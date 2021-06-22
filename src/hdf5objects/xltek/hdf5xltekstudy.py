@@ -203,12 +203,9 @@ class HDF5XLTEKstudy:
 
         return data_array, primary, final
 
-    def export_range_as_file(self, s=None, e=None, rnd=False, tails=False, frame=False, separate=False):
-        d, f, l, = self.data_range(s, e, rnd, tails, frame, separate)
-
-
-
-
+    # Todo: Finish making this Method
+    # def export_range_as_file(self, s=None, e=None, rnd=False, tails=False, frame=False, separate=False):
+    #     d, f, l, = self.data_range(s, e, rnd, tails, frame, separate)
 
 
 class DayDirectory:
