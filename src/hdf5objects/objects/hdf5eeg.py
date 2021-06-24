@@ -38,7 +38,7 @@ class HDF5EEG:
                  'saxis': 'saxis',
                  'taxis': 'taxis'}
 
-    def __init__(self, name, ID=None, path=None, init=False):
+    def __init__(self, name, ID="", path=None, init=False):
         self._type = 'EEG'
         self._name = name
         self._ID = ID
@@ -59,7 +59,7 @@ class HDF5EEG:
         self._dt_axis = None
 
         self.h5_fobj = None
-        
+
         self.cargs = {'compression': 'gzip', 'compression_opts': 4}
         self.is_updating = False
 
@@ -299,25 +299,25 @@ class HDF5EEG:
     def build(self, start=None, data=None, saxis=None, taxis=None):
         if self.path.is_dir():
             if start is None:
-                f_name = self.name
+                f_name = self._name
             else:
-                f_name = self.name + '_' + start.isoformat('_', 'seconds').replace(':', '~')
+                f_name = self._name + '_' + start.isoformat('_', 'seconds').replace(':', '~')
             self.path = pathlib.Path(self.path, f_name + '.h5')
 
-        self.h5_fobj = h5py.File(str(self.path))
+        h5_fobj = h5py.File(str(self.path), "a")
 
-        self.h5_fobj.attrs[self.structure['type']] = self._type
-        self.h5_fobj.attrs[self.structure['name']] = self._name
-        self.h5_fobj.attrs[self.structure['ID']] = self._ID
-        self.h5_fobj.attrs[self.structure['start']] = 0
-        self.h5_fobj.attrs[self.structure['end']] = 0
+        h5_fobj.attrs[self.structure['type']] = self._type
+        h5_fobj.attrs[self.structure['name']] = self._name
+        h5_fobj.attrs[self.structure['ID']] = self._ID
+        h5_fobj.attrs[self.structure['start']] = self._start
+        h5_fobj.attrs[self.structure['end']] = self._end
 
-        ecog = self.h5_fobj.create_dataset(self.structure['data'], dtype='f32', data=data, maxshape=(None, None), **self.cargs)
-        ecog.attrs[self.structure['samplerate']] = 0
-        ecog.attrs[self.structure['nsamples']] = 0
+        ecog = h5_fobj.create_dataset(self.structure['data'], dtype='f', data=data, maxshape=(None, None), **self.cargs)
+        ecog.attrs[self.structure['samplerate']] = self._sample_rate
+        ecog.attrs[self.structure['nsamples']] = self._n_samples
 
-        sstamps = self.h5_fobj.create_dataset(self.structure['saxis'], dtype='i', data=saxis, maxshape=(None,), **self.cargs)
-        tstamps = self.h5_fobj.create_dataset(self.structure['taxis'], dtype='f8', data=taxis, maxshape=(None,), **self.cargs)
+        sstamps = h5_fobj.create_dataset(self.structure['saxis'], dtype='i', data=saxis, maxshape=(None,), **self.cargs)
+        tstamps = h5_fobj.create_dataset(self.structure['taxis'], dtype='f', data=taxis, maxshape=(None,), **self.cargs)
 
         ecog.dims.create_scale(sstamps, 'sample axis')
         ecog.dims.create_scale(tstamps, 'time axis')
@@ -325,9 +325,10 @@ class HDF5EEG:
         ecog.dims[0].attach_scale(sstamps)
         ecog.dims[0].attach_scale(tstamps)
 
-        self.h5_fobj.flush()
+        h5_fobj.flush()
 
-        return self.h5_fobj
+        self.h5_fobj = h5_fobj
+        return h5_fobj
 
     def open(self, exc=False):
         if not self.is_open:

@@ -35,7 +35,7 @@ class HDF5XLTEK(HDF5EEG):
                  'saxis': 'samplestamp vector',
                  'taxis': 'timestamp vector'}
 
-    def __init__(self, name, ID=None, path=None, init=False, entry=None):
+    def __init__(self, name, ID="", path=None, init=False, entry=None):
         HDF5EEG.__init__(self, name, ID, path)
         self._type = 'XLTEK_EEG'
         self._start_entry = None

@@ -19,6 +19,7 @@ import configparser
 import datetime
 
 # Downloaded Libraries #
+import numpy as np
 
 # Local Libraries #
 from .eegframe import EEGFrame
@@ -93,6 +94,7 @@ class HDF5XLTEKstudy:
                 self.path.mkdir()
         else:
             self.days = [DayDirectory(self.name, self.path, path=p) for p in self.path.glob(self.name+'_*') if p.is_dir()]
+            self.days.sort()
 
     def make_directories(self, start, end):
         days = end - start
@@ -170,7 +172,7 @@ class HDF5XLTEKstudy:
         if frame and not separate:
             data_array = EEGFrame()
         else:
-            data_array = []
+            data_array = None
 
         # Allow nonspecific start time and before scope option
         if s is None or (tails and s < self.days[0].files[0].start):
@@ -187,8 +189,10 @@ class HDF5XLTEKstudy:
                 data, first, last = day.data_range_time(s, e, rnd=True, tails=True, frame=frame)
                 if separate:
                     data_array.append(data)
+                elif data_array is None:
+                    data_array = data
                 else:
-                    data_array += data
+                    data_array = np.concatenate([data_array, data], axis=0)
                 if f_pass:
                     if separate:
                         primary = [i] + first
@@ -227,6 +231,42 @@ class DayDirectory:
         self.build()
         if date is None:
             self.get_time_info()
+
+    def __eq__(self, other):
+        try:
+            return self.start == other.start
+        except AttributeError:
+            return self.start == other
+
+    def __ne__(self, other):
+        try:
+            return self.start != other.start
+        except AttributeError:
+            return self.start != other
+
+    def __le__(self, other):
+        try:
+            return self.start <= other.start
+        except AttributeError:
+            return self.start <= other
+
+    def __lt__(self, other):
+        try:
+            return self.start < other.start
+        except AttributeError:
+            return self.start < other
+
+    def __ge__(self, other):
+        try:
+            return self.start >= other.start
+        except AttributeError:
+            return self.start >= other
+
+    def __gt__(self, other):
+        try:
+            return self.start > other.start
+        except AttributeError:
+            return self.start > other
 
     @property
     def name_dir(self):
@@ -360,7 +400,7 @@ class DayDirectory:
         e_file = None
         e_fi = None
         f_array = []
-        d_array = []
+        d_array = None
 
         # Allow nonspecific start time and before scope option
         if s is None or (tails and s < self.files[0].start):
@@ -406,8 +446,10 @@ class DayDirectory:
                 if collect:
                     if frame:
                         f_array.append(d_frame)
+                    elif d_array is None:
+                        d_array = f.data[st:end]
                     else:
-                        d_array.append(f.data[st:end])
+                        d_array = np.concatenate([d_array, f.data[st:end]], axis=0)
                 last_time = f.end
             if stop:
                 break
