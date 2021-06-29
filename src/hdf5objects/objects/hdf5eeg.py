@@ -312,12 +312,12 @@ class HDF5EEG:
         h5_fobj.attrs[self.structure['start']] = self._start
         h5_fobj.attrs[self.structure['end']] = self._end
 
-        ecog = h5_fobj.create_dataset(self.structure['data'], dtype='f', data=data, maxshape=(None, None), **self.cargs)
+        ecog = h5_fobj.create_dataset(self.structure['data'], dtype='f8', data=data, maxshape=(None, None), **self.cargs)
         ecog.attrs[self.structure['samplerate']] = self._sample_rate
         ecog.attrs[self.structure['nsamples']] = self._n_samples
 
         sstamps = h5_fobj.create_dataset(self.structure['saxis'], dtype='i', data=saxis, maxshape=(None,), **self.cargs)
-        tstamps = h5_fobj.create_dataset(self.structure['taxis'], dtype='f', data=taxis, maxshape=(None,), **self.cargs)
+        tstamps = h5_fobj.create_dataset(self.structure['taxis'], dtype='f8', data=taxis, maxshape=(None,), **self.cargs)
 
         ecog.dims.create_scale(sstamps, 'sample axis')
         ecog.dims.create_scale(tstamps, 'time axis')
