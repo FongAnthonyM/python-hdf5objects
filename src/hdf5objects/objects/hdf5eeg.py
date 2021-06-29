@@ -60,7 +60,7 @@ class HDF5EEG:
 
         self.h5_fobj = None
 
-        self.cargs = {'compression': 'gzip', 'compression_opts': 4}
+        self.cargs = {'compression': 'gzip', 'compression_opts': 6}
         self.is_updating = False
 
         if self.path.is_file():
