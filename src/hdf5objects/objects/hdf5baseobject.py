@@ -22,8 +22,9 @@ import uuid
 from warnings import warn
 
 # Downloaded Libraries #
-from baseobjects import BaseObject
+from baseobjects import BaseObject, DynamicWrapper
 from bidict import bidict
+from classversioning import VersionedClass, VersionType, TriNumberVersion
 import h5py
 import numpy as np
 
@@ -93,29 +94,23 @@ def recursive_looping(loops, func, previous=None, size=None, **kwargs):
 
 
 # Classes #
-# Todo: Create Versioning package and inherit from that.
-class HDF5BaseObject(BaseObject):
-    FILE_TYPE = "Abstract"
-    VERSION = "0.0.0"
-
+class HDF5Object(BaseObject):
     # Instantiation, Copy, Destruction
     def __init__(self, path=None, update=True, init=False):
         self._file_attrs = set()
         self._datasets = set()
         self._path = None
-
-        self.path = path
-        self.is_updating = update
+        self.is_updating = True
 
         self.cargs = {"compression": "gzip", "compression_opts": 4}
         self.default_datasets_parameters = self.cargs.copy()
-        self.default_attrs = {"FileType": self.FILE_TYPE, "Version": self.VERSION}
+        self.default_file_attributes = {"FileType": self.FILE_TYPE, "Version": self.VERSION}
         self.default_datasets = {}
 
         self.h5_fobj = None
 
         if init:
-            self.construct()
+            self.construct(path, update)
 
     @property
     def path(self):
@@ -133,21 +128,29 @@ class HDF5BaseObject(BaseObject):
         return bool(self.h5_fobj)
 
     @property
-    def file_attrs_names(self):
-        self.load_attributes()
-        return self._file_attrs
+    def file_attribute_names(self):
+        if not self._file_attrs or self.is_updating:
+            return self.get_file_attribute_names()
+        else:
+            return self._file_attrs
 
     @property
     def dataset_names(self):
-        return self.get_dataset_names()
-
-    def __copy__(self):
-        new = type(self)()
-        new.__dict__.update(self.__dict__)
-        return new
+        if not self._datasets or self.is_updating:
+            return self.get_dataset_names()
+        else:
+            return self._datasets
 
     def __deepcopy__(self, memo={}):
-        new = self.deepcopy(init=True, memo=memo)
+        # Todo: Rethink how a deep copy should be made
+        new = type(self)(path=self.path.as_posix)
+        new._file_attrs = copy.deepcopy(self._file_attrs, memo=memo)
+        new._datasets = copy.deepcopy(self._datasets, memo=memo)
+        if self.is_open:
+            new.open()
+        new.is_updating = self.is_updating
+        new.cargs = copy.deepcopy(self.cargs, memo=memo)
+        new.default_datasets_parameters = copy.deepcopy(self.cargs, memo=memo)
         return new
 
     def __del__(self):
@@ -167,36 +170,43 @@ class HDF5BaseObject(BaseObject):
 
     def __setstate__(self, state):
         name, open_state = state["h5_fobj"]
-        state["h5_fobj"] = h5py.File(name.as_posix(), "r+")
+        state["h5_fobj"] = h5py.File(name, "r+")
         if not open_state:
             state["h5_fobj"].close()
         self.__dict__.update(state)
 
     # Attribute Access
-    def __getattribute__(self, item):
-        reserved = ("_file_attrs", "_datasets", "get_file_attribute", "get_dataset", "__init__")
-        try:
-            if item in reserved:
-                return super().__getattribute__(item)
-            elif item in self._file_attrs:
-                return self.get_file_attribute(item)
-            elif item in self._datasets:
-                return self.get_dataset(item)
-            else:
-                return super().__getattribute__(item)
-        except AttributeError:
-            return super().__getattribute__(item)
+    def __getattr__(self, name):
+        """Overrides the getattr magic method to get an attribute or dataset from the h5 file.
 
-    def __setattr__(self, key, value):
-        reserved = ("_file_attrs", "_datasets")
-        if key in reserved:
-            super().__setattr__(key, value)
-        elif key in self._file_attrs:
-            self.set_file_attribute(key, value)
-        elif key in self._datasets:
-            self.set_dataset(key, value)
+        Args:
+            name (str): The name of the attribute to get.
+
+        Returns:
+            obj: Whatever the attribute contains.
+        """
+        if name in self.file_attribute_names:
+            return self.get_file_attribute(name)
+        elif name in self.dataset_names:
+            return self.get_dataset(name)
         else:
-            super().__setattr__(key, value)
+            raise AttributeError(f"{type(self)} does not have \"{name}\" as an attribute")
+
+    def __setattr__(self, name, value):
+        """Overrides the setattr magic method to set the attribute of the h5 file.
+
+        Args:
+            name (str): The name of the attribute to set.
+            value: Whatever the attribute will contain.
+        """
+        if name in ("_file_attrs", "_datasets"):
+            super().__setattr__(name, value)
+        elif name in self.file_attribute_names:
+            self.set_file_attribute(name, value)
+        elif name in self.dataset_names:
+            self.set_dataset(name, value)
+        else:
+            super().__setattr__(name, value)
 
     # Container Magic Methods
     def __len__(self):
@@ -208,7 +218,7 @@ class HDF5BaseObject(BaseObject):
         return length
 
     def __getitem__(self, item):
-        if item in self._datasets:
+        if item in self.dataset_names:
             data = self.get_dataset(item)
         else:
             raise KeyError(item)
@@ -229,7 +239,12 @@ class HDF5BaseObject(BaseObject):
         return self.close()
 
     # Constructors
-    def construct(self, open_=False, **kwargs):
+    def construct(self, path=None, update=None, open_=False, **kwargs):
+        if path is not None:
+            self.path = path
+        if update is not None:
+            self.is_updating = update
+
         if self.path.is_file():
             self.open(validate=True, **kwargs)
             if not open_:
@@ -251,12 +266,12 @@ class HDF5BaseObject(BaseObject):
             return None
 
     def construct_file_attributes(self, value=""):
-        if len(self._file_attrs.intersection(self._datasets)) > 0:
+        if len(self.file_attribute_names.intersection(self._datasets)) > 0:
             warn("Attribute name already exists", stacklevel=2)
 
         op = self.is_open
         self.open()
-        for key in self._file_attrs:
+        for key in self.file_attrs_names:
             _key = "_" + key
             try:
                 self.h5_fobj.attrs[key] = value
@@ -268,7 +283,7 @@ class HDF5BaseObject(BaseObject):
             self.close()
 
     def construct_file_datasets(self, **kwargs):
-        if len(self._datasets.intersection(self._file_attrs)) > 0:
+        if len(self.dataset_names.intersection(self._file_attrs)) > 0:
             warn("Dataset name already exists", stacklevel=2)
 
         op = self.is_open
@@ -285,51 +300,36 @@ class HDF5BaseObject(BaseObject):
         if not op:
             self.close()
 
-    # Copy Methods
-    def copy(self):
-        return self.__copy__()
-
-    def deepcopy(self, path=None, init=False, memo={}):
-        if path is None:
-            new = type(self)(path=self.path.as_posix)
-        else:
-            new = type(self)(path=path)
-        new._file_attrs = copy.deepcopy(self._file_attrs, memo=memo)
-        new._datasets = copy.deepcopy(self._datasets, memo=memo)
-        new.is_open = self.is_open
-        new.is_updating = self.is_updating
-        new.cargs = copy.deepcopy(self.cargs, memo=memo)
-        new.default_datasets_parameters = copy.deepcopy(self.cargs, memo=memo)
-
-        if init:
-            new.construct()
-        return new
-
     # Getters and Setters
     def get(self, item):
-        if item in self._file_attrs:
+        if item in self.file_attribute_names:
             return self.get_file_attribute(item)
-        elif item in self._datasets:
+        elif item in self.dataset_names:
             return self.get_dataset(item)
         else:
             warn("No attribute or dataset " + item, stacklevel=2)
             return None
 
     # File Attributes
+    def get_file_attribute_names(self):
+        for key, value in self.h5_fobj.attrs.items():
+            self._file_attrs.update((key,))
+        return self._file_attrs
+
     def get_file_attribute(self, item):
         _item = "_" + item
         op = self.is_open
         self.open()
 
         try:
-            if item in self.h5_fobj.attrs and (super().__getattribute__(_item) is None or self.is_updating):
+            if item in self.h5_fobj.attrs and (self._item is None or self.is_updating):
                 setattr(self, _item, self.h5_fobj.attrs[item])
         except Exception as e:
             warn("Could not update attribute due to error: "+str(e), stacklevel=2)
 
         if not op:
             self.close()
-        return super().__getattribute__(_item)
+        return getattr(self, _item)
 
     def get_file_attributes(self):
         op = self.is_open
@@ -360,7 +360,7 @@ class HDF5BaseObject(BaseObject):
 
     def add_file_attributes(self, items):
         names = set(items.keys())
-        if len(names.intersection(self._datasets)) > 0:
+        if len(names.intersection(self.dataset_names)) > 0:
             warn("Attribute name already exists", stacklevel=2)
 
         op = self.is_open
@@ -378,23 +378,25 @@ class HDF5BaseObject(BaseObject):
         if not op:
             self.close()
 
-    def clear_attributes(self):
+    def clear_file_attributes(self):
         for key in self._file_attrs:
             self.__delattr__("_" + key)
         self._file_attrs.clear()
 
-    def load_attributes(self):
-        self.clear_attributes()
+    def load_file_attributes(self):
         for key, value in self.h5_fobj.attrs.items():
             _item = "_" + key
             self._file_attrs.update((key,))
             super().__setattr__(_item, value)
 
-    def list_attributes(self):
-        self.load_attributes()
-        return list(self._file_attrs)
+    def list_file_attributes(self):
+        return list(self.file_attrs_names)
 
     # Datasets
+    def get_dataset_names(self):
+        for name, value in self.h5_fobj.items():
+            self._datasets.update((name,))
+
     def create_dataset(self, name, data=None, **kwargs):
         self.set_dataset(name=name, data=data, **kwargs)
         return self.get_dataset(name)
@@ -467,13 +469,8 @@ class HDF5BaseObject(BaseObject):
             self._datasets.update((name,))
             super().__setattr__(_item, value)
 
-    def get_dataset_names(self):
-        self.load_datasets()
-        return self._datasets
-
     def list_dataset_names(self):
-        self.load_datasets()
-        return list(self._datasets)
+        return list(self.datasets_names)
 
     #  Mapping Items Methods
     def items(self):
@@ -481,13 +478,13 @@ class HDF5BaseObject(BaseObject):
 
     def items_file_attributes(self):
         result = []
-        for key in self._file_attrs:
+        for key in self.file_attribute_names:
             result.append((key, self.get_file_attribute(key)))
         return result
 
     def items_datasets(self):
         result = []
-        for key in self._datasets:
+        for key in self.dataset_names:
             result.append((key, self.get_dataset(key)))
         return result
 
@@ -496,10 +493,10 @@ class HDF5BaseObject(BaseObject):
         return self.keys_file_attributes() + self.keys_datasets()
 
     def keys_file_attributes(self):
-        return list(self._file_attrs)
+        return list(self.file_attribute_names)
 
     def keys_datasets(self):
-        return list(self._datasets)
+        return list(self.dataset_names)
 
     # Mapping Pop Methods
     def pop(self, key):
@@ -522,10 +519,10 @@ class HDF5BaseObject(BaseObject):
         return value
 
     # Mapping Update Methods
-    def update_file_attrs(self, **kwargs):
-        if len(self._datasets.intersection(kwargs.keys())) > 0:
+    def update_file_attributes(self, **kwargs):
+        if len(self.dataset_names.intersection(kwargs.keys())) > 0:
             warn("Dataset name already exists", stacklevel=2)
-        if len(self._file_attrs.intersection(kwargs.keys())) > 0:
+        if len(self.file_attribute_names.intersection(kwargs.keys())) > 0:
             warn("Attribute name already exists", stacklevel=2)
 
         op = self.is_open
@@ -543,10 +540,10 @@ class HDF5BaseObject(BaseObject):
             self.close()
 
     def update_datasets(self, **kwargs):
-        if len(self._file_attrs.intersection(kwargs.keys())) > 0:
-            warn("Attribute name already exists", stacklevel=2)
-        if len(self._datasets.intersection(kwargs.keys())) > 0:
+        if len(self.dataset_names.intersection(kwargs.keys())) > 0:
             warn("Dataset name already exists", stacklevel=2)
+        if len(self.file_attribute_names.intersection(kwargs.keys())) > 0:
+            warn("Attribute name already exists", stacklevel=2)
 
         op = self.is_open
         self.open()
@@ -589,7 +586,7 @@ class HDF5BaseObject(BaseObject):
         return not self.is_open
 
     # General Methods
-    def append2dataset(self, name, data, axis=0):
+    def append_to_dataset(self, name, data, axis=0):
         dataset = self.get_dataset(name)
         s_shape = dataset.shape
         d_shape = data.shape
@@ -601,6 +598,89 @@ class HDF5BaseObject(BaseObject):
             dataset.resize(*f_shape)
             dataset[slicing] = data
 
+    def report_file_structure(self):
+        op = self.is_open
+        self.open()
+
+        # Construct Structure Report Dictionary
+        report = {"file_type": {"valid": False, "differences": {"object": self.FILE_TYPE, "file": None}},
+                  "attrs": {"valid": False, "differences": {"object": None, "file": None}},
+                  "datasets": {"valid": False, "differences": {"object": None, "file": None}}}
+
+        # Check H5 File Type
+        if "FileType" in self.h5_fobj.attrs:
+            if self.h5_fobj.attrs["FileType"] == self.FILE_TYPE:
+                report["file_type"]["valid"] = True
+                report["file_type"]["differences"]["object"] = None
+            else:
+                report["file_type"]["differences"]["file"] = self.h5_fobj.attrs["FileType"]
+
+        # Check File Attributes
+        if self.h5_fobj.attrs.keys() == self._file_attrs:
+            report["attrs"]["valid"] = True
+        else:
+            f_attr_set = set(self.h5_fobj.attrs.keys())
+            o_attr_set = self._file_attrs
+            report["attrs"]["differences"]["object"] = o_attr_set - f_attr_set
+            report["attrs"]["differences"]["file"] = f_attr_set - o_attr_set
+
+        # Check File Datasets
+        if self.h5_fobj.keys() == self._datasets:
+            report["attrs"]["valid"] = True
+        else:
+            f_attr_set = set(self.h5_fobj.keys())
+            o_attr_set = self._datasets
+            report["datasets"]["differences"]["object"] = o_attr_set - f_attr_set
+            report["datasets"]["differences"]["file"] = f_attr_set - o_attr_set
+
+        if not op:
+            self.close()
+        return report
+
+    def validate_file_structure(self, file_type=True, o_attrs=True, f_attrs=False, o_datasets=True, f_datasets=False):
+        report = self.report_file_structure()
+        # Validate File Type
+        if file_type and not report["file_type"]["valid"]:
+            warn(self.path.as_posix() + " file type is not a " + self.FILE_TYPE, stacklevel=2)
+        # Validate Attributes
+        if not report["attrs"]["valid"]:
+            if o_attrs and report["attrs"]["differences"]["object"] is not None:
+                warn(self.path.as_posix() + " is missing attributes", stacklevel=2)
+            if f_attrs and report["attrs"]["differences"]["file"] is not None:
+                warn(self.path.as_posix() + " has extra attributes", stacklevel=2)
+        # Validate Datasets
+        if not report["datasets"]["valid"]:
+            if o_datasets and report["datasets"]["differences"]["object"] is not None:
+                warn(self.path.as_posix() + " is missing datasets", stacklevel=2)
+            if f_datasets and report["datasets"]["differences"]["file"] is not None:
+                warn(self.path.as_posix() + " has extra datasets", stacklevel=2)
+
+
+class BaseHDF5(HDF5Object, VersionedClass):
+    _VERSION_TYPE = VersionType(name="BaseHDF5", class_=TriNumberVersion)
+    FILE_TYPE = "Abstract"
+    VERSION = TriNumberVersion(0, 0, 0)
+
+    # File Methods
+    def open(self, mode="a", exc=False, validate=False, **kwargs):
+        if not self.is_open:
+            try:
+                self.h5_fobj = h5py.File(self.path.as_posix(), mode=mode)
+            except Exception as e:
+                if exc:
+                    warn("Could not open" + self.path.as_posix() + "due to error: " + str(e), stacklevel=2)
+                    self.h5_fobj = None
+                    return None
+                else:
+                    raise e
+            else:
+                if validate:
+                    self.validate_file_structure(**kwargs)
+                self.load_attributes()
+                self.load_datasets()
+                return self.h5_fobj
+
+    # General Methods
     def report_file_structure(self):
         op = self.is_open
         self.open()

@@ -71,7 +71,7 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        'baseobjects>=1.1.1', 'h5py>=3.2.1', 'numpy'
+        'baseobjects>=1.2.0', 'classversioning>=0.2.0', 'h5py>=3.2.1', 'numpy'
     ],
     extras_require={
         "dev": ['pytest>=6.2.3'],
