@@ -600,6 +600,52 @@ class HDF5dataset(StaticWrapper):
     _wrapped_types = [h5py.Dataset]
     _wrap_attributes = ["_dataset"]
 
+    # Static Methods
+    @staticmethod
+    def _create_callback_functions(call_name, name):
+        """A factory for creating property modification functions which accesses an embedded objects attributes.
+
+        Args:
+            call_name (str): The name attribute the object to call is stored.
+            name (str): The name of the attribute that this property will mask.
+
+        Returns:
+            get_: The get function for a property object.
+            set_: The wet function for a property object.
+            del_: The del function for a property object.
+        """
+        store_name = "_" + call_name
+
+        def get_(obj):
+            """Gets the wrapped object's attribute and check the temporary attribute if not."""
+            try:
+                # Todo: In StaticWrapper consider having this as a separate method to make it easier to use.
+                with obj:
+                    return getattr(getattr(obj, store_name), name)
+            except AttributeError as error:
+                try:
+                    return getattr(obj, "__" + name)
+                except AttributeError:
+                    raise error
+
+        def set_(obj, value):
+            """Sets the wrapped object's attribute or saves it to a temporary attribute if wrapped object."""
+            try:
+                with obj:
+                    setattr(getattr(obj, store_name), name, value)
+            except AttributeError as error:
+                if not hasattr(obj, store_name) or getattr(obj, store_name) is None:
+                    setattr(obj, "__" + name, value)
+                else:
+                    raise error
+
+        def del_(obj):
+            """Deletes the wrapped object's attribute."""
+            with obj:
+                delattr(getattr(obj, store_name), name)
+
+        return get_, set_, del_
+
     # Instantiation, Copy, Destruction
     def __init__(self, dataset=None, file=None, init=True):
         self._dataset = None
@@ -614,18 +660,6 @@ class HDF5dataset(StaticWrapper):
     @property
     def dataset(self):
         return self._dataset
-
-    # Attribute Access
-    def __getattr__(self, name):
-        with self:
-            return getattr(self._dataset[self._name], name)
-
-    def __setattr__(self, name, value):
-        if name not in dir(self):
-            with self:
-                setattr(self._dataset, name, value)
-
-        object.__setattr__(self, name, value)
 
     # Container Magic Methods
     def __getitem__(self, item):
