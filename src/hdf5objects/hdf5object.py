@@ -17,14 +17,10 @@ import collections
 import copy
 import datetime
 import pathlib
-import time
-import uuid
 from warnings import warn
 
 # Downloaded Libraries #
-from baseobjects import BaseObject, DynamicWrapper, StaticWrapper
-from bidict import bidict
-from classversioning import VersionedClass, VersionType, TriNumberVersion
+from baseobjects import BaseObject, StaticWrapper
 import h5py
 import numpy as np
 
@@ -41,60 +37,10 @@ def merge_dict(dict1, dict2, copy_=True):
     return dict1
 
 
-def np_to_dict(array):
-    result = {}
-    for t in array.dtype.descr:
-        name = t[0]
-        result[name] = array[name]
-    return result
-
-
-def dict_to_np(item, descr, pop=False):
-    array = []
-    for dtype in descr:
-        field = dtype[0]
-        if pop:
-            data = item.pop(field)
-        else:
-            data = item[field]
-        data = item_to_np(data)
-        array.append(data)
-    return array
-
-
-def item_to_np(item):
-    if isinstance(item, int) or isinstance(item, float) or isinstance(item, str):
-        return item
-    elif isinstance(item, datetime.datetime):
-        return item.timestamp()
-    elif isinstance(item, datetime.timedelta):
-        return item.total_seconds()
-    elif isinstance(item, uuid.UUID):
-        return str(item)
-    else:
-        return item
-
-
-def recursive_looping(loops, func, previous=None, size=None, **kwargs):
-    if previous is None:
-        previous = []
-    if size is None:
-        size = len(loops)
-    output = []
-    loop = loops.pop(0)
-    previous.append(None)
-    for item in loop:
-        previous[-1] = item
-        if len(previous) == size:
-            output.append(func(items=previous, **kwargs))
-        else:
-            output.append(recursive_looping(loops, func, previous=previous, size=size, **kwargs))
-    return output
-
-
 # Classes #
 class HDF5Object(BaseObject):
-    # Instantiation, Copy, Destruction
+    # Magic Methods
+    # Construction/Destruction
     def __init__(self, path=None, update=True, init=False):
         self._file_attrs = set()
         self._datasets = set()
@@ -207,7 +153,7 @@ class HDF5Object(BaseObject):
         else:
             super().__setattr__(name, value)
 
-    # Container Magic Methods
+    # Container Methods
     def __len__(self):
         op = self.is_open
         self.open()
@@ -237,7 +183,8 @@ class HDF5Object(BaseObject):
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self.close()
 
-    # Constructors
+    # Instance Methods
+    # Constructors/Destructors
     def construct(self, path=None, update=None, open_=False, **kwargs):
         if path is not None:
             self.path = path
@@ -407,7 +354,7 @@ class HDF5Object(BaseObject):
 
         try:
             if item in self.h5_fobj and self.is_updating:
-                super().__setattr__(_item, HDF5dataset(self.h5_fobj[item], self))
+                super().__setattr__(_item, HDF5Dataset(self.h5_fobj[item], self))
         except Exception as e:
             warn("Could not update datasets due to error: " + str(e), stacklevel=2)
 
@@ -431,7 +378,7 @@ class HDF5Object(BaseObject):
         except Exception as e:
             warn("Could not set datasets due to error: " + str(e), stacklevel=2)
         else:
-            super().__setattr__(_key, HDF5dataset(self.h5_fobj[name], self))
+            super().__setattr__(_key, HDF5Dataset(self.h5_fobj[name], self))
 
         if not op:
             self.close()
@@ -452,7 +399,7 @@ class HDF5Object(BaseObject):
             except Exception as e:
                 warn("Could not set datasets due to error: " + str(e), stacklevel=2)
             else:
-                super().__setattr__(_key, HDF5dataset(self.h5_fobj[name], self))
+                super().__setattr__(_key, HDF5Dataset(self.h5_fobj[name], self))
         if not op:
             self.close()
 
@@ -471,7 +418,19 @@ class HDF5Object(BaseObject):
     def list_dataset_names(self):
         return list(self.datasets_names)
 
-    #  Mapping Items Methods
+    def append_to_dataset(self, name, data, axis=0):
+        dataset = self.get_dataset(name)
+        s_shape = dataset.shape
+        d_shape = data.shape
+        f_shape = list(s_shape)
+        f_shape[axis] = s_shape[axis] + d_shape[axis]
+        slicing = tuple(slice(s_shape[ax]) for ax in range(0, axis)) + (-d_shape[axis], ...)
+
+        with dataset:
+            dataset.resize(*f_shape)
+            dataset[slicing] = data
+
+    #  Mapping Items
     def items(self):
         return self.items_file_attributes() + self.items_datasets()
 
@@ -487,7 +446,7 @@ class HDF5Object(BaseObject):
             result.append((key, self.get_dataset(key)))
         return result
 
-    # Mapping Keys Methods
+    # Mapping Keys
     def keys(self):
         return self.keys_file_attributes() + self.keys_datasets()
 
@@ -497,7 +456,7 @@ class HDF5Object(BaseObject):
     def keys_datasets(self):
         return list(self.dataset_names)
 
-    # Mapping Pop Methods
+    # Mapping Pop
     def pop(self, key):
         if key in self._file_attrs:
             return self.pop_file_attribute(key)
@@ -517,7 +476,7 @@ class HDF5Object(BaseObject):
         del self.h5_fobj[key]
         return value
 
-    # Mapping Update Methods
+    # Mapping Update
     def update_file_attributes(self, **kwargs):
         if len(self.dataset_names.intersection(kwargs.keys())) > 0:
             warn("Dataset name already exists", stacklevel=2)
@@ -559,7 +518,7 @@ class HDF5Object(BaseObject):
         if not op:
             self.close()
 
-    # File Methods
+    # File
     def open(self, mode="a", exc=False):
         if not self.is_open:
             try:
@@ -582,106 +541,121 @@ class HDF5Object(BaseObject):
             self.h5_fobj.close()
         return not self.is_open
 
-    # General Methods
-    def append_to_dataset(self, name, data, axis=0):
-        dataset = self.get_dataset(name)
-        s_shape = dataset.shape
-        d_shape = data.shape
-        f_shape = list(s_shape)
-        f_shape[axis] = s_shape[axis] + d_shape[axis]
-        slicing = tuple(slice(s_shape[ax]) for ax in range(0, axis)) + (-d_shape[axis], ...)
 
-        with dataset:
-            dataset.resize(*f_shape)
-            dataset[slicing] = data
+class HDF5Dataset(StaticWrapper):
+    """A wrapper object which wraps a HDF5 dataset and gives more functionality.
 
+    Attributes:
+        _name (str): The name of this dataset.
+        _dataset: The HDF5 dataset to wrap.
+        _file_was_open (bool): Determines if the file object was open when this dataset was accessed.
+        _file: The file this dataset is from.
 
-class HDF5dataset(StaticWrapper):
+    Args:
+        dataset: The HDF5 dataset to build this dataset around.
+        file: The file which the dataset originates from.
+        init (bool): Determines if this object should initialize.
+    """
     _wrapped_types = [h5py.Dataset]
     _wrap_attributes = ["_dataset"]
 
-    # Static Methods
-    @staticmethod
-    def _create_callback_functions(call_name, name):
-        """A factory for creating property modification functions which accesses an embedded objects attributes.
+    # Class Methods
+    # Wrapped Attribute Callback Functions
+    @classmethod
+    def _get_attribute(cls, obj, wrap_name, attr_name):
+        """Gets an attribute from a wrapped dataset.
 
         Args:
-            call_name (str): The name attribute the object to call is stored.
-            name (str): The name of the attribute that this property will mask.
+            obj (Any): The target object to get the wrapped object from.
+            wrap_name (str): The attribute name of the wrapped object.
+            attr_name (str): The attribute name of the attribute to get from the wrapped object.
 
         Returns:
-            get_: The get function for a property object.
-            set_: The wet function for a property object.
-            del_: The del function for a property object.
+            (Any): The wrapped object.
         """
-        store_name = "_" + call_name
+        with obj:  # Ensures the hdf5 dataset is open when accessing attributes
+            super()._get_attribute(obj, wrap_name, attr_name)
 
-        def get_(obj):
-            """Gets the wrapped object's attribute and check the temporary attribute if not."""
-            try:
-                # Todo: In StaticWrapper consider having this as a separate method to make it easier to use.
-                with obj:
-                    return getattr(getattr(obj, store_name), name)
-            except AttributeError as error:
-                try:
-                    return getattr(obj, "__" + name)
-                except AttributeError:
-                    raise error
+    @classmethod
+    def _set_attribute(cls, obj, wrap_name, attr_name, value):
+        """Sets an attribute in a wrapped dataset.
 
-        def set_(obj, value):
-            """Sets the wrapped object's attribute or saves it to a temporary attribute if wrapped object."""
-            try:
-                with obj:
-                    setattr(getattr(obj, store_name), name, value)
-            except AttributeError as error:
-                if not hasattr(obj, store_name) or getattr(obj, store_name) is None:
-                    setattr(obj, "__" + name, value)
-                else:
-                    raise error
+        Args:
+            obj (Any): The target object to set.
+            wrap_name (str): The attribute name of the wrapped object.
+            attr_name (str): The attribute name of the attribute to set from the wrapped object.
+            value (Any): The object to set the wrapped objects attribute to.
+        """
+        with obj: # Ensures the hdf5 dataset is open when accessing attributes
+            super()._set_attribute(obj, wrap_name, attr_name, value)
 
-        def del_(obj):
-            """Deletes the wrapped object's attribute."""
-            with obj:
-                delattr(getattr(obj, store_name), name)
+    @classmethod
+    def _del_attribute(cls, obj, wrap_name, attr_name):
+        """Deletes an attribute in a wrapped dataset.
 
-        return get_, set_, del_
+        Args:
+            obj (Any): The target object to set.
+            wrap_name (str): The attribute name of the wrapped object.
+            attr_name (str): The attribute name of the attribute to delete from the wrapped object.
+        """
+        with obj:  # Ensures the hdf5 dataset is open when accessing attributes
+            super()._del_attribute(obj, wrap_name, attr_name)
 
-    # Instantiation, Copy, Destruction
+    # Magic Methods
+    # Constructors/Destructors
     def __init__(self, dataset=None, file=None, init=True):
-        self._dataset = None
         self._name = None
+        self._dataset = None
 
-        self._file = None
         self._file_was_open = None
+        self._file = None
 
         if init:
             self.construct(dataset=dataset, file=file)
 
-    @property
-    def dataset(self):
-        return self._dataset
+    # Container Methods
+    def __getitem__(self, key):
+        """Allows slicing access to the data in the dataset.
 
-    # Container Magic Methods
-    def __getitem__(self, item):
+        Args:
+            key: A slice used to get data from the dataset.
+
+        Returns:
+            Data from the dataset base on the slice.
+        """
         with self:
-            return self._dataset[item]
+            return self._dataset[key]
 
     def __setitem__(self, key, value):
+        """Allows slicing assignment of the data in the dataset.
+
+        Args:
+            key: A slice used to get data from the dataset.
+            value: Data to assign to the slice in the dataset.
+        """
         with self:
             self._dataset[self._name][key] = value
 
     # Context Managers
     def __enter__(self):
+        """The enter context which opens the file to make this dataset usable"""
         self.open()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """The exit context which close the file."""
         return self.close()
 
-    # Generic Methods #
-    # Constructors Methods
+    # Instance Methods
+    # Constructors/Destructors
     def construct(self, dataset=None, file=None):
-        if isinstance(dataset, HDF5dataset):
+        """Constructs this object from the provided arguments.
+
+        Args:
+            dataset: The HDF5 dataset to build this dataset around.
+            file: The file which the dataset originates from.
+        """
+        if isinstance(dataset, HDF5Dataset):
             self._dataset = dataset._dataset
             self._name = dataset._name
             if file is None:
@@ -701,7 +675,17 @@ class HDF5dataset(StaticWrapper):
             self._dataset = dataset
             self._name = dataset.name
 
+    # File
     def open(self, mode='a', **kwargs):
+        """Opens the file to make this dataset usable.
+
+        Args:
+            mode (str, optional): The file mode to open the file with.
+            **kwargs (dict, optional): The additional keyword arguments to open the file with.
+
+        Returns:
+            This object.
+        """
         self._file_was_open = self._file.is_open
         if not self._dataset:
             self._file.open(mode=mode, **kwargs)
@@ -710,5 +694,28 @@ class HDF5dataset(StaticWrapper):
         return self
 
     def close(self):
+        """Closes the file of this dataset."""
         if not self._file_was_open:
             self._file.close()
+
+    # Data Modification
+    def append(self, data, axis=0):
+        """Append data to the dataset along a specified axis.
+
+        Args:
+            data: The data to append.
+            axis (int): The axis to append the data along.
+        """
+        with self:
+            # Get the shapes of the dataset and the new data to be added
+            s_shape = self._dataset.shape
+            d_shape = data.shape
+            # Determine the new shape of the dataset
+            new_shape = list(s_shape)
+            new_shape[axis] = s_shape[axis] + d_shape[axis]
+            # Determine the location where the new data should be assigned
+            slicing = tuple(slice(s_shape[ax]) for ax in range(0, axis)) + (-d_shape[axis], ...)
+
+            # Assign Data
+            self._dataset.resize(new_shape)  # Reshape for new data
+            self._dataset[slicing] = data    # Assign data to the new location

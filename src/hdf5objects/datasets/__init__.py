@@ -18,7 +18,3 @@ __status__ = "Prototype"
 
 # Local Libraries #
 
-
-# Definitions #
-# Classes #
-
