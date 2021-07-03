@@ -206,26 +206,48 @@ class HDF5Dataset(StaticWrapper):
 
 
 class HDF5Object(BaseObject):
+    """A class which wraps a HDF5 File and gives more functionality.
+
+    Attributes:
+        _file_attrs (set): The names of the attributes in the HDF5 file.
+        _datasets (set): The names of the datasets in the HDF5 file.
+        _path (obj:`Path`): The path to were the HDF5 file exists.
+        is_updating (bool): Determines if this object should constantly open the file for updating attributes.
+
+        c_kwargs: The keyword arguments for the data compression.
+        default_dataset_kwargs: The default keyword arguments for datasets when they are created.
+        default_file_attributes (dict): The default file attributes the HDF5 file should have.
+        default_datasets (dict): The default datasets the HDF5 file should have.
+
+        hf_fobj: The HDF5 File object this object wraps.
+
+    Args:
+        path: The path to the HDF5 file.
+        update (bool): Determines if this object should constantly open the file for updating attributes.
+        open_ (bool): Determines if this object will remain open after construction.
+        init (bool): Determines if this object should initialize.
+        **kwargs: The keyword arguments for the open method.
+    """
     # Todo: Rethink about how Errors and Warnings are handled in this object.
     dataset_type = HDF5Dataset
 
     # Magic Methods
     # Construction/Destruction
-    def __init__(self, path=None, update=True, init=False):
+    def __init__(self, path=None, update=True, open_=False, init=False, **kwargs):
         self._file_attrs = set()
         self._datasets = set()
         self._path = None
         self.is_updating = True
 
-        self.cargs = {"compression": "gzip", "compression_opts": 4}
-        self.default_datasets_parameters = self.cargs.copy()
+        self.c_kwargs = {"compression": "gzip", "compression_opts": 4}
+        self.default_dataset_kwargs = self.c_kwargs.copy()
         self.default_file_attributes = {}
         self.default_datasets = {}
 
         self.h5_fobj = None
 
         if init:
-            self.construct(path, update)
+            self.construct(path, update, open_, **kwargs)
 
     @property
     def path(self):
@@ -393,7 +415,7 @@ class HDF5Object(BaseObject):
 
         Args:
             path: The path to the HDF5 file.
-            update (bool): Determines if this object should constantly the file for updating attributes.
+            update (bool): Determines if this object should constantly open the file for updating attributes.
             open_ (bool): Determines if this object will remain open after construction.
             **kwargs: The keyword arguments for the open method.
 
@@ -462,7 +484,7 @@ class HDF5Object(BaseObject):
         Args:
             **kwargs: Datasets to assign when the file is created.
         """
-        d_kwargs = self.default_datasets_parameters.copy()
+        d_kwargs = self.default_dataset_kwargs.copy()
         d_kwargs.update(kwargs)
         self.update_datasets(**d_kwargs)
 
@@ -715,7 +737,7 @@ class HDF5Object(BaseObject):
                     self.h5_fobj[name].resize(data.shape)
                     self.h5_fobj[name][...] = data
                 else:
-                    d_kwargs = self.default_datasets_parameters.copy()
+                    d_kwargs = self.default_dataset_kwargs.copy()
                     d_kwargs.update(kwargs)
                     d_kwargs["data"] = data
 
@@ -755,7 +777,7 @@ class HDF5Object(BaseObject):
                         self.h5_fobj[name][...] = kwargs["data"]
                     else:
                         self._datasets.update((name,))
-                        d_kwargs = self.default_datasets_parameters.copy()
+                        d_kwargs = self.default_dataset_kwargs.copy()
                         d_kwargs.update(kwargs)
 
                         self.h5_fobj.require_dataset(name, **d_kwargs)
