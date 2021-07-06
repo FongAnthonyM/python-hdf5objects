@@ -13,6 +13,8 @@ __email__ = ""
 __status__ = "Prototype"
 
 # Default Libraries #
+from abc import ABC
+import pathlib
 from warnings import warn
 
 # Downloaded Libraries #
@@ -26,11 +28,62 @@ from ..hdf5object import HDF5Object
 # Definitions #
 # Classes #
 class BaseHDF5(HDF5Object, VersionedClass):
+    _registration = False
     _VERSION_TYPE = VersionType(name="BaseHDF5", class_=TriNumberVersion)
-    FILE_TYPE = "Abstract"
     VERSION = TriNumberVersion(0, 0, 0)
+    file_attribute_map = {"file_type": "FileType", "version": "Version"}
+    dataset_map = {}
+    FILE_TYPE = "Abstract"
 
-    # File Methods
+    # Class Methods
+    @classmethod
+    def validate_file_type(cls, obj):
+        t_name = cls.file_attribute_map["file_type"]
+
+        if isinstance(obj, pathlib.Path):
+            obj = obj.as_posix()
+
+        if isinstance(obj, str):
+            obj = HDF5Object(obj)
+
+        if isinstance(obj, h5py.File):
+            obj = HDF5Object(obj)
+
+        return cls.FILE_TYPE == obj[t_name]
+
+    @classmethod
+    def validate_file(cls, obj):
+        raise NotImplementedError
+
+    @classmethod
+    def get_version_from_object(cls, obj):
+        """An optional abstract method that must return a version from an object."""
+        v_name = cls.file_attribute_map["version"]
+
+        if isinstance(obj, pathlib.Path):
+            obj = obj.as_posix()
+
+        if isinstance(obj, str):
+            obj = h5py.File(obj)
+
+        return TriNumberVersion(obj.attrs[v_name])
+
+    # Magic Methods
+    # Construction/Destruction
+    def __new__(cls, *args, **kwargs):
+        """With given input, will return the correct subclass."""
+        if cls == BaseHDF5 and (kwargs or args):
+            if args:
+                obj = args[0]
+            else:
+                obj = kwargs["obj"]
+            class_ = cls.get_version_class(obj)
+            return class_(*args, **kwargs)
+        else:
+            return super(BaseHDF5, cls).__new__(cls)
+
+    # Instance Methods
+    # File
     def open(self, mode="a", exc=False, validate=False, **kwargs):
         if not self.is_open:
             try:

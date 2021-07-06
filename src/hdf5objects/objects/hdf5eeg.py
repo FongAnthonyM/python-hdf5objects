@@ -17,16 +17,52 @@ import pathlib
 import datetime
 
 # Downloaded Libraries #
+from classversioning import VersionType, TriNumberVersion
 import h5py
+from multipledispatch import dispatch
 
 # Local Libraries #
+from .basehdf5 import BaseHDF5
 
 
-# Todo: Inherit from the AdvanceHDF5 object
-# Todo: Make one big HDF5 Package
 # Definitions #
 # Classes #
-class HDF5EEG:
+class HDF5EEG(BaseHDF5):
+    _registration = False
+    _VERSION_TYPE = VersionType(name="HDF5EEG", class_=TriNumberVersion)
+    VERSION = TriNumberVersion(0, 0, 0)
+    file_attribute_map = {"file_type": "FileType",
+                          "version": "Version",
+                          "name": "name",
+                          "ID": "ID",
+                          "start": "start",
+                          "end": "end",
+                          "sample_rate": "sample_rate",
+                          "n_samples": "n_samples"}
+
+    dataset_map = {"data": "EEG Array",
+                   "s_axis": "s_axis",
+                   "t_axis": "t_axis"}
+    FILE_TYPE = "EEG"
+
+    # Magic Methods
+    # Construction/Destruction
+    def __init__(self, obj, **kwargs):
+        super().__init__()
+
+    # Representation
+    def __repr__(self):
+        return repr(self.start)
+
+    # Instance Methods
+
+
+
+
+
+
+
+class HDF5EEGor:
     structure = {'type': 'type',
                  'name': 'name',
                  'ID': 'ID',
@@ -59,7 +95,7 @@ class HDF5EEG:
         self._dt_axis = None
 
         self.h5_fobj = None
-        
+
         self.cargs = {'compression': 'gzip', 'compression_opts': 4}
         self.is_updating = False
 

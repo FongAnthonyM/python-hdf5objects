@@ -208,6 +208,9 @@ class HDF5Dataset(StaticWrapper):
 class HDF5Object(BaseObject):
     """A class which wraps a HDF5 File and gives more functionality.
 
+    Class Attributes:
+        dataset_type: The class to cast the HDF5 dataset as.
+
     Attributes:
         _file_attrs (set): The names of the attributes in the HDF5 file.
         _datasets (set): The names of the datasets in the HDF5 file.
@@ -222,7 +225,7 @@ class HDF5Object(BaseObject):
         hf_fobj: The HDF5 File object this object wraps.
 
     Args:
-        path: The path to the HDF5 file.
+        obj: An object to build this object from. It can be the path to the file or a File objects.
         update (bool): Determines if this object should constantly open the file for updating attributes.
         open_ (bool): Determines if this object will remain open after construction.
         init (bool): Determines if this object should initialize.
@@ -233,7 +236,7 @@ class HDF5Object(BaseObject):
 
     # Magic Methods
     # Construction/Destruction
-    def __init__(self, path=None, update=True, open_=False, init=False, **kwargs):
+    def __init__(self, obj=None, update=True, open_=False, init=False, **kwargs):
         self._file_attrs = set()
         self._datasets = set()
         self._path = None
@@ -247,7 +250,7 @@ class HDF5Object(BaseObject):
         self.h5_fobj = None
 
         if init:
-            self.construct(path, update, open_, **kwargs)
+            self.construct(obj, update, open_, **kwargs)
 
     @property
     def path(self):
@@ -271,6 +274,11 @@ class HDF5Object(BaseObject):
             return bool(self.h5_fobj)
         except:
             return False
+
+    @property
+    def attr(self):
+        """Returns the attributes from the file in the traditional way."""
+        return self.h5_fobj.attrs
 
     @property
     def file_attribute_names(self):
@@ -410,11 +418,11 @@ class HDF5Object(BaseObject):
 
     # Instance Methods
     # Constructors/Destructors
-    def construct(self, path=None, update=None, open_=False, **kwargs):
+    def construct(self, obj=None, update=None, open_=False, **kwargs):
         """Constructs this object.
 
         Args:
-            path: The path to the HDF5 file.
+            obj: An object to build this object from. It can be the path to the file or a File objects.
             update (bool): Determines if this object should constantly open the file for updating attributes.
             open_ (bool): Determines if this object will remain open after construction.
             **kwargs: The keyword arguments for the open method.
@@ -422,8 +430,14 @@ class HDF5Object(BaseObject):
         Returns:
             This object.
         """
-        if path is not None:
-            self.path = path
+        if isinstance(obj, str) or isinstance(obj, pathlib.Path):
+            self.path = obj
+        elif isinstance(obj, h5py.File):
+            if obj:
+                self.path = obj.filename
+            else:
+                raise ValueError("The supplied HDF5 File must be open.")
+
         if update is not None:
             self.is_updating = update
 
