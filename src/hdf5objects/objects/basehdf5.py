@@ -13,12 +13,12 @@ __email__ = ""
 __status__ = "Prototype"
 
 # Default Libraries #
-from abc import ABC
 import pathlib
 from warnings import warn
 
 # Downloaded Libraries #
-from classversioning import VersionedClass, VersionType, TriNumberVersion
+from baseobjects import InitMeta, AutomaticProperties
+from classversioning import VersionedMeta, VersionedClass, VersionType, TriNumberVersion
 import h5py
 
 # Local Libraries #
@@ -26,8 +26,14 @@ from ..hdf5object import HDF5Object
 
 
 # Definitions #
+# Meta Classes #
+# Todo: Add this to classversioning
+class VersionedInitMeta(InitMeta, VersionedMeta):
+    ...
+
+
 # Classes #
-class BaseHDF5(HDF5Object, VersionedClass):
+class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=VersionedInitMeta):
     _registration = False
     _VERSION_TYPE = VersionType(name="BaseHDF5", class_=TriNumberVersion)
     VERSION = TriNumberVersion(0, 0, 0)
@@ -36,6 +42,55 @@ class BaseHDF5(HDF5Object, VersionedClass):
     FILE_TYPE = "Abstract"
 
     # Class Methods
+    # Property Creation
+    # Callbacks
+    @classmethod
+    def _get_attribute(cls, obj, name):
+        return obj.attributes[obj.file_attribte_map[name]]
+
+    @classmethod
+    def _set_attribute(cls, obj, name, value):
+        obj.attributes[obj.file_attribte_map[name]] = value
+
+    @classmethod
+    def _del_attribute(cls, obj, name):
+        del obj.attrs[obj.file_attribte_map[name]]
+
+    # Callback Factories
+    @classmethod
+    def _attribute_callback_factory(cls, name):
+        """A factory for creating property modification functions.
+
+        Args:
+            name (str): An object that can be use to create the get, set, and delete functions
+
+        Returns:
+            get_: The get function for a property object.
+            set_: The wet function for a property object.
+            del_: The del function for a property object.
+        """
+
+        def get_(obj):
+            """Gets the object."""
+            return cls._get_attribute(obj, name)
+
+        def set_(obj, value):
+            """Sets the wrapped object."""
+            cls._set_attribute(obj, name, value)
+
+        def del_(obj):
+            """Deletes the wrapped object."""
+            cls._del_attribute(obj, name)
+
+        return get_, set_, del_
+
+    # Property Mapping
+    @classmethod
+    def _construct_properties_map(cls):
+        file_attributes = ["file_attribute_map", cls._iterable_to_properties, cls._attribute_callback_factory]
+        cls._properties_map.append(file_attributes)
+
+    #
     @classmethod
     def validate_file_type(cls, obj):
         t_name = cls.file_attribute_map["file_type"]
@@ -98,8 +153,7 @@ class BaseHDF5(HDF5Object, VersionedClass):
             else:
                 if validate:
                     self.validate_file_structure(**kwargs)
-                self.load_attributes()
-                self.load_datasets()
+                self.load_containers()
                 return self.h5_fobj
 
     # General Methods

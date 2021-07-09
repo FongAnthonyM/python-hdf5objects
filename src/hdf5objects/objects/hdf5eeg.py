@@ -19,7 +19,6 @@ import datetime
 # Downloaded Libraries #
 from classversioning import VersionType, TriNumberVersion
 import h5py
-from multipledispatch import dispatch
 
 # Local Libraries #
 from .basehdf5 import BaseHDF5
@@ -49,12 +48,186 @@ class HDF5EEG(BaseHDF5):
     # Construction/Destruction
     def __init__(self, obj, **kwargs):
         super().__init__()
+        self._file_type
+
+    @property
+    def name(self):
+        return self.attributes[self.file_attribute_map["name"]]
 
     # Representation
     def __repr__(self):
         return repr(self.start)
 
     # Instance Methods
+    # File Creation/Construction
+
+
+
+    def build(self, start=None, data=None, saxis=None, taxis=None):
+        if self.path.is_dir():
+            if start is None:
+                f_name = self.name
+            else:
+                f_name = self.name + '_' + start.isoformat('_', 'seconds').replace(':', '~')
+            self.path = pathlib.Path(self.path, f_name + '.h5')
+
+        self.h5_fobj = h5py.File(str(self.path))
+
+        self.h5_fobj.attrs[self.structure['type']] = self._type
+        self.h5_fobj.attrs[self.structure['name']] = self._name
+        self.h5_fobj.attrs[self.structure['ID']] = self._ID
+        self.h5_fobj.attrs[self.structure['start']] = 0
+        self.h5_fobj.attrs[self.structure['end']] = 0
+
+        ecog = self.h5_fobj.create_dataset(self.structure['data'], dtype='f32', data=data, maxshape=(None, None), **self.cargs)
+        ecog.attrs[self.structure['samplerate']] = 0
+        ecog.attrs[self.structure['nsamples']] = 0
+
+        sstamps = self.h5_fobj.create_dataset(self.structure['saxis'], dtype='i', data=saxis, maxshape=(None,), **self.cargs)
+        tstamps = self.h5_fobj.create_dataset(self.structure['taxis'], dtype='f8', data=taxis, maxshape=(None,), **self.cargs)
+
+        ecog.dims.create_scale(sstamps, 'sample axis')
+        ecog.dims.create_scale(tstamps, 'time axis')
+
+        ecog.dims[0].attach_scale(sstamps)
+        ecog.dims[0].attach_scale(tstamps)
+
+        self.h5_fobj.flush()
+
+        return self.h5_fobj
+
+
+    # Data Manipulation
+    def find_sample(self, s):
+        with self._temp_open():
+            s_axis = self.s_axis
+            if s in s_axis:
+                index = list(s_axis).index(s)
+            else:
+                index = None
+
+        return index
+
+    def find_time(self, dt, tails=False):
+        op = self.is_open
+        self.open()
+
+        dt_axis = self.dt_axis
+        index = None
+
+        if tails and dt < dt_axis[0]:
+            index = 0
+        elif tails and dt > dt_axis[-1]:
+            index = -1
+        else:
+            for i in range(1, len(dt_axis)):
+                if dt_axis[i-1] <= dt <= dt_axis[i]:
+                    if dt_axis[i-1] == dt:
+                        index = i-1
+                    else:
+                        index = i
+                    break
+
+        if not op:
+            self.close()
+        return index
+
+    def find_time_range(self, s=None, e=None, tails=False):
+        op = self.is_open
+        self.open()
+
+        dt_axis = self.dt_axis
+        start = None
+        end = None
+
+        if s is None or (tails and s < dt_axis[0]):
+            start = 0
+        if e is None or (tails and e > dt_axis[-1]):
+            end = -1
+
+        for i in range(1, len(dt_axis)):
+            if dt_axis[i - 1] <= s <= dt_axis[i]:
+                if dt_axis[i - 1] == s:
+                    start = i - 1
+                else:
+                    start = i
+                if end == -1:
+                    break
+            if dt_axis[i - 1] <= e <= dt_axis[i]:
+                if dt_axis[i - 1] == s:
+                    end = i - 1
+                else:
+                    end = i
+                break
+
+        if not op:
+            self.close()
+        return dt_axis[start:end]
+
+    def data_range(self):
+        pass
+
+    def data_range_sample(self, s=None, e=None, tails=False):
+        op = self.is_open
+        self.open()
+        s_axis = list(self.s_axis)
+        start = None
+        end = None
+        d_range = None
+
+        if s is None or (tails and s < s_axis[0]):
+            start = 0
+        elif s in s_axis:
+            start = s_axis.index(s)
+
+        if e is None or (tails and e > s_axis[-1]):
+            end = 0
+        elif e in s_axis:
+            end = s_axis.index(e)
+
+        if start is not None and end is not None:
+            d_range = self.data[start:end]
+
+        if not op:
+            self.close()
+        return d_range, start, end
+
+    def data_range_time(self, s=None, e=None, tails=False):
+        op = self.is_open
+        self.open()
+        dt_axis = self.dt_axis
+        start = None
+        end = None
+        d_range = None
+
+        if s is None or (tails and s < dt_axis[0]):
+            start = 0
+
+        if e is None or (tails and e > dt_axis[-1]):
+            end = -1
+
+        if start is None or end is None:
+            for i in range(1, len(dt_axis)):
+                if dt_axis[i-1] <= s <= dt_axis[i]:
+                    if dt_axis[i-1] == s:
+                        start = i-1
+                    else:
+                        start = i
+                if dt_axis[i-1] <= e <= dt_axis[i]:
+                    if dt_axis[i-1] == e:
+                        end = i-1
+                    else:
+                        end = i
+                if start is not None and end is not None:
+                    break
+
+        if start is not None and end is not None:
+            d_range = self.data[start:end]
+
+        if not op:
+            self.close()
+        return d_range, start, end
+
 
 
 
