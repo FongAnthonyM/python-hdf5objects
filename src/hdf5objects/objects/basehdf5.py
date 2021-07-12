@@ -17,8 +17,8 @@ import pathlib
 from warnings import warn
 
 # Downloaded Libraries #
-from baseobjects import InitMeta, AutomaticProperties
-from classversioning import VersionedMeta, VersionedClass, VersionType, TriNumberVersion
+from baseobjects import AutomaticProperties
+from classversioning import VersionedInitMeta, VersionedClass, VersionType, TriNumberVersion
 import h5py
 
 # Local Libraries #
@@ -26,18 +26,12 @@ from ..hdf5object import HDF5Object
 
 
 # Definitions #
-# Meta Classes #
-# Todo: Add this to classversioning
-class VersionedInitMeta(InitMeta, VersionedMeta):
-    ...
-
-
 # Classes #
 class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=VersionedInitMeta):
     _registration = False
     _VERSION_TYPE = VersionType(name="BaseHDF5", class_=TriNumberVersion)
     VERSION = TriNumberVersion(0, 0, 0)
-    file_attribute_map = {"file_type": "FileType", "version": "Version"}
+    file_attribute_map = {"file_type": "FileType", "file_version": "FileVersion"}
     dataset_map = {}
     FILE_TYPE = "Abstract"
 
@@ -46,15 +40,24 @@ class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=Versio
     # Callbacks
     @classmethod
     def _get_attribute(cls, obj, name):
-        return obj.attributes[obj.file_attribte_map[name]]
+        try:
+            setattr(obj, "__" + name, obj.attributes[obj.file_attribute_map[name]])
+        finally:
+            getattr(obj, "__" + name)
 
     @classmethod
     def _set_attribute(cls, obj, name, value):
-        obj.attributes[obj.file_attribte_map[name]] = value
+        try:
+            obj.attributes[obj.file_attribute_map[name]] = value
+        except:
+            pass
 
     @classmethod
     def _del_attribute(cls, obj, name):
-        del obj.attrs[obj.file_attribte_map[name]]
+        try:
+            del obj.attrs[obj.file_attribute_map[name]]
+        except:
+            pass
 
     # Callback Factories
     @classmethod
@@ -90,7 +93,7 @@ class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=Versio
         file_attributes = ["file_attribute_map", cls._iterable_to_properties, cls._attribute_callback_factory]
         cls._properties_map.append(file_attributes)
 
-    #
+    # File Validation
     @classmethod
     def validate_file_type(cls, obj):
         t_name = cls.file_attribute_map["file_type"]
@@ -137,6 +140,14 @@ class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=Versio
         else:
             return super(BaseHDF5, cls).__new__(cls)
 
+    def __init__(self, init=True, **kwargs):
+        super().__init__(init=False)
+        self.__file_type = ""
+        self.__file_version = ""
+
+        if init:
+            self.construct(**kwargs)
+
     # Instance Methods
     # File
     def open(self, mode="a", exc=False, validate=False, **kwargs):
@@ -175,11 +186,11 @@ class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=Versio
                 report["file_type"]["differences"]["file"] = self.h5_fobj.attrs["FileType"]
 
         # Check File Attributes
-        if self.h5_fobj.attrs.keys() == self._file_attrs:
+        if self.h5_fobj.attrs.keys() == self.attributes:
             report["attrs"]["valid"] = True
         else:
             f_attr_set = set(self.h5_fobj.attrs.keys())
-            o_attr_set = self._file_attrs
+            o_attr_set = self.attributes
             report["attrs"]["differences"]["object"] = o_attr_set - f_attr_set
             report["attrs"]["differences"]["file"] = f_attr_set - o_attr_set
 

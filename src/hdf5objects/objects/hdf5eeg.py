@@ -31,14 +31,10 @@ class HDF5EEG(BaseHDF5):
     _VERSION_TYPE = VersionType(name="HDF5EEG", class_=TriNumberVersion)
     VERSION = TriNumberVersion(0, 0, 0)
     file_attribute_map = {"file_type": "FileType",
-                          "version": "Version",
-                          "name": "name",
-                          "ID": "ID",
+                          "file_version": "FileVersion",
+                          "subject_name": "subject_name",
                           "start": "start",
-                          "end": "end",
-                          "sample_rate": "sample_rate",
-                          "n_samples": "n_samples"}
-
+                          "end": "end"}
     dataset_map = {"data": "EEG Array",
                    "s_axis": "s_axis",
                    "t_axis": "t_axis"}
@@ -46,19 +42,68 @@ class HDF5EEG(BaseHDF5):
 
     # Magic Methods
     # Construction/Destruction
-    def __init__(self, obj, **kwargs):
-        super().__init__()
-        self._file_type
+    def __init__(self, obj, init=True, **kwargs):
+        super().__init__(init=False)
+        self.__subject_name = ""
+        self.__start = 0
+        self.__end = 0
+
+        if init:
+            self.construct(obj, **kwargs)
 
     @property
-    def name(self):
-        return self.attributes[self.file_attribute_map["name"]]
+    def start(self):
+        try:
+            self.__start = datetime.datetime.fromtimestamp(self.attributes[self.file_attribute_map["start"]])
+        finally:
+            return self.__start
+
+    @start.setter
+    def start(self, value):
+        try:
+            if isinstance(value, datetime.datetime):
+                value = value.timestamp()
+            self.attributes[self.file_attribute_map["start"]] = value
+        except:
+            pass
+
+    @property
+    def end(self):
+        try:
+            self.__end = datetime.datetime.fromtimestamp(self.attributes[self.file_attribute_map["end"]])
+        finally:
+            return self.__end
+
+    @end.setter
+    def end(self, value):
+        try:
+            if isinstance(value, datetime.datetime):
+                value = value.timestamp()
+            self.attributes[self.file_attribute_map["end"]] = value
+        except:
+            pass
 
     # Representation
     def __repr__(self):
         return repr(self.start)
 
     # Instance Methods
+    # Constructors/Destructors
+    def construct(self, obj=None, **kwargs):
+        """Constructs this object.
+
+        Args:
+            obj: An object to build this object from. It can be the path to the file or a File object.
+            update (bool): Determines if this object should constantly open the file for updating attributes.
+            open_ (bool): Determines if this object will remain open after construction.
+            **kwargs: The keyword arguments for the open method.
+
+        Returns:
+            This object.
+        """
+        super().construct(obj, **kwargs)
+
+
     # File Creation/Construction
 
 
@@ -96,6 +141,8 @@ class HDF5EEG(BaseHDF5):
 
         return self.h5_fobj
 
+    def generate_file_name(self):
+        return self.name + '_' + self.start.isoformat('_', 'seconds').replace(':', '~')
 
     # Data Manipulation
     def find_sample(self, s):

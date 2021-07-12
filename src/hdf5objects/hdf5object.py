@@ -397,7 +397,7 @@ class HDF5Attributes(HDF5BaseWrapper):
         __name = "__" + name
         try:
             with self:
-                del self._attribute_manager[name]  # Todo: Check if this works.
+                del self._attribute_manager[name]
                 delattr(self, __name)
         except Exception as e:
             warn("Could not update attribute due to error: " + str(e), stacklevel=2)
@@ -447,6 +447,7 @@ class HDF5Group(HDF5BaseWrapper):
     """
     _wrapped_types = [h5py.Group]
     _wrap_attributes = ["_group"]
+    attribute_map = {}
 
     # Magic Methods
     # Constructors/Destructors
@@ -543,34 +544,44 @@ class HDF5Dataset(HDF5BaseWrapper):
     """
     _wrapped_types = [h5py.Dataset]
     _wrap_attributes = ["_dataset"]
+    attribute_map = {}
 
     # Magic Methods
     # Constructors/Destructors
-    def __init__(self, dataset=None, file=None, init=True):
+    def __init__(self, dataset=None, name=None, file=None, init=True, **kwargs):
         super().__init__(file=file, init=False)
         self._dataset = None
         self.attributes = None
 
         if init:
-            self.construct(dataset=dataset, file=file)
+            self.construct(dataset, name, file, **kwargs)
 
     # Instance Methods
     # Constructors/Destructors
-    def construct(self, dataset=None, file=None):
+    def construct(self, dataset=None, name=None, file=None, create=False, **kwargs):
         """Constructs this object from the provided arguments.
 
         Args:
             dataset: The HDF5 dataset to build this dataset around.
+            name: The name of the dataset.
             file: The file which the dataset originates from.
+            create: Determines if the dataset will be created if it does not exist.
+            kwargs: The key word arguments to construct the base HDF5 dataset.
         """
         if file is None and isinstance(dataset, str):
             raise ValueError("A file must be given if giving dataset name")
+
+        if name is not None:
+            self._name = name
 
         if dataset is not None:
             self.set_dataset(dataset)
 
         if file is not None:
             self.set_file(file)
+
+        if create:
+            self.require(name=self._name, **kwargs)
 
         self.attributes = HDF5Attributes(name=self._name, file=self._file)
 
@@ -612,6 +623,18 @@ class HDF5Dataset(HDF5BaseWrapper):
         self._name = dataset
 
     # Data Modification
+    def attach_axis(self, dataset, axis=0):
+        if isinstance(dataset, HDF5Dataset):
+            dataset = dataset._dataset
+        self._dataset.dim[axis].attach_scale(dataset)
+
+    def require(self, name=None, **kwargs):
+        if name is not None:
+            self._name = name
+
+        self._dataset = self._file.h5_fobj.require_container(name, **kwargs)
+        return self
+
     def append(self, data, axis=0):
         """Append data to the dataset along a specified axis.
 
@@ -1064,12 +1087,11 @@ class HDF5Object(BaseObject):
         self.get_container_names()
 
     # General
-    def create_dataset(self, name, data=None, **kwargs):
+    def create_dataset(self, name, **kwargs):
         """Creates a dataset in the HDF5 file.
 
          Args:
             name (str): The name of the dataset in the HDF5 file.
-            data: The data to add to the dataset.
             **kwargs: The keyword arguments for the new dataset.
 
         Returns:
@@ -1079,17 +1101,12 @@ class HDF5Object(BaseObject):
 
         try:
             with self._temp_open():
-                if name in self._containers:
-                    self.h5_fobj[name].resize(data.shape)
-                    self.h5_fobj[name][...] = data
-                else:
-                    d_kwargs = self.default_dataset_kwargs.copy()
-                    d_kwargs.update(kwargs)
-                    d_kwargs["data"] = data
+                d_kwargs = self.default_dataset_kwargs.copy()
+                d_kwargs.update(kwargs)
 
-                    self.h5_fobj.require_container(name, **d_kwargs)
-                    self._containers.update((name,))
-                    setattr(self, __name, self.dataset_type(self.h5_fobj[name], self))
+                self.h5_fobj.require_container(name, **d_kwargs)
+                self._containers.update((name,))
+                setattr(self, __name, self.dataset_type(self.h5_fobj[name], self))
         except Exception as e:
             warn("Could not set dataset due to error: " + str(e), stacklevel=2)
 
