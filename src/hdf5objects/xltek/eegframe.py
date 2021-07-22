@@ -22,9 +22,9 @@ import numpy as np
 
 # Definitions #
 # Functions #
-def smart_append(a, b):
+def smart_append(a, b, axis=0):
     if isinstance(a, np.ndarray):
-        return np.append(a, b, 0)
+        return np.append(a, b, axis)
     else:
         return a.append(b)
 

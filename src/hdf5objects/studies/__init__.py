@@ -17,7 +17,11 @@ __status__ = "Prototype"
 # Downloaded Libraries #
 
 # Local Libraries #
-from .channelaxis import ChannelAxis, ChannelAxisMap
-from .sampleaxis import SampleAxis, SampleAxisMap
-from .timeaxis import TimeAxis, TimeAxisMap
-from .timeseriesdataset import TimeSeriesDataset, TimeSeriesMap
+
+
+# Definitions #
+# Classes #
+
+# Main #
+if __name__ == "__main__":
+    pass

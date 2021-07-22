@@ -13,149 +13,185 @@ __email__ = ""
 __status__ = "Prototype"
 
 # Default Libraries #
-import pathlib
 import datetime
 
 # Downloaded Libraries #
+from classversioning import VersionType, TriNumberVersion
+from bidict import bidict
 import numpy as np
 
 # Local Libraries #
-from .hdf5eeg import HDF5EEG
+from ..datasets import TimeSeriesDataset, TimeSeriesMap, ChannelAxisMap, SampleAxisMap, TimeAxisMap
+from ..hdf5map import HDF5Map
+from ..hdf5object import HDF5Dataset
+from .hdf5eeg import HDF5EEG, HDF5EEGMap
+
+
+# Definitions #
+# Classes #
+class XLTEKDataMap(TimeSeriesMap):
+    default_attributes = {"sample_rate": "Sampling Rate",
+                          "n_samples": "n_samples",
+                          "c_axis": "c_axis",
+                          "t_axis": "t_axis"}
+
+
+class HDF5EXLTEKMap(HDF5EEGMap):
+    default_attributes = bidict({"file_type": "type",
+                                 "file_version": "version",
+                                 "subject_id": "subject_id",
+                                 "start": "start time",
+                                 "end": "end time",
+                                 "start_entry": "start entry",
+                                 "end_entry": "end entry",
+                                 "total_samples": "total samples"})
+    default_containers = bidict({"data": "ECoG Array",
+                                 "channel_axis": "channel indices",
+                                 "sample_axis": "samplestamp axis",
+                                 "time_axis": "timestamp axis",
+                                 "entry_axis": "entry vector"})
+    default_maps = {"data": XLTEKDataMap(name="data"),
+                    "channel_axis": ChannelAxisMap(name="channel_axis"),
+                    "sample_axis": SampleAxisMap(name="sample_axis"),
+                    "time_axis": TimeAxisMap(name="time_axis"),
+                    "entry_axis": HDF5Map(name="entry_axis", type_=HDF5Dataset)}
 
 
 class HDF5XLTEK(HDF5EEG):
-    structure = {'type': 'type',
-                 'name': 'name',
-                 'ID': 'ID',
-                 'start': 'start time',
-                 'end': 'end time',
-                 'data': 'ECoG Array',
-                 'samplerate': 'Sampling Rate',
-                 'nsamples': 'total samples',
-                 'saxis': 'samplestamp vector',
-                 'taxis': 'timestamp vector'}
+    _registration = True
+    _VERSION_TYPE = VersionType(name="HDF5XLTEK", class_=TriNumberVersion)
+    VERSION = TriNumberVersion(0, 0, 0)
+    FILE_TYPE = "XLTEK_EEG"
+    default_map = HDF5EXLTEKMap()
 
-    def __init__(self, name, ID=None, path=None, init=False, entry=None):
-        HDF5EEG.__init__(self, name, ID, path)
-        self._type = 'XLTEK_EEG'
+    def __init__(self, file=None, s_id=None, s_dir=None, start=None, init=True, **kwargs):
+        super().__init__(init=False)
         self._start_entry = None
         self._end_entry = None
+        self._total_samples = 0
 
-        if self.path.is_file():
-            self.open()
-            if not init:
-                self.close()
-        elif init:
-            self.make_file(entry)
+        self.entry_axis = None
 
-    @property
-    def start_entry(self):
-        op = self.is_open
-        self.open()
+        if init:
+            self.construct(file, s_id, s_dir, start, **kwargs)
 
-        if 'start entry' in self.h5_fobj.attrs and (self._start_entry is None or self.is_updating):
-            self._start_entry = self.h5_fobj.attrs['start entry']
+    def construct_file_attributes(self, **kwargs):
+        self.attributes[self.map.attributes["total_samples"]] = self._total_samples
+        self.attributes[self.map.attributes["start_entry"]] = self._start_entry
+        self.attributes[self.map.attributes["end_entry"]] = self._end_entry
+        super().construct_file_attributes(**kwargs)
 
-        if not op:
-            self.close()
+    # Entry Axis
+    def create_entry_axis(self, axis=None, **kwargs):
+        if axis is None:
+            axis = self.eeg_data.t_axis
+        if "name" not in kwargs:
+            kwargs["name"] = self.map.containers["entry_axis"]
 
-        return self._start_entry
+        self.entry_axis = self.map["entry_axis"].create_object(file=self, dtype='i', maxshape=(None, 4), **kwargs)
+        self.entry_axis.make_scale("entry axis")
+        self.eeg_data.attach_axis(self.entry_axis, axis)
+        return self.entry_axis
 
-    @property
-    def end_entry(self):
-        op = self.is_open
-        self.open()
+    def attach_entry_axis(self, dataset, axis=None):
+        if axis is None:
+            axis = self.eeg_data.t_axis
+        self.eeg_data.attach_axis(dataset, axis)
+        self.entry_axis = dataset
 
-        if 'end entry' in self.h5_fobj.attrs and (self._end_entry is None or self.is_updating):
-            self._end_entry = self.h5_fobj.attrs['end entry']
+    def detach_entry_axis(self, axis=None):
+        if axis is None:
+            axis = self.eeg_data.t_axis
+        self.eeg_data.detach_axis(self.entry_axis, axis)
+        self.entry_axis = None
 
-        if not op:
-            self.close()
+    def load_entry_axis(self):
+        with self.temp_open():
+            if "entry axis" in self.eeg_data.dims[self.eeg_data.t_axis]:
+                self.entry_axis = HDF5Dataset(dataset=self.eeg_data.dims[self.eeg_data.t_axis]["entry axis"], file=self)
 
-        return self._end_entry
+    # EEG Data
+    def create_eeg_dataset(self, data=None, shape=None, maxshape=None, dtype=None, **kwargs):
+        if maxshape is None:
+            maxshape = (None, None)
 
-    @property
-    def n_samples(self):
-        op = self.is_open
-        self.open()
+        if data is None:
+            if shape is None:
+                shape = (0, 0)
+            if dtype is None:
+                dtype = "f4"
 
-        if self.structure['nsamples'] in self.h5_fobj.attrs and (self._n_samples is None or self.is_updating):
-            self._n_samples = int(self.h5_fobj.attrs[self.structure['nsamples']])
+        kwargs["data"] = data
+        kwargs["shape"] = shape
+        kwargs["maxshape"] = maxshape
+        kwargs["dtype"] = dtype
 
-        if not op:
-            self.close()
+        self.eeg_data = TimeSeriesDataset(init=False)
+        self.eeg_data.map.attributes = self.map["data"].attributes.copy()
+        self.eeg_data.channel_axis_label = "channel axis"
+        self.eeg_data.sample_axis_label = "sample axis"
+        self.eeg_data.time_axis_label = "time axis"
+        self.eeg_data.construct(name=self.map.containers["data"], file=self, **kwargs)
+        self.eeg_data.axis_map["channel_axis"] = self.map.containers["channel_axis"]
+        self.eeg_data.axis_map["sample_axis"] = self.map.containers["sample_axis"]
+        self.eeg_data.axis_map["time_axis"] = self.map.containers["time_axis"]
+        self.structure[self.map.containers["data"]].object = self.eeg_data
 
-        return self._n_samples
+    def load_eeg_data(self):
+        with self.temp_open():
+            d_name = self.map.containers["data"]
+            if d_name in self.h5_fobj:
+                self.create_eeg_dataset(dataset=self.h5_fobj[d_name], create=False)
+                self.load_entry_axis()
+            else:
+                self.create_eeg_dataset(name=d_name, create=False)
+                self.create_entry_axis()
 
+    def set_eeg_data(self, data, sample_rate=None, start_sample=None, end_sample=None,
+                     start_time=None, end_time=None, dtype='f4', maxshape=(None, None), **kwargs):
+        d_kwargs = self.default_file_attributes.copy()
+        d_kwargs.update(kwargs)
+        d_name = self.map.containers["data"]
+        with self.temp_open():
+            if self.eeg_data is None:
+                self.create_eeg_dataset(name=d_name, create=False)
+                self.create_entry_axis()
+            if sample_rate is not None:
+                self.eeg_data.sample_rate = sample_rate
+
+            self.eeg_data.set_data(self, data, sample_rate, start_sample, end_sample, start_time, end_time,
+                                   axis=None,
+                                   dtype=dtype, maxshape=maxshape, **d_kwargs)
+
+    # XLTEK Entry # Todo: Redesign this.
     def format_entry(self, entry):
-        data = entry['data']
-        dshape = data.shape
-        channels = np.arange(0, dshape[1])
-        samples = np.array(range(entry['start_sample'], entry['end_sample']))
+        data = entry["data"]
+        n_channels = data.shape[self.eeg_data.c_axis]
+        n_samples =data.shape[self.time_axis]
 
-        locs = np.zeros((dshape[0], 4), dtype=np.int32)
-        locs[:, :] = entry['entry_info']
+        channel_axis = np.arange(0, n_channels)
+        sample_axis = np.arrange(entry["start_sample"], entry["end_sample"])
 
-        times = np.zeros(dshape[0], dtype=np.float64)
-        for i in range(0, len(samples)):
-            delta_t = datetime.timedelta(seconds=((samples[i] - entry['snc_sample']) * 1.0 / entry['sample_rate']))
-            time = entry['snc_time'] + delta_t
-            times[i] = time.timestamp()
+        entry_info = np.zeros((n_samples, 4), dtype=np.int32)
+        entry_info[:, :] = entry["entry_info"]
 
-        return data, dshape, samples, times, locs, channels, entry['sample_rate']
+        time_axis = np.zeros(n_samples, dtype=np.float64)
+        for sample, i in enumerate(sample_axis):
+            delta_t = datetime.timedelta(seconds=((sample - entry["snc_sample"]) * 1.0 / entry['sample_rate']))
+            time = entry["snc_time"] + delta_t
+            time_axis[i] = time.timestamp()
 
-    def make_file(self, entry):
-        start = entry['snc_start'].replace(tzinfo=None)
-        data, dshape, samples, times, locs, channels, sample_rate = self.format_entry(entry)
+        return data, sample_axis, time_axis, entry_info, channel_axis, entry['sample_rate']
 
-        self.build(start, data, samples, times)
+    def add_entry(self, entry):
+        data, samples, times, entry_info, channels, sample_rate = self.format_entry(entry)
 
-        self.h5_fobj.attrs['start time'] = times[0]
-        self.h5_fobj.attrs['end time'] = times[-1]
-        self.h5_fobj.attrs['total samples'] = len(samples)
-        self.h5_fobj.attrs['start entry'] = locs[0]
-        self.h5_fobj.attrs['end entry'] = locs[0]
+        self.end_entry = entry_info[0]
+        self.end = times[-1]
 
-        ecog = self.h5_fobj['ECoG Array']
-        estamps = self.h5_fobj.create_dataset('entry vector', dtype='i', data=locs, maxshape=(None,4), **self.cargs)
-        cstamps = self.h5_fobj.create_dataset('channel indices', dtype='i', data=channels, maxshape=(None,), **self.cargs)
+        self.eeg_data.append_data(data)
+        self.sample_axis.append(samples)
+        self.time_axis.append(times)
+        self.entry_axis.append(entry_info)
 
-        ecog.dims.create_scale(estamps, 'entry axis')
-        ecog.dims.create_scale(cstamps, 'channel axis')
-
-        ecog.dims[0].attach_scale(estamps)
-        ecog.dims[1].attach_scale(cstamps)
-
-        self.h5_fobj.flush()
-
-        return self.h5_fobj
-
-    def add_data(self, entry, h5_fobj=None):
-        if h5_fobj is None:
-            h5_fobj = self.h5_fobj
-
-        data, dshape, samples, times, locs, channels, sample_rate = self.format_entry(entry)
-
-        h5_fobj.attrs['end entry'] = locs[0]
-        h5_fobj.attrs['end time'] = times[-1]
-
-        ecog = h5_fobj['ECoG Array']
-        last_total = ecog.shape[0]
-
-        samplestamps = h5_fobj['samplestamp vector']
-        timestamps = h5_fobj['timestamp vector']
-        entrystamps = h5_fobj['entry vector']
-
-        ecog.resize(last_total+dshape[0], 0)
-        samplestamps.resize(last_total+dshape[0], 0)
-        timestamps.resize(last_total+dshape[0], 0)
-        entrystamps.resize(last_total+dshape[0], 0)
-
-        ecog[-dshape[0]:, :] = data
-        samplestamps[-dshape[0]:] = samples
-        timestamps[-dshape[0]:] = times
-        entrystamps[-dshape[0]:, :] = locs
-
-        h5_fobj.attrs['total samples'] = len(samplestamps)
-
-
+        self.total_samples = self.eeg_data.n_samples

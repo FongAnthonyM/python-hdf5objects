@@ -17,5 +17,5 @@ __status__ = "Prototype"
 # Downloaded Libraries #
 
 # Local Libraries #
-from hdf5object import HDF5Object, HDF5Dataset
-
+from .hdf5object import HDF5BaseWrapper, HDF5Attributes, HDF5Group, HDF5Dataset, HDF5Object
+from .objects import *

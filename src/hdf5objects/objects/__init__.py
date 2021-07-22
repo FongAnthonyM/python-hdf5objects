@@ -18,3 +18,4 @@ __status__ = "Prototype"
 
 # Local Libraries #
 from .hdf5eeg import HDF5EEG
+from .hdf5xltek import HDF5XLTEK
