@@ -24,13 +24,13 @@ import numpy as np
 
 
 # Local Libraries #
-from .hdf5baseobject import HDF5BaseObject, HDF5hierarchicalDatasets
+from .basehdf5 import BaseHDF5, HDF5hierarchicalDatasets
 
 
 # Todo: Adapt this to new style
 # Definitions #
 # Classes #
-class HDF5eventLogger(HDF5BaseObject):
+class HDF5eventLogger(BaseHDF5):
     FILE_TYPE = "EventLog"
     VERSION = "0.0.1"
     EVENT_FIELDS = bidict(Time=0, DeltaTime=1, StartTime=2, Type=3)

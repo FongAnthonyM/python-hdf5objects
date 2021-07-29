@@ -73,7 +73,7 @@ class HDF5XLTEK(HDF5EEG):
         self.entry_axis = None
 
         if init:
-            self.construct(file, s_id, s_dir, start, **kwargs)
+            self.construct(file=file, s_id=s_id, s_dir=s_dir, start=start, **kwargs)
 
     def construct_file_attributes(self, **kwargs):
         self.attributes[self.map.attributes["total_samples"]] = self._total_samples
@@ -164,34 +164,34 @@ class HDF5XLTEK(HDF5EEG):
                                    dtype=dtype, maxshape=maxshape, **d_kwargs)
 
     # XLTEK Entry # Todo: Redesign this.
-    def format_entry(self, entry):
-        data = entry["data"]
-        n_channels = data.shape[self.eeg_data.c_axis]
-        n_samples =data.shape[self.time_axis]
-
-        channel_axis = np.arange(0, n_channels)
-        sample_axis = np.arrange(entry["start_sample"], entry["end_sample"])
-
-        entry_info = np.zeros((n_samples, 4), dtype=np.int32)
-        entry_info[:, :] = entry["entry_info"]
-
-        time_axis = np.zeros(n_samples, dtype=np.float64)
-        for sample, i in enumerate(sample_axis):
-            delta_t = datetime.timedelta(seconds=((sample - entry["snc_sample"]) * 1.0 / entry['sample_rate']))
-            time = entry["snc_time"] + delta_t
-            time_axis[i] = time.timestamp()
-
-        return data, sample_axis, time_axis, entry_info, channel_axis, entry['sample_rate']
-
-    def add_entry(self, entry):
-        data, samples, times, entry_info, channels, sample_rate = self.format_entry(entry)
-
-        self.end_entry = entry_info[0]
-        self.end = times[-1]
-
-        self.eeg_data.append_data(data)
-        self.sample_axis.append(samples)
-        self.time_axis.append(times)
-        self.entry_axis.append(entry_info)
-
-        self.total_samples = self.eeg_data.n_samples
+    # def format_entry(self, entry):
+    #     data = entry["data"]
+    #     n_channels = data.shape[self.eeg_data.c_axis]
+    #     n_samples =data.shape[self.time_axis]
+    #
+    #     channel_axis = np.arange(0, n_channels)
+    #     sample_axis = np.arrange(entry["start_sample"], entry["end_sample"])
+    #
+    #     entry_info = np.zeros((n_samples, 4), dtype=np.int32)
+    #     entry_info[:, :] = entry["entry_info"]
+    #
+    #     time_axis = np.zeros(n_samples, dtype=np.float64)
+    #     for sample, i in enumerate(sample_axis):
+    #         delta_t = datetime.timedelta(seconds=((sample - entry["snc_sample"]) * 1.0 / entry['sample_rate']))
+    #         time = entry["snc_time"] + delta_t
+    #         time_axis[i] = time.timestamp()
+    #
+    #     return data, sample_axis, time_axis, entry_info, channel_axis, entry['sample_rate']
+    #
+    # def add_entry(self, entry):
+    #     data, samples, times, entry_info, channels, sample_rate = self.format_entry(entry)
+    #
+    #     self.end_entry = entry_info[0]
+    #     self.end = times[-1]
+    #
+    #     self.eeg_data.append_data(data)
+    #     self.sample_axis.append(samples)
+    #     self.time_axis.append(times)
+    #     self.entry_axis.append(entry_info)
+    #
+    #     self.total_samples = self.eeg_data.n_samples

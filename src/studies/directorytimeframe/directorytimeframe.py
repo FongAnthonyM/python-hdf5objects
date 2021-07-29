@@ -17,10 +17,9 @@ import pathlib
 import datetime
 
 # Downloaded Libraries #
-import numpy as np
 
 # Local Libraries #
-from .timeseriesframe import TimeSeriesFrame
+from ..timeseriesframe import TimeSeriesFrame
 
 
 # Definitions #
@@ -31,7 +30,7 @@ class DirectoryTimeFrame(TimeSeriesFrame):
 
     # Magic Methods
     # Construction/Destruction
-    def __init__(self, name, name_dir, date=None, path=None, init=True):
+    def __init__(self, name, path=None, frames=None, update=True, init=True):
         super().__init__(init=False)
         self._path = None
 
@@ -41,23 +40,10 @@ class DirectoryTimeFrame(TimeSeriesFrame):
         self.is_updating_all = False
         self.is_updating_last = True
 
-        self.name_dir = name_dir
-
         self.frame_names = set()
 
         if init:
-            self.construct()
-
-    @property
-    def name_dir(self):
-        return self._name_dir
-
-    @name_dir.setter
-    def name_dir(self, value):
-        if isinstance(value, pathlib.Path) or value is None:
-            self._name_dir = value
-        else:
-            self._name_dir = pathlib.Path(value)
+            self.construct(path=path, frames=frames, update=update)
 
     @property
     def path(self):
@@ -72,13 +58,16 @@ class DirectoryTimeFrame(TimeSeriesFrame):
 
     # Instance Methods
     # Constructors/Destructors
-    def construct(self, **kwargs):
-        super().construct()
+    def construct(self, path=None, frames=None, update=True):
+        super().construct(frames=frames, update=update)
 
-        self.construct_frames()
-        if self.frames:
-            self.get_time_info()
-        else:
+        if path is not None:
+            self.path = path
+
+        if path is not None:
+            self.construct_frames()
+
+        if not self.frames:
             try:
                 self.date_from_path()
             except (ValueError, IndexError):
@@ -87,25 +76,31 @@ class DirectoryTimeFrame(TimeSeriesFrame):
     def construct_frames(self):
         for path in self.path.glob(self.glob_condition):
             if path not in self.frame_names:
-                if self.frame_condition(path):
+                if self.frame_creation_condition(path):
                     self.frames.append(self.frame_type(self.path))
                     self.frame_names.add(path)
         self.frames.sort(key=lambda frame: frame.start)
 
-    # File
-    def frame_condition(self, path):
+    # Frames
+    def frame_creation_condition(self, path):
         return True
 
+    # Path and File System
     def require_path(self):
         if not self.path.is_dir():
             self.path.mkdir()
 
+    def require_frames(self):
+        for frame in self.frames():
+            try:
+                frame.require()
+            except AttributeError:
+                continue
+
+    def require(self):
+        self.require_path()
+        self.require_frames()
+
     def date_from_path(self):
         date_string = self.path.parts[-1].split('_')[1]
         self._date = datetime.datetime.strptime(date_string, self.date_format).date()
-
-    def new_file(self, entry):
-        file = HDF5XLTEK(self.name, path=self.path, entry=entry)
-        self.frames.append(file)
-        return file
-

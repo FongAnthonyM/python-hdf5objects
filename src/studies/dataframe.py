@@ -13,7 +13,6 @@ __email__ = ""
 __status__ = "Prototype"
 
 # Default Libraries #
-from abc import abstractmethod
 from contextlib import contextmanager
 
 # Downloaded Libraries #
@@ -21,33 +20,48 @@ from baseobjects import BaseObject
 import numpy as np
 
 # Local Libraries #
+from .dataframeinterface import DataFrameInterface
+from .datacontainer import DataContainer
 
 
 # Definitions #
 # Classes #
-class DataFrame(BaseObject):
+class DataFrame(DataFrameInterface):
     default_return_frame_type = None
-    default_combine_type = None
+    default_combine_type = DataContainer
 
     # Magic Methods
     # Construction/Destruction
     def __init__(self, frames=None, update=True, init=True):
+        # Parent Attributes #
+        super().__init__()
+
+        # New Attributes #
+        # Descriptors #
+        # System
         self._cache = False
+        self.is_cache = True
+        self.is_updating = True
+        self.is_combine = False
+        self.returns_frame = False
+        self.mode = 'a'
+
+        # Shape
         self._shapes = None
         self._shape = None
         self._lengths = None
         self._length = None
         self.target_shape = None
-
-        self.is_cache = True
-        self.is_updating = True
-        self.returns_frame = False
         self.axis = 0
 
+        # Assign Classes #
         self.combine_type = self.default_combine_type
         self.return_frame_type = self.default_return_frame_type
+
+        # Containers #
         self.frames = []
 
+        # Object Construction #
         if init:
             self.construct(frames, update)
 
@@ -102,6 +116,10 @@ class DataFrame(BaseObject):
         if update is not None:
             self.is_updating = update
 
+    # Editable Copy Methods
+    def default_editable_method(self):
+        return self.combine_frames()
+
     # Cache and Memory
     @contextmanager
     def cache(self):
@@ -122,25 +140,26 @@ class DataFrame(BaseObject):
         self.get_lengths()
         self.get_length()
 
-    # Getters/Setters
+    # Getters
     def get_shapes(self):
-        self._shapes = [frame.shape for frame in self.frames]
+        self._shapes = tuple(frame.shape for frame in self.frames)
         return self._shapes
 
     def get_shape(self):
         shape_array = np.array(self.get_shapes())
-        self._shape = [None] * shape_array.shape[0]
+        shape = [None] * shape_array.shape[0]
         for ax in range(shape_array.shape[0]):
             if ax == self.axis:
-                self._shape[ax] = sum(shape_array[:, ax])
+                shape[ax] = sum(shape_array[:, ax])
             else:
-                self._shape[ax] = min(shape_array[:, ax])
+                shape[ax] = min(shape_array[:, ax])
+        self._shape = tuple(shape)
 
         return self._shape
 
     def get_lengths(self):
         shape_array = np.array(self.get_shapes())
-        self._lengths = list(shape_array[:, self.axis])
+        self._lengths = tuple(shape_array[:, self.axis])
         return self._lengths
 
     def get_length(self):
@@ -166,9 +185,13 @@ class DataFrame(BaseObject):
         elif isinstance(item, ...):
             return self.get_all_data()
 
+    # Setters
+    def set_editable_method(self, obj):
+        self.editable_method = obj
+
     # Shape
     def validate_shape(self):
-        shapes = self.get_shapes()
+        shapes = list(self.get_shapes())
         if shapes:
             shape = shapes.pop()
             for s in shapes:
@@ -176,13 +199,13 @@ class DataFrame(BaseObject):
                     return False
         return True
 
-    def reshape(self, shape=None, **kwargs):
+    def change_size(self, shape=None, **kwargs):
         if shape is None:
             shape = self.target_shape
 
         for frame in self.frames:
             if not frame.validate_shape() or frame.shape != shape:
-                frame.reshape(shape, **kwargs)
+                frame.change_size(shape, **kwargs)
 
     # Frames
     def frame_sort_key(self, frame):
@@ -453,30 +476,7 @@ class DataFrame(BaseObject):
 
     # Combine
     def combine_frames(self, start=None, stop=None, step=None):
-        combine = self.combine_type()
-        for frame in self.frames[start:stop:step]:
-            combine.append_frame(frame)
-        return combine
-
-
-class DataFrameInterface(BaseObject):
-    # Container Methods
-    @abstractmethod
-    def __len__(self):
-        pass
-
-    @abstractmethod
-    def __getitem__(self, item):
-        pass
-
-    # Shape
-    @abstractmethod
-    def validate_shape(self):
-        pass
-
-    @abstractmethod
-    def reshape(self, shape=None, **kwargs):
-        pass
+        return self.combine_type(frames=self.frames[start:stop:step])
 
 
 # Assign Cyclic Definitions

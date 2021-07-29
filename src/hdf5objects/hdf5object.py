@@ -691,6 +691,12 @@ class HDF5Dataset(HDF5BaseWrapper):
             self._dataset.resize(new_shape)  # Reshape for new data
             self._dataset[slicing] = data    # Assign data to the new location
 
+    def replace_data(self, data):
+        with self:
+            # Assign Data
+            self._dataset.resize(data.shape)  # Reshape for new data
+            self._dataset[...] = data
+
 
 class HDF5Structure(BaseObject):
     """
