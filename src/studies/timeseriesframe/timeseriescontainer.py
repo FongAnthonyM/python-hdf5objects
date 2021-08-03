@@ -50,7 +50,7 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
 
     # Magic Methods #
     # Construction/Destruction
-    def __init__(self, frames=None, data=None, time_axis=True, shape=None, init=True, **kwargs):
+    def __init__(self, frames=None, data=None, time_axis=True, shape=None, sample_rate=None, init=True, **kwargs):
         # Parent Attributes #
         super().__init__(init=False)
 
@@ -70,8 +70,10 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
         self.interpolate_type = "linear"
         self.interpolate_fill_value = "extrapolate"
 
+        # Object Assignment #
+        self.resampler = None
+
         # Method Assignment #
-        # Corrections
         self.blank_generator = self.create_nan_array
         self.tail_correction = self.default_tail_correction
 
@@ -80,7 +82,7 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
 
         # Object Construction #
         if init:
-            self.construct(frames=frames, data=data, time_axis=time_axis, shape=shape, **kwargs)
+            self.construct(frames=frames, data=data, time_axis=time_axis, shape=shape, sample_rate=sample_rate, **kwargs)
 
     @property
     def n_samples(self):
@@ -110,11 +112,16 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
 
     # Instance Methods #
     # Constructors/Destructors
-    def construct(self, frames=None, data=None, time_axis=None, shape=None, **kwargs):
+    def construct(self, frames=None, data=None, time_axis=None, shape=None, sample_rate=None, **kwargs):
+        if sample_rate is not None:
+            self.sample_rate = sample_rate
+
         if time_axis is not None:
             self.time_axis = time_axis
 
         super().construct(frames=frames, data=data, shape=shape, **kwargs)
+
+        self.resampler = Resample(data=self.data, old_fs=self.sample_rate, axis=self.axis)
 
     # Getters
     def get_time_axis(self):
@@ -243,7 +250,7 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
         if correction:
             data, time_axis = correction(data, time_axis, axis=axis, tolerance=tolerance, **kwargs)
 
-        self.ndarray = np.append(self.ndarray, data, axis)
+        self.data = np.append(self.data, data, axis)
         self.time_axis = np.append(self.time_axis, time_axis, 0)
 
     def append_frame(self, frame, axis=None, truncate=None, correction=None):
@@ -276,11 +283,11 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
 
         frames = list(frames)
 
-        if self.ndarray is None:
+        if self.data is None:
             frame = frames.pop(0)
             if not frame.validate_sample_rate():
                 raise ValueError("the frame's sample rate must be valid")
-            self.ndarray = frame[...]
+            self.data = frame[...]
             self.time_axis = frame.get_time_axis()
 
         for frame in frames:
@@ -327,9 +334,9 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
         if not self.validate_sample_rate():
             raise ValueError("the data needs to have a uniform sample rate before resampling")
 
-        # Todo: Optimize Resample and have resampler as an attribute
-        resampler = Resample(data=self.ndarray, new_fs=sample_rate, old_fs=self.sample_rate, axis=self.axis)
-        self.ndarray = resampler.evaluate()
+        # Todo: Make Resample for multiple frames (maybe edit resampler from an outer layer)
+        self.data = self.resampler(new_fs=self.sample_rate, **kwargs)
+        self.time_axis = np.arange(self.time_axis[0], self.time_axis[-1], self.sample_period, dtype="f8")
 
     # Continuous Data
     def evaluate_continuity(self, tolerance=None):
@@ -447,11 +454,11 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
             offsets = np.append(offsets, [[self.time_axis - discontinuities[-1], 0]], axis=0)
 
             new_size = np.sum(offsets)
-            new_shape = list(self.ndarray.shape)
+            new_shape = list(self.data.shape)
             new_shape[axis] = new_size
-            old_data = self.ndarray
+            old_data = self.data
             old_times = self.time_axis
-            self.ndarray = self.blank_generator(shape=new_shape, **kwargs)
+            self.data = self.blank_generator(shape=new_shape, **kwargs)
             self.time_axis = np.empty((new_size,), dtype="f8")
             old_start = 0
             new_start = 0
@@ -462,7 +469,7 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
                 mid_timestamp = old_times[previous] + self.sample_period
                 end_timestamp = offset[1] * self.sample_period
 
-                slice_ =slice(start=old_start, stop=old_start + offset[0])
+                slice_ = slice(start=old_start, stop=old_start + offset[0])
                 slices = [slice(None, None)] * len(old_data.shape)
                 slices[axis] = slice_
 

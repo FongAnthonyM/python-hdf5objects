@@ -31,6 +31,9 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
     # Magic Methods #
     # Construction/Destruction
     def __init__(self, frames=None, data=None, shape=None, init=True, **kwargs):
+        # Parent Attributes #
+        super().__init__()
+
         # Descriptors #
         # System
         self._cache = True
@@ -48,7 +51,7 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
         self.editable_type = self.default_editable_type
 
         # Containers #
-        self.ndarray = None
+        self.data = None
 
         # Object Construction #
         if init:
@@ -56,20 +59,20 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
 
     @property
     def shape(self):
-        return self.ndarray.shape
+        return self.data.shape
 
     # Instance Methods
     # Constructors/Destructors
     def construct(self, frames=None, data=None, shape=None, **kwargs):
-        if shape is not None and self.ndarray is None:
-            self.ndarray = np.zeros(shape=shape, **kwargs)
+        if shape is not None and self.data is None:
+            self.data = np.zeros(shape=shape, **kwargs)
 
         if data is not None:
-            self.ndarray = data
+            self.data = data
 
         if frames is not None:
             if isinstance(frames, np.ndarray):
-                self.ndarray = frames
+                self.data = frames
             else:
                 self.add_frames(frames)
 
@@ -98,10 +101,10 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
 
     # Getters
     def get_length(self):
-        return self.ndarray.shape[self.axis]
+        return self.data.shape[self.axis]
 
     def get_item(self, item):
-        return self.ndarray[item]
+        return self.data[item]
 
     # Data
     def append(self, data, axis=None):
@@ -112,7 +115,7 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
             axis = self.axis
 
         if isinstance(data, np.ndarray):
-            self.ndarray = np.append(self.ndarray, data, axis)
+            self.data = np.append(self.data, data, axis)
 
     def append_frame(self, frame, axis=None, truncate=None):
         if self.mode == 'r':
@@ -136,7 +139,7 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
                 slices[axis] = slice(None, None)
                 slices = tuple(slices)
 
-        self.ndarray = np.append(self.ndarray, frame[slices], axis)
+        self.data = np.append(self.data, frame[slices], axis)
 
     def add_frames(self, frames, axis=None, truncate=None):
         if self.mode == 'r':
@@ -144,8 +147,8 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
 
         frames = list(frames)
 
-        if self.ndarray is None:
-            self.ndarray = frames.pop(0)[...]
+        if self.data is None:
+            self.data = frames.pop(0)[...]
 
         for frame in frames:
             self.append_frame(frame, axis=axis, truncate=truncate)
@@ -157,7 +160,7 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
         slices = [slice(None, None)] * len(self.shape)
         slices[axis] = slice(start=start, stop=stop, step=step)
 
-        return self.ndarray[tuple(slices)]
+        return self.data[tuple(slices)]
 
     def set_range(self, data, start=None, stop=None, step=None, axis=None):
         if self.mode == 'r':
@@ -177,7 +180,7 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
             slices[index] = slice(None, None)
         slices[axis] = slice(start=start, stop=stop, step=step)
 
-        self.ndarray[tuple(slices)] = data
+        self.data[tuple(slices)] = data
 
     # Shape
     def validate_shape(self):
@@ -191,7 +194,7 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
             shape = self.target_shape
 
         if dtype is None:
-            dtype = self.ndarray.dtype
+            dtype = self.data.dtype
 
         new_slices = [0] * len(shape)
         old_slices = [0] * len(self.shape)
@@ -201,9 +204,9 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
             old_slices[index] = slice_
 
         new_ndarray = np.zeros(shape, dtype, **kwargs)
-        new_ndarray[tuple(new_slices)] = self.ndarray[tuple(old_slices)]
+        new_ndarray[tuple(new_slices)] = self.data[tuple(old_slices)]
 
-        self.ndarray = new_ndarray
+        self.data = new_ndarray
 
 
 # Assign Cyclic Definitions

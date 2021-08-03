@@ -36,15 +36,6 @@ class DirectoryTimeFrameInterface(TimeSeriesFrameInterface):
     #     if init:
     #         self.construct(data=data, times=times)
 
-    # Container Methods
-    @abstractmethod
-    def __len__(self):
-        pass  # self.data.shape[self.axis]
-
-    @abstractmethod
-    def __getitem__(self, item):
-        pass  # return self.data[item]
-
     # Instance Methods
     # Constructors/Destructors
     # def construct(self, data=None, times=None):
@@ -54,11 +45,15 @@ class DirectoryTimeFrameInterface(TimeSeriesFrameInterface):
     #     if times is not None:
     #         self.times = times
 
+    # Getters
     @abstractmethod
-    def editable_copy(self, **kwargs):
+    def get_length(self):
         pass
 
-    # Getters
+    @abstractmethod
+    def get_item(self, item):
+        pass
+
     @abstractmethod
     def get_time_axis(self):
         pass

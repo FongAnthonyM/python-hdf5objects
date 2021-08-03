@@ -46,9 +46,6 @@ class TimeSeriesFrameInterface(DataFrameInterface):
     #     if times is not None:
     #         self.times = times
 
-    def editable_copy(self, **kwargs):
-        pass
-
     # Getters
     @abstractmethod
     def get_length(self):

@@ -17,6 +17,11 @@ __status__ = "Prototype"
 # Downloaded Libraries #
 
 # Local Libraries #
-from .basehdf5 import BaseHDF5
-from .hdf5eeg import HDF5EEG
-from .hdf5xltek import HDF5XLTEK
+
+
+# Definitions #
+# Classes #
+
+# Main #
+if __name__ == "__main__":
+    pass

@@ -76,6 +76,7 @@ def remove_dc_offset(data=None, axis=0, copy_=True):
 
 
 # Classes #
+# Todo: Optimize Resample for real-time
 class Resample(BaseObject):
     # Magic Methods
     # Construction/Destruction
@@ -192,6 +193,7 @@ class Resample(BaseObject):
         if copy_:
             data = data.copy()
 
+        # Todo: Give options for forward and backward filter rather than assume both.
         for aa_filter in self.aa_filters:
             data = sosfiltfilt(aa_filter, data, axis=self.axis)
 

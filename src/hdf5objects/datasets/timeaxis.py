@@ -57,7 +57,7 @@ class TimeAxis(HDF5Dataset):
     def __init__(self, obj=None, start=None, stop=None, step=None, rate=None, size=None,
                  create=True, init=True, **kwargs):
         super().__init__(init=False)
-        self._timezone = self.local_timezone
+        self._timezone = None
         self.is_updating = True
         self.default_kwargs = {"dtype": 'f8', "maxshape": (None,)}
         self.label = "timestamps"
@@ -88,8 +88,8 @@ class TimeAxis(HDF5Dataset):
             else:
                 tz_str = value
             self.attributes[self.map.attributes["timezone"]] = tz_str
-        except:
-            pass
+        finally:
+            self._timezone = None
 
     @property
     def datetimes(self):
@@ -106,11 +106,19 @@ class TimeAxis(HDF5Dataset):
         return self._start
 
     @property
+    def start_datetime(self):
+        return datetime.datetime.fromtimestamp(self.start, self.timezone)
+
+    @property
     def end(self):
         if self._end is None or self.is_updating:
             self._end = self.datetimes[-1]
 
         return self._end
+
+    @property
+    def end_datetime(self):
+        return datetime.datetime.fromtimestamp(self.end, self.timezone)
 
     # Instance Methods
     # Constructors/Destructors
@@ -176,6 +184,14 @@ class TimeAxis(HDF5Dataset):
         else:
             return [datetime.datetime.fromtimestamp(t, origin_tz) for t in self._dataset]
 
+    def require(self, name=None, **kwargs):
+        super().require(name=name, **kwargs)
+        if not self.map.attributes["timezone"] in self.attributes:
+            if self._timezone is None:
+                self._timezone = self.local_timezone
+            self.attributes[self.map.attributes["timezone"]] = self._timezone
+
+        return self
 
 # Assign Cyclic Definitions
 TimeAxisMap.default_type = TimeAxis

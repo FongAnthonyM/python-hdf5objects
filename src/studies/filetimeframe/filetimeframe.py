@@ -36,6 +36,9 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
         self._end = None
         self._sample_rate = None
 
+        self._time_axis = None
+        self._data = None
+
         # Parent Attributes #
         super().__init__(init=False)
 
@@ -49,7 +52,10 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
 
     @property
     def data(self):
-        return self.file.data
+        if self._data is None or (self.is_updating and not self._cache):
+            return self.load_data()
+        else:
+            return self._data
 
     @data.setter
     def data(self, value):
@@ -57,7 +63,10 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
 
     @property
     def time_axis(self):
-        return self.file.time_axis
+        if self._time_axis is None or (self.is_updating and not self._cache):
+            return self.load_time_axis()
+        else:
+            return self._time_axis
 
     @time_axis.setter
     def time_axis(self, value):
@@ -152,12 +161,12 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
         return self._is_continuous
 
     # Setters
+    @abstractmethod
     def set_data(self, value):
         if self.mode == 'r':
             raise IOError("not writable")
-        self.data.replace_data(value)
 
+    @abstractmethod
     def set_time_axis(self, value):
         if self.mode == 'r':
             raise IOError("not writable")
-        self.time_axis.replace_data(value)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" __init__.py
+""" directorydayframe.py
 Description:
 """
 __author__ = "Anthony Fong"
@@ -17,6 +17,21 @@ __status__ = "Prototype"
 # Downloaded Libraries #
 
 # Local Libraries #
-from .basehdf5 import BaseHDF5
-from .hdf5eeg import HDF5EEG
-from .hdf5xltek import HDF5XLTEK
+from .directorytimeframe import DirectoryTimeFrame
+
+
+# Definitions #
+# Classes #
+# Todo: Maybe skip to XLTEKDayFrame
+class DirectoryDayFrame(DirectoryTimeFrame):
+    """
+
+    Class Attributes:
+
+    Attributes:
+
+    Args:
+
+    """
+
+
