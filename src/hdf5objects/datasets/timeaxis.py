@@ -23,8 +23,7 @@ import pytz
 import tzlocal
 
 # Local Libraries #
-from ..hdf5map import HDF5Map
-from ..hdf5object import HDF5Dataset
+from ..hdf5object import HDF5Map, HDF5Dataset
 
 
 # Definitions #

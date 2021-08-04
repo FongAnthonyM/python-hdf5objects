@@ -13,17 +13,16 @@ __email__ = ""
 __status__ = "Prototype"
 
 # Default Libraries #
-import datetime
+import pathlib
 
 # Downloaded Libraries #
 from classversioning import VersionType, TriNumberVersion
 from bidict import bidict
-import numpy as np
+import h5py
 
 # Local Libraries #
 from ..datasets import TimeSeriesDataset, TimeSeriesMap, ChannelAxisMap, SampleAxisMap, TimeAxisMap
-from ..hdf5map import HDF5Map
-from ..hdf5object import HDF5Dataset
+from ..hdf5object import HDF5Map, HDF5Dataset, HDF5Object
 from .hdf5eeg import HDF5EEG, HDF5EEGMap
 
 
@@ -63,6 +62,23 @@ class HDF5XLTEK(HDF5EEG):
     VERSION = TriNumberVersion(0, 0, 0)
     FILE_TYPE = "XLTEK_EEG"
     default_map = HDF5EXLTEKMap()
+
+    # File Validation
+    @classmethod
+    def validate_file_type(cls, obj):
+        start_name = cls.default_map.attributes["start"]
+        end_name = cls.default_map.attributes["end"]
+
+        if isinstance(obj, (str, pathlib.Path)):
+            if cls.validate_openable(obj):
+                obj = HDF5Object(obj)
+            else:
+                return False
+
+        if isinstance(obj, h5py.File):
+            obj = HDF5Object(obj)
+
+        return start_name in obj.attributes and end_name in obj.attributes
 
     def __init__(self, file=None, s_id=None, s_dir=None, start=None, init=True, **kwargs):
         super().__init__(init=False)

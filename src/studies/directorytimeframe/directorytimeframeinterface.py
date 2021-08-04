@@ -24,6 +24,12 @@ from ..timeseriesframe import TimeSeriesFrameInterface
 # Definitions #
 # Classes #
 class DirectoryTimeFrameInterface(TimeSeriesFrameInterface):
+    # Class Methods #
+    @classmethod
+    @abstractmethod
+    def validate_path(cls, path):
+        pass
+
     # Magic Methods
     # Construction/Destruction
     # def __init__(self, data=None, times=True, init=True):

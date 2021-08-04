@@ -15,13 +15,11 @@ __status__ = "Prototype"
 # Default Libraries #
 
 # Downloaded Libraries #
-from bidict import bidict
 import h5py
 import numpy as np
 
 # Local Libraries #
-from ..hdf5map import HDF5Map
-from ..hdf5object import HDF5Dataset
+from ..hdf5object import HDF5Map, HDF5Dataset
 
 
 # Definitions #

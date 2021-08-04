@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" test_hdf5objects.py
+""" test_hdf5frames.py
 Description:
 """
 __author__ = "Anthony Fong"
@@ -23,6 +23,7 @@ import numpy as np
 
 # Local Libraries #
 from src.hdf5objects import *
+from src.hdf5objects.dataframes import *
 
 
 # Definitions #
@@ -47,43 +48,16 @@ class ClassTest:
         return lines
 
 
-class TestHDF5XLTEK(ClassTest):
-    class_ = HDF5XLTEK
+class TestXLTEKStudy(ClassTest):
+    class_ = XLTEKStudyFrame
     studies_path = pathlib.Path("/Users/changlab/Documents/Projects/Epilepsy Spike Detection")
     load_path = pathlib.Path("/Users/changlab/PycharmProjects/python-hdf5objects/tests/EC228_2020-09-21_14~53~19.h5")
     save_path = pathlib.Path("/Users/changlab/PycharmProjects/python-hdf5objects/tests/")
 
-    @pytest.fixture
-    def load_file(self):
-        return HDF5XLTEK(file=self.load_path)
 
-    def test_load_file(self):
-        f_obj = HDF5XLTEK(file=self.load_path)
-        assert 1
+    def test_load_study(self):
+        pass
 
-    def test_validate_file(self):
-        assert HDF5XLTEK.validate_file_type(self.load_path)
-
-    @pytest.mark.xfail
-    def test_data_speed(self, load_file):
-        def assignment():
-            x = 10
-
-        def get_data():
-            x = load_file.eeg_data[:10000, :100]
-
-        mean_new = timeit.timeit(get_data, number=self.timeit_runs) / self.timeit_runs * 1000000
-        mean_old = timeit.timeit(assignment, number=self.timeit_runs) / self.timeit_runs * 1000000
-        percent = (mean_new / mean_old) * 100
-
-        print(f"\nNew speed {mean_new:.3f} μs took {percent:.3f}% of the time of the old function.")
-        assert percent < self.speed_tolerance
-
-    def test_create_file(self):
-        start = datetime.datetime.now()
-        f_obj = HDF5XLTEK(s_id="EC_test", s_dir=self.save_path, start=start)
-        f_obj.create_eeg_dataset()
-        assert 1
 
 
 # Main #

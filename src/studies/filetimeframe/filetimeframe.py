@@ -14,6 +14,7 @@ __status__ = "Prototype"
 
 # Default Libraries #
 from abc import abstractmethod
+import pathlib
 
 # Downloaded Libraries #
 
@@ -27,6 +28,15 @@ from ..directorytimeframe import DirectoryTimeFrameInterface
 class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
     file_type = None
     default_editable_type = TimeSeriesContainer
+
+    # Class Methods #
+    @classmethod
+    @abstractmethod
+    def validate_path(cls, path):
+        if not isinstance(path, pathlib.Path):
+            path = pathlib.Path(path)
+
+        return path.is_file()
 
     # Magic Methods
     # Construction/Destruction

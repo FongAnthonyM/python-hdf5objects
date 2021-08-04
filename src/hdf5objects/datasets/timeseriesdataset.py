@@ -19,8 +19,7 @@ from bidict import bidict
 import numpy as np
 
 # Local Libraries #
-from ..hdf5map import HDF5Map
-from ..hdf5object import HDF5Dataset
+from ..hdf5object import HDF5Map, HDF5Dataset
 from .channelaxis import ChannelAxis
 from .sampleaxis import SampleAxis
 from .timeaxis import TimeAxis

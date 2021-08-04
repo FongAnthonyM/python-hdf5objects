@@ -23,8 +23,7 @@ from classversioning import VersionedInitMeta, VersionedClass, VersionType, TriN
 import h5py
 
 # Local Libraries #
-from ..hdf5map import HDF5Map
-from ..hdf5object import HDF5Object, HDF5Group
+from ..hdf5object import HDF5Map, HDF5Group, HDF5Object
 
 
 # Definitions #
@@ -112,16 +111,16 @@ class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=Versio
     def validate_file_type(cls, obj):
         t_name = cls.default_map.attributes["file_type"]
 
-        if isinstance(obj, pathlib.Path):
-            obj = obj.as_posix()
-
-        if isinstance(obj, str):
-            obj = HDF5Object(obj)
+        if isinstance(obj, (str, pathlib.Path)):
+            if cls.validate_openable(obj):
+                obj = HDF5Object(obj)
+            else:
+                return False
 
         if isinstance(obj, h5py.File):
             obj = HDF5Object(obj)
 
-        return cls.FILE_TYPE == obj[t_name]
+        return cls.FILE_TYPE == obj.attributes[t_name]
 
     @classmethod
     def validate_file(cls, obj):

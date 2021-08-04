@@ -31,6 +31,17 @@ class HDF5BaseFrame(FileTimeFrame):
     file_type = BaseHDF5
     default_data_container = None
 
+    # Class Methods #
+    @classmethod
+    def validate_path(cls, path):
+        if not isinstance(path, pathlib.Path):
+            path = pathlib.Path(path)
+
+        if path.is_file():
+            return cls.file_type.validate_file_type(path)
+        else:
+            return False
+
     # Instance Methods
     # File
     @dispatch(object)

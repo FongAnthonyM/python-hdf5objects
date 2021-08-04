@@ -14,7 +14,6 @@ __status__ = "Prototype"
 
 # Default Libraries #
 import pathlib
-import datetime
 
 # Downloaded Libraries #
 
@@ -28,13 +27,20 @@ class DirectoryTimeFrame(TimeSeriesFrame):
     default_return_frame_type = TimeSeriesFrame
     default_frame_type = None
 
-    # Magic Methods
+    # Class Methods #
+    @classmethod
+    def validate_path(cls, path):
+        if not isinstance(path, pathlib.Path):
+            path = pathlib.Path(path)
+
+        return path.is_dir()
+
+    # Magic Methods #
     # Construction/Destruction
-    def __init__(self, name, path=None, frames=None, update=True, init=True):
+    def __init__(self, path=None, frames=None, update=True, init=True):
         super().__init__(init=False)
         self._path = None
 
-        self.name = name
         self.glob_condition = None
 
         self.is_updating_all = False
@@ -67,12 +73,6 @@ class DirectoryTimeFrame(TimeSeriesFrame):
         if path is not None:
             self.construct_frames()
 
-        if not self.frames:
-            try:
-                self.date_from_path()
-            except (ValueError, IndexError):
-                pass
-
     def construct_frames(self):
         for path in self.path.glob(self.glob_condition):
             if path not in self.frame_names:
@@ -83,7 +83,7 @@ class DirectoryTimeFrame(TimeSeriesFrame):
 
     # Frames
     def frame_creation_condition(self, path):
-        return True
+        return self.frame_type.validate_path(path)
 
     # Path and File System
     def require_path(self):
@@ -100,7 +100,3 @@ class DirectoryTimeFrame(TimeSeriesFrame):
     def require(self):
         self.require_path()
         self.require_frames()
-
-    def date_from_path(self):
-        date_string = self.path.parts[-1].split('_')[1]
-        self._date = datetime.datetime.strptime(date_string, self.date_format).date()

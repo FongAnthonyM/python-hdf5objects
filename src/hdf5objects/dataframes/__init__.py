@@ -21,7 +21,7 @@ __status__ = "Prototype"
 
 # Definitions #
 # Classes #
-
-# Main #
-if __name__ == "__main__":
-    pass
+from .hdf5baseframe import HDF5BaseFrame
+from .hdf5xltekframe import HDF5XLTEKFrame
+from .xltekdayframe import XLTEKDayFrame
+from .xltekstudyframe import XLTEKStudyFrame
