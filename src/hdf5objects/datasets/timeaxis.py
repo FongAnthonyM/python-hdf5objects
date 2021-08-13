@@ -100,7 +100,8 @@ class TimeAxis(HDF5Dataset):
     @property
     def start(self):
         if self._start is None or self.is_updating:
-            self._start = self.datetimes[0]
+            with self:
+                self._start = self._dataset[0]
 
         return self._start
 
@@ -111,7 +112,8 @@ class TimeAxis(HDF5Dataset):
     @property
     def end(self):
         if self._end is None or self.is_updating:
-            self._end = self.datetimes[-1]
+            with self:
+                self._end = self._dataset[-1]
 
         return self._end
 

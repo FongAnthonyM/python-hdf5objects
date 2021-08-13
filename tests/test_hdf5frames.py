@@ -54,10 +54,22 @@ class TestXLTEKStudy(ClassTest):
     load_path = pathlib.Path("/Users/changlab/PycharmProjects/python-hdf5objects/tests/EC228_2020-09-21_14~53~19.h5")
     save_path = pathlib.Path("/Users/changlab/PycharmProjects/python-hdf5objects/tests/")
 
-
     def test_load_study(self):
-        pass
+        s_id = "EC228"
+        study_frame = XLTEKStudyFrame(s_id=s_id, studies_path=self.studies_path)
+        assert 1
 
+    def test_get_data(self):
+        s_id = "EC228"
+        study_frame = XLTEKStudyFrame(s_id=s_id, studies_path=self.studies_path)
+        data = study_frame[slice(0, 1)]
+        assert data is not None
+
+    def test_get_study_time_range(self):
+        s_id = "EC228"
+        study_frame = XLTEKStudyFrame(s_id=s_id, studies_path=self.studies_path)
+
+        assert 1
 
 
 # Main #

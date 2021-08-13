@@ -194,3 +194,17 @@ class BlankDataFrame(DataFrameInterface):
 
     def change_size(self, shape=None, **kwargs):
         self.shape = shape
+
+    # Get Index
+    def get_index(self, indices, reverse=False, frame=True):
+        if isinstance(indices, int):
+            start = indices
+        elif len(indices) == 1:
+            start = indices[0]
+        else:
+            raise IndexError("index out of range")
+
+        if frame:
+            return self
+        else:
+            return self.create_data(start=start, stop=start + 1)

@@ -43,16 +43,17 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
     # Instance Methods
     # Constructors/Destructors
     def construct(self, file=None, s_id=None, s_dir=None, start=None, **kwargs):
-        super().construct(file=None)
-
         if file is not None:
             self.set_file(file, s_id=s_id, s_dir=s_dir, start=start, **kwargs)
         elif s_id is not None or s_dir is not None or start is not None or kwargs:
             self.file = self.file_type(s_id=s_id, s_dir=s_dir, start=start, **kwargs)
 
+        super().construct(file=None)
+
     # File
     def load_data(self):
         self._data = self.file.eeg_data
+        return self._data
 
     def load_time_axis(self):
         self._time_axis = self.file.time_axis

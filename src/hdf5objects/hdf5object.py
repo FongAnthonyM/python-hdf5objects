@@ -920,7 +920,7 @@ class HDF5Structure(BaseObject):
 
     def construct_from_map(self, map_):
         for name, inner_map_ in map_.items():
-            f_name = map_.structures[name]
+            f_name = map_.containers[name]
             self.structures[f_name] = type(self)(name=f_name, map_=inner_map_, parent=self.full_name)
 
     def construct_object(self, file=None, override=False):
@@ -1205,6 +1205,8 @@ class HDF5Object(BaseObject):
 
         if not is_path and create:
             self.require_file(open_, **kwargs)
+        elif is_path and open_:
+            self.open(**kwargs)
 
         self._construct_attributes(load=is_path)
 

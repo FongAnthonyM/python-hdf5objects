@@ -146,9 +146,20 @@ class DataFrame(DataFrameInterface):
         return self._shapes
 
     def get_shape(self):
-        shape_array = np.array(self.get_shapes())
-        shape = [None] * shape_array.shape[0]
-        for ax in range(shape_array.shape[0]):
+        n_frames = len(self.frames)
+        n_dims = [None] * n_frames
+        shapes = [None] * n_frames
+        for index, frame in enumerate(self.frames):
+            shapes[index] = frame.shape
+            n_dims[index] = len(shapes[index])
+
+        max_dims = max(n_dims)
+        shape_array = np.zeros((n_frames, max_dims))
+        for index, s in enumerate(shapes):
+            shape_array[index, :n_dims[index]] = s
+
+        shape = [None] * max_dims
+        for ax in range(max_dims):
             if ax == self.axis:
                 shape[ax] = sum(shape_array[:, ax])
             else:
@@ -158,13 +169,23 @@ class DataFrame(DataFrameInterface):
         return self._shape
 
     def get_lengths(self):
-        shape_array = np.array(self.get_shapes())
+        n_frames = len(self.frames)
+        n_dims = [None] * n_frames
+        shapes = [None] * n_frames
+        for index, frame in enumerate(self.frames):
+            shapes[index] = frame.shape
+            n_dims[index] = len(shapes[index])
+
+        max_dims = max(n_dims)
+        shape_array = np.zeros((n_frames, max_dims))
+        for index, s in enumerate(shapes):
+            shape_array[index, :n_dims[index]] = s
+
         self._lengths = tuple(shape_array[:, self.axis])
         return self._lengths
 
     def get_length(self):
-        shape_array = np.array(self.get_shapes())
-        self._length = sum(shape_array[:, self.axis])
+        self._length = sum(self.get_lengths())
         return self._length
 
     def get_item(self, item):
@@ -179,10 +200,10 @@ class DataFrame(DataFrameInterface):
             if is_slices:
                 return self.get_ranges(item)
             else:
-                return self.get_frame_within(item)
+                return self.get_index(item)
         elif isinstance(item, int):
             return self.get_frame(item)
-        elif isinstance(item, ...):
+        elif item is Ellipsis:
             return self.get_all_data()
 
     # Setters
@@ -255,12 +276,12 @@ class DataFrame(DataFrameInterface):
             super_indices = list(super_indices)
             for index, super_index in enumerate(super_indices):
                 # Check if index is in range.
-                if super_index >= self.length or (super_index + self._length) < 0:
+                if super_index >= self.length or (super_index + self.length) < 0:
                     raise IndexError("index is out of range")
 
                 # Change negative indexing into positive.
                 if super_index < 0:
-                    super_indices[index] = self.length - super_index
+                    super_indices[index] = self.length + super_index
 
             # Find
             indices = [None] * len(super_indices)
@@ -301,13 +322,15 @@ class DataFrame(DataFrameInterface):
             if frame_start is None:
                 frame_start = 0
             if frame_stop is None:
-                frame_stop = -1
+                frame_stop = 0
+            elif frame_stop < 0:
+                frame_stop = len(self.frames) + frame_stop
 
-            if (frame_start + 1) == frame_stop or (frame_start + 1) == len(self.frames) + frame_stop:
+            if frame_start == frame_stop:
                 data = self.frames[frame_start][inner_start:inner_stop:step]
             else:
                 data = self.frames[frame_start][inner_start::step]
-                for fi in range(frame_start + 1, frame_stop):
+                for fi in range(frame_start + 1, frame_stop + 1):
                     data = self.smart_append(data, self.frames[fi][::step])
                 data = self.smart_append(data, self.frames[frame_stop][:inner_stop:step])
         return data
@@ -393,7 +416,7 @@ class DataFrame(DataFrameInterface):
             return data
 
     # Get Frame within by Index
-    def get_frame_within(self, indices, reverse=False, frame=True):
+    def get_index(self, indices, reverse=False, frame=True):
         if len(indices) == 1:
             item = indices[0]
             if isinstance(item, int):
@@ -409,7 +432,7 @@ class DataFrame(DataFrameInterface):
             else:
                 index = indices.pop()
 
-            return self.frames[index].get_frame_within(indices, reverse, frame)
+            return self.frames[index].get_index(indices, reverse, frame)
 
     def get_range_indices(self, start=None, stop=None, step=None, reverse=False, frame=None):
         if frame is None:

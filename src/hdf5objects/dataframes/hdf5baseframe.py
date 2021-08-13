@@ -53,7 +53,7 @@ class HDF5BaseFrame(FileTimeFrame):
 
     @dispatch((str, pathlib.Path))
     def set_file(self, file, **kwargs):
-        self.file = self.file_type(file=file, *kwargs)
+        self.file = self.file_type(file=file, **kwargs)
 
     @abstractmethod
     def load_data(self):

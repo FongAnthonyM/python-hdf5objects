@@ -67,3 +67,8 @@ class DataFrameInterface(BaseObject):
     def change_size(self, shape=None, **kwargs):
         pass
 
+    # Get Frame within by Index
+    @abstractmethod
+    def get_index(self, indices, reverse=False, frame=True):
+        pass
+

@@ -121,7 +121,7 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
 
         super().construct(frames=frames, data=data, shape=shape, **kwargs)
 
-        self.resampler = Resample(data=self.data, old_fs=self.sample_rate, axis=self.axis)
+        self.resampler = Resample(old_fs=self.sample_rate, axis=self.axis)
 
     # Getters
     def get_time_axis(self):
@@ -335,7 +335,7 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
             raise ValueError("the data needs to have a uniform sample rate before resampling")
 
         # Todo: Make Resample for multiple frames (maybe edit resampler from an outer layer)
-        self.data = self.resampler(new_fs=self.sample_rate, **kwargs)
+        self.data = self.resampler(data=self.data[...], new_fs=self.sample_rate, **kwargs)
         self.time_axis = np.arange(self.time_axis[0], self.time_axis[-1], self.sample_period, dtype="f8")
 
     # Continuous Data

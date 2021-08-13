@@ -69,7 +69,8 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
 
     @data.setter
     def data(self, value):
-        self.set_data(value)
+        if value is not None:
+            self.set_data(value)
 
     @property
     def time_axis(self):
@@ -80,7 +81,8 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
 
     @time_axis.setter
     def time_axis(self, value):
-        self.set_time_axis(value)
+        if value is not None:
+            self.set_time_axis(value)
 
     @property
     def shape(self):
@@ -106,6 +108,11 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
             return self.get_sample_rate()
         else:
             return self._sample_rate
+
+    @sample_rate.setter
+    def sample_rate(self, value):
+        if value is not None:
+            raise AttributeError("can't set attribute")
 
     @property
     def sample_period(self):
@@ -137,6 +144,13 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
             self.file = file
         else:
             raise ValueError("file must be a path or str")
+
+    def open(self, mode='a', **kwargs):
+        self.file.open(mode, **kwargs)
+        return self
+
+    def close(self):
+        self.file.close()
 
     @abstractmethod
     def load_data(self):

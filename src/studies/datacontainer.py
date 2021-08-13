@@ -208,6 +208,20 @@ class DataContainer(DataFrameInterface):  # Todo: Make this a StaticWrapper (Sta
 
         self.data = new_ndarray
 
+    # Get Index
+    def get_index(self, indices, reverse=False, frame=True):
+        if isinstance(indices, int):
+            start = indices
+        elif len(indices) == 1:
+            start = indices[0]
+        else:
+            raise IndexError("index out of range")
+
+        if frame:
+            return self
+        else:
+            return self.get_range(start=start, stop=start + 1)
+
 
 # Assign Cyclic Definitions
 DataContainer.default_editable_type = DataContainer
