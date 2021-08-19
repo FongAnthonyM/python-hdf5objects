@@ -688,6 +688,10 @@ class HDF5Dataset(HDF5BaseWrapper):
         if init:
             self.construct(dataset=dataset, name=name, a_type=a_type, map_=map_, file=file, **kwargs)
 
+    def __array__(self, dtype=None):
+        with self:
+            return self._dataset.__array__(dtype=dtype)
+
     # Instance Methods
     # Constructors/Destructors
     def construct(self, dataset=None, name=None, a_type=None, map_=None, file=None, create=False, **kwargs):

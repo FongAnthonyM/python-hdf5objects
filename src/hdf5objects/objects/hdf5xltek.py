@@ -70,15 +70,20 @@ class HDF5XLTEK(HDF5EEG):
         end_name = cls.default_map.attributes["end"]
 
         if isinstance(obj, (str, pathlib.Path)):
-            if cls.validate_openable(obj):
-                obj = HDF5Object(obj)
+            if not isinstance(obj, pathlib.Path):
+                obj = pathlib.Path(obj)
+
+            if obj.is_file():
+                try:
+                    with h5py.File(obj) as obj:
+                        return start_name in obj.attrs and end_name in obj.attrs
+                except OSError:
+                    return False
             else:
                 return False
-
-        if isinstance(obj, h5py.File):
-            obj = HDF5Object(obj)
-
-        return start_name in obj.attributes and end_name in obj.attributes
+        elif isinstance(obj, HDF5Object):
+            obj = obj.h5_fobj
+            return start_name in obj.attrs and end_name in obj.attrs
 
     def __init__(self, file=None, s_id=None, s_dir=None, start=None, init=True, **kwargs):
         super().__init__(init=False)

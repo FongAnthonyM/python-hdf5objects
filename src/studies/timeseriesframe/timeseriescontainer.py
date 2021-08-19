@@ -293,7 +293,17 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
         for frame in frames:
             self.append_frame(frame, axis=axis, truncate=truncate)
 
+    def get_time(self, super_index):
+        return datetime.datetime.fromtimestamp(self.time_axis[super_index])
+
     def get_times(self, start=None, stop=None, step=None):
+        if start is not None:
+            start = int(start)
+        if stop is not None:
+            stop = int(stop)
+        if step is not None:
+            step = int(step)
+
         return self.time_axis[slice(start, stop, step)]
 
     def get_intervals(self, start=None, stop=None, step=None):
@@ -311,12 +321,10 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
         elif timestamp > self.time_axis[-1]:
             if tails:
                 return samples, self.end
-        elif timestamp in self.time_axis:
-            index = np.searchsorted(self.time_axis, timestamp)
-            return index, datetime.datetime.fromtimestamp(timestamp)
-        elif aprox:
-            index = np.searchsorted(self.time_axis, timestamp) - 1
-            return index, datetime.datetime.fromtimestamp(self.time_axis[index])
+        else:
+            index = np.searchsorted(self.time_axis, timestamp, side="right") - 1
+            if aprox or timestamp == self.time_axis[index]:
+                return index, datetime.datetime.fromtimestamp(self.time_axis[index])
 
         return -1, datetime.datetime.fromtimestamp(timestamp)
 
@@ -367,7 +375,10 @@ class TimeSeriesContainer(DataContainer, TimeSeriesFrameInterface):
         else:
             discontinuous = list(np.where(np.abs(np.ediff1d(self.time_axis) - self.sample_period) > tolerance)[0] + 1)
 
-        return discontinuous
+        if discontinuous:
+            return discontinuous
+        else:
+            return None
 
     def validate_continuous(self, tolerance=None):
         if self._is_continuous is None or not self.is_cache:

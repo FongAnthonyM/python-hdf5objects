@@ -51,6 +51,7 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
 
         # Parent Attributes #
         super().__init__(init=False)
+        self.is_updating = False
 
         # New Attributes #
         # Containers #
@@ -138,6 +139,16 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
         # Parent Construction
         super().construct(frames=frames)
 
+    # Cache and Memory
+    def refresh(self):
+        self.load_data()
+        self.load_time_axis()
+        self.get_start()
+        self.get_end()
+        self.get_sample_rate()
+        self.get_sample_period()
+        self.get_is_continuous()
+
     # File
     def set_file(self, file):
         if isinstance(file, self.file_type):
@@ -147,6 +158,7 @@ class FileTimeFrame(TimeSeriesContainer, DirectoryTimeFrameInterface):
 
     def open(self, mode='a', **kwargs):
         self.file.open(mode, **kwargs)
+        self.refresh()
         return self
 
     def close(self):

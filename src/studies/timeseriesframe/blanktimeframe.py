@@ -195,6 +195,9 @@ class BlankTimeFrame(BlankDataFrame, TimeSeriesFrameInterface):
     def create_times_slice(self, slice_, dtype=None):
         return self.create_times(start=slice_.start, stop=slice_.stop, step=slice_.step, dtype=dtype)
 
+    def get_time(self, super_index):
+        return self.create_times(start=super_index, stop=super_index + 1)
+
     def get_times(self, start=None, stop=None, step=None):
         return self.create_times(start=start, stop=stop, step=step)
 

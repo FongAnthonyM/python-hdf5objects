@@ -102,7 +102,7 @@ class DirectoryTimeFrame(TimeSeriesFrame):
     # Get a Range of Frames
     def get_range(self, start=None, stop=None, step=None, frame=None):
         with self:
-            super().get_range(start=start, stop=stop, step=step, frame=frame)
+            return super().get_range(start=start, stop=stop, step=step, frame=frame)
 
     # Path and File System
     def open(self, mode='a', **kwargs):

@@ -71,6 +71,3 @@ class XLTEKStudyFrame(DirectoryTimeFrame):
             path = pathlib.Path(self.studies_path, self.subject_id)
 
         super().construct(path=path, frames=frames, update=update)
-
-
-

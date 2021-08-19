@@ -154,7 +154,7 @@ class DataFrame(DataFrameInterface):
             n_dims[index] = len(shapes[index])
 
         max_dims = max(n_dims)
-        shape_array = np.zeros((n_frames, max_dims))
+        shape_array = np.zeros((n_frames, max_dims), dtype='i')
         for index, s in enumerate(shapes):
             shape_array[index, :n_dims[index]] = s
 
@@ -214,8 +214,11 @@ class DataFrame(DataFrameInterface):
     def validate_shape(self):
         shapes = list(self.get_shapes())
         if shapes:
-            shape = shapes.pop()
+            shape = list(shapes.pop())
+            shape.pop(self.axis)
             for s in shapes:
+                s = list(s)
+                s.pop(self.axis)
                 if s != shape:
                     return False
         return True
@@ -255,7 +258,7 @@ class DataFrame(DataFrameInterface):
     def find_frame_index(self, super_index):
         with self.cache():
             # Check if index is in range.
-            if super_index >= self.length or (super_index + self._length) < 0:
+            if super_index >= self.length or (super_index + self.length) < 0:
                 raise IndexError("index is out of range")
 
             # Change negative indexing into positive.
@@ -267,7 +270,7 @@ class DataFrame(DataFrameInterface):
             for frame_index, frame_length in enumerate(self.lengths):
                 end = previous + frame_length
                 if super_index < end:
-                    return frame_index, super_index - previous, previous
+                    return frame_index, int(super_index - previous), int(previous)
                 else:
                     previous = end
 
@@ -290,7 +293,7 @@ class DataFrame(DataFrameInterface):
                 end = previous + frame_length
                 for index, super_index in enumerate(super_indices):
                     if previous <= super_index < end:
-                        indices[index] = [frame_index, super_index - previous, previous]
+                        indices[index] = [frame_index, int(super_index - previous), int(previous)]
                 previous = end
 
             return indices
@@ -301,13 +304,13 @@ class DataFrame(DataFrameInterface):
             start_index, stop_index = self.find_frame_indices([start, stop])
         elif start is not None:
             start_index = self.find_frame_index(start)
-            stop_index = [None, None, None]
+            stop_index = [len(self.frames) - 1, None, None]
         elif stop is not None:
             stop_index = self.find_frame_index(stop)
-            start_index = [None, None, None]
+            start_index = [0, None, None]
         else:
-            start_index = [None, None, None]
-            stop_index = [None, None, None]
+            start_index = [0, None, None]
+            stop_index = [len(self.frames) - 1, None, None]
 
         start_frame, start_inner, _ = start_index
         stop_frame, stop_inner, _ = stop_index
@@ -321,8 +324,10 @@ class DataFrame(DataFrameInterface):
         else:
             if frame_start is None:
                 frame_start = 0
+            elif frame_start < 0:
+                frame_start = len(self.frames) + frame_start
             if frame_stop is None:
-                frame_stop = 0
+                frame_stop = len(self.frames) - 1
             elif frame_stop < 0:
                 frame_stop = len(self.frames) + frame_stop
 
@@ -330,7 +335,7 @@ class DataFrame(DataFrameInterface):
                 data = self.frames[frame_start][inner_start:inner_stop:step]
             else:
                 data = self.frames[frame_start][inner_start::step]
-                for fi in range(frame_start + 1, frame_stop + 1):
+                for fi in range(frame_start + 1, frame_stop):
                     data = self.smart_append(data, self.frames[fi][::step])
                 data = self.smart_append(data, self.frames[frame_stop][:inner_stop:step])
         return data

@@ -65,6 +65,10 @@ class TimeSeriesFrameInterface(DataFrameInterface):
         pass
 
     @abstractmethod
+    def get_time(self, super_index):
+        pass  # return self.time[super_index]
+
+    @abstractmethod
     def get_times(self, start=None, stop=None, step=None):
         pass  # return self.times[slice(start, stop, step)]
 

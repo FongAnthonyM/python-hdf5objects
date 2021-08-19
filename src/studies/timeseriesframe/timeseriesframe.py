@@ -13,7 +13,7 @@ __email__ = ""
 __status__ = "Prototype"
 
 # Default Libraries #
-import datetime
+import datetime  # Todo: Consider Pandas Timestamp for nanosecond resolution
 
 # Downloaded Libraries #
 import numpy as np
@@ -144,7 +144,7 @@ class TimeSeriesFrame(DataFrame):
 
     def get_end(self):
         if self.frames:
-            end = self.frames[0].end
+            end = self.frames[-1].end
             if isinstance(end, datetime.datetime):
                 self._end = end
             else:
@@ -156,7 +156,7 @@ class TimeSeriesFrame(DataFrame):
 
     def get_start_timestamps(self):
         starts = np.empty(len(self.frames))
-        for index, frame in self.frames:
+        for index, frame in enumerate(self.frames):
             starts[index] = frame.start.timestamp()
         return starts
 
@@ -173,44 +173,69 @@ class TimeSeriesFrame(DataFrame):
         return time_axis
 
     def get_sample_rates(self):
-        self._sample_rates = [frame.sample_rate for frame in self.frames]
+        self._sample_rates = (frame.sample_rate for frame in self.frames)
         return self._sample_rates
 
     def get_sample_rate(self):
-        self._sample_rate = self.validate_sample_rate()
-        sample_rates = self.get_sample_rates()
-        if self._sample_rate and len(sample_rates) > 0:
-            self._sample_rate = sample_rates[0]
+        sample_rates = list(self.get_sample_rates())
+        if sample_rates:
+            rate = sample_rates.pop()
+            if rate:
+                for sample_rate in sample_rates:
+                    if not sample_rate or rate != sample_rate:
+                        self._sample_rate = False
+            self._sample_rate = rate
+        else:
+            self._sample_rate = False
         return self._sample_rate
 
     def get_sample_period(self):
         self._sample_period = self.get_sample_rate()
         if not isinstance(self._sample_period, bool):
             self._sample_period = 1 / self._sample_period
-        return self._sample_rate
+        return self._sample_period
 
     def get_is_continuous(self):
         self._is_continuous = self.validate_continuous()
         return self._is_continuous
 
     # Data
+    def get_time(self, super_index):
+        with self.cache():
+            # Check if index is in range.
+            if super_index >= self.length or (super_index + self.length) < 0:
+                raise IndexError("index is out of range")
+
+            # Change negative indexing into positive.
+            if super_index < 0:
+                super_index = self.length + super_index
+
+            # Find
+            previous = 0
+            for frame_index, frame_length in enumerate(self.lengths):
+                end = previous + frame_length
+                if super_index < end:
+                    return self.frames[frame_index].get_time(int(super_index - previous))
+                else:
+                    previous = end
+
     def get_times(self, start=None, stop=None, step=None):
         if start is not None and stop is not None:
             start_index, stop_index = self.find_frame_indices([start, stop])
         elif start is not None:
             start_index = self.find_frame_index(start)
-            stop_index = [None, None, None]
+            stop_index = [len(self.frames) - 1, None, None]
         elif stop is not None:
             stop_index = self.find_frame_index(stop)
-            start_index = [None, None, None]
+            start_index = [0, None, None]
         else:
-            start_index = [None, None, None]
-            stop_index = [None, None, None]
+            start_index = [0, None, None]
+            stop_index = [len(self.frames) - 1, None, None]
 
         frame_start, inner_start, _ = start_index
         frame_stop, inner_stop, _ = stop_index
 
-        if (frame_start + 1) == frame_stop or (frame_start + 1) == len(self.frames) + frame_stop:
+        if frame_start == frame_stop:
             times = self.frames[frame_start].get_times(inner_start, inner_stop, step)
         else:
             times = self.frames[frame_start].get_times(inner_start, None, step)
@@ -228,27 +253,27 @@ class TimeSeriesFrame(DataFrame):
         index = None
         times = self.get_start_timestamps()
 
-        if timestamp < times[0]:
+        if timestamp < self.start.timestamp():
             if tails:
                 index = 0
-        elif timestamp > times[-1]:
+        elif timestamp > self.end.timestamp():
             if tails:
-                index = times.shape[0]
-        elif timestamp in times:
-            index = np.searchsorted(times, timestamp)
+                index = times.shape[0] - 1
         else:
-            index = np.searchsorted(times, timestamp) - 1
+            index = np.searchsorted(times, timestamp, side="right") - 1
 
         return index
 
     def find_time_index(self, timestamp, aprox=False, tails=False):
+        if isinstance(timestamp, float):
+            timestamp = datetime.datetime.fromtimestamp(timestamp)
         index = self.find_frame_time(timestamp, tails)
         location = []
         true_timestamp = timestamp
 
         if index:
             frame = self.frames[index]
-            if timestamp <= frame.end.timestamp():
+            if timestamp <= frame.end:
                 location, true_timestamp = frame.find_time_index(timestamp=timestamp, aprox=aprox)
             else:
                 index = None
@@ -257,14 +282,16 @@ class TimeSeriesFrame(DataFrame):
 
     def find_time_sample(self, timestamp, aprox=False, tails=False):
         with self.cache():
+            if isinstance(timestamp, float):
+                timestamp = datetime.datetime.fromtimestamp(timestamp)
             index = self.find_frame_time(timestamp, tails)
             frame_samples = sum(self.lengths[:index])
             inner_samples = 0
             true_timestamp = timestamp
 
-            if index:
+            if index is not None:
                 frame = self.frames[index]
-                if timestamp <= frame.end.timestamp():
+                if timestamp <= frame.end:
                     inner_samples, true_timestamp = frame.find_time_sample(timestamp=timestamp, aprox=aprox)
                 else:
                     frame_samples = -1
@@ -286,7 +313,7 @@ class TimeSeriesFrame(DataFrame):
 
     # Sample Rate
     def validate_sample_rate(self):
-        sample_rates = self.get_sample_rates()
+        sample_rates = list(self.get_sample_rates())
         if sample_rates:
             rate = sample_rates.pop()
             if rate:
@@ -315,7 +342,35 @@ class TimeSeriesFrame(DataFrame):
                 self.frames[index].resample(sample_rate=sample_rate, **kwargs)
 
     # Continuous Data
-    def validate_continuous(self):
+    def where_discontinuous(self, tolerance=None):
+        if tolerance is None:
+            tolerance = self.time_tolerance
+
+        discontinuities = []
+        for index, frame in enumerate(self.frames):
+            discontinuities.append(frame.where_discontinuous())
+
+            if index + 1 < len(self.frames):
+                if isinstance(frame.end, datetime.datetime):
+                    first = frame.end.timestamp()
+                else:
+                    first = frame.end
+
+                if isinstance(self.frames[index + 1].start, datetime.datetime):
+                    second = self.frames[index + 1].start.timestamp()
+                else:
+                    second = self.frames[index + 1].start
+
+                if abs((second - first) - self.sample_period) > tolerance:
+                    discontinuities.append(index + 1)
+                else:
+                    discontinuities.append(None)
+        return discontinuities
+
+    def validate_continuous(self, tolerance=None):
+        if tolerance is None:
+            tolerance = self.time_tolerance
+
         for index, frame in enumerate(self.frames):
             if not frame.validate_continuous():
                 return False
@@ -331,7 +386,7 @@ class TimeSeriesFrame(DataFrame):
                 else:
                     second = self.frames[index + 1].start
 
-                if (second - first) - self.sample_period > self.time_tolerance:
+                if abs((second - first) - self.sample_period) > tolerance:
                     return False
 
         return True

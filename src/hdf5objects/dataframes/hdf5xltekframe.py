@@ -57,6 +57,7 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
 
     def load_time_axis(self):
         self._time_axis = self.file.time_axis
+        return self._time_axis
 
     # Getters
     def get_start(self):
