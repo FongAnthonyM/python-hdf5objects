@@ -19,7 +19,7 @@ import math
 # Downloaded Libraries #
 import numpy as np
 from scipy import interpolate
-from ...dspobjects import Resample  # Todo: Make this a package
+from dspobjects import Resample
 
 # Local Libraries #
 from ..datacontainer import DataContainer

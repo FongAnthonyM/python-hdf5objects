@@ -71,8 +71,8 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        'baseobjects>=1.4.3', 'classversioning', 'h5py>=3.2.1', 'numpy', 'multipledispatch', 'pytz', 'tzlocal',
-        'bidict'
+        'baseobjects>=1.4.3', 'classversioning', 'dspobjects', 'h5py>=3.2.1', 'numpy', 'multipledispatch', 'pytz',
+        'tzlocal', 'bidict'
     ],
     extras_require={
         "dev": ['pytest>=6.2.3'],
