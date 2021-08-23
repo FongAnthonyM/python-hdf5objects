@@ -76,6 +76,7 @@ class TestXLTEKStudy(ClassTest):
         ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
         ps.print_stats()
         print(s.getvalue())
+        assert 1
 
     def test_load_study_mount(self):
         s_id = "EC228"

@@ -1238,6 +1238,7 @@ class HDF5Object(BaseObject):
             obj (obj:`File`): A HDF5 file to build this object around.
         """
         if obj:
+            self.h5_fobj = obj
             self.path = obj.filename
         else:
             raise ValueError("The supplied HDF5 File must be open.")

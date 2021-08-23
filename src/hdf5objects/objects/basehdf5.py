@@ -112,19 +112,46 @@ class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=Versio
         t_name = cls.default_map.attributes["file_type"]
 
         if isinstance(obj, (str, pathlib.Path)):
-            if cls.validate_openable(obj):
-                obj = HDF5Object(obj)
+            if not isinstance(obj, pathlib.Path):
+                obj = pathlib.Path(obj)
+
+            if obj.is_file():
+                try:
+                    with h5py.File(obj) as obj:
+                        return t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]
+                except OSError:
+                    return False
             else:
                 return False
-
-        if isinstance(obj, h5py.File):
-            obj = HDF5Object(obj)
-
-        return cls.FILE_TYPE == obj.attributes[t_name]
+        elif isinstance(obj, HDF5Object):
+            obj = obj.h5_fobj
+            return t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]
 
     @classmethod
     def validate_file(cls, obj):
         raise NotImplementedError
+
+    @classmethod
+    def new_validated(cls, obj, **kwargs):
+        t_name = cls.default_map.attributes["file_type"]
+
+        if isinstance(obj, (str, pathlib.Path)):
+            if not isinstance(obj, pathlib.Path):
+                obj = pathlib.Path(obj)
+
+            if obj.is_file():
+                try:
+                    obj = h5py.File(obj)
+                    if t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]:
+                        return cls(obj=obj, **kwargs)
+                except OSError:
+                    return None
+            else:
+                return None
+        elif isinstance(obj, HDF5Object):
+            obj = obj.h5_fobj
+            if t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]:
+                return cls(obj=obj, **kwargs)
 
     @classmethod
     def get_version_from_object(cls, obj):

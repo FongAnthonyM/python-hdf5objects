@@ -16,7 +16,7 @@ __status__ = "Prototype"
 import datetime
 
 # Downloaded Libraries #
-from ...studies.directorytimeframe.directorytimeframe import DirectoryTimeFrame
+from framestructure import DirectoryTimeFrame
 
 # Local Libraries #
 from .hdf5xltekframe import HDF5XLTEKFrame
@@ -60,6 +60,21 @@ class XLTEKDayFrame(DirectoryTimeFrame):
         if not open_:
             self.close()
 
+    # Constructors/Destructors
+    def construct_frames(self, **kwargs):
+        for path in self.path.glob(self.glob_condition):
+            if path not in self.frame_names:
+                file_frame = self.frame_type.new_validated(path, **kwargs)
+                if self.frame_creation_condition(file_frame):
+                    self.frames.append(file_frame)
+                    self.frame_names.add(path)
+        self.frames.sort(key=lambda frame: frame.start)
+
+    # Frames
+    def frame_creation_condition(self, path):
+        return True
+
+    # File
     def date_from_path(self):
         date_string = self.path.parts[-1].split('_')[1]
         self._date = datetime.datetime.strptime(date_string, self.date_format).date()

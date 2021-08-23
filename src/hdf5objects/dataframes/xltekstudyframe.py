@@ -16,7 +16,7 @@ __status__ = "Prototype"
 import pathlib
 
 # Downloaded Libraries #
-from ...studies.directorytimeframe.directorytimeframe import DirectoryTimeFrame
+from framestructure import DirectoryTimeFrame
 
 # Local Libraries #
 from .xltekdayframe import XLTEKDayFrame

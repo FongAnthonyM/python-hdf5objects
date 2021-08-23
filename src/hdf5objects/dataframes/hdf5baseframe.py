@@ -17,7 +17,7 @@ from abc import abstractmethod
 import pathlib
 
 # Downloaded Libraries #
-from ...studies import FileTimeFrame
+from framestructure import FileTimeFrame
 from multipledispatch import dispatch
 import numpy as np
 
@@ -41,6 +41,18 @@ class HDF5BaseFrame(FileTimeFrame):
             return cls.file_type.validate_file_type(path)
         else:
             return False
+
+    @classmethod
+    def new_validated(cls, path, **kwargs):
+        if not isinstance(path, pathlib.Path):
+            path = pathlib.Path(path)
+
+        if path.is_file():
+            file = cls.file_type.new_validated(path)
+            if file:
+                return cls(file=file, **kwargs)
+
+        return None
 
     # Instance Methods
     # File

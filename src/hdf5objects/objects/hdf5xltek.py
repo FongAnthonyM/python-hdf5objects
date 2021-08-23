@@ -85,6 +85,29 @@ class HDF5XLTEK(HDF5EEG):
             obj = obj.h5_fobj
             return start_name in obj.attrs and end_name in obj.attrs
 
+    @classmethod
+    def new_validated(cls, obj, **kwargs):
+        start_name = cls.default_map.attributes["start"]
+        end_name = cls.default_map.attributes["end"]
+
+        if isinstance(obj, (str, pathlib.Path)):
+            if not isinstance(obj, pathlib.Path):
+                obj = pathlib.Path(obj)
+
+            if obj.is_file():
+                try:
+                    obj = h5py.File(obj)
+                    if start_name in obj.attrs and end_name in obj.attrs:
+                        return cls(file=obj, **kwargs)
+                except OSError:
+                    return None
+            else:
+                return None
+        elif isinstance(obj, HDF5Object):
+            obj = obj.h5_fobj
+            if start_name in obj.attrs and end_name in obj.attrs:
+                return cls(file=obj, **kwargs)
+
     def __init__(self, file=None, s_id=None, s_dir=None, start=None, init=True, **kwargs):
         super().__init__(init=False)
         self._start_entry = None
