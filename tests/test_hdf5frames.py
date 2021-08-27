@@ -72,7 +72,7 @@ class TestXLTEKStudy(ClassTest):
 
         pr.disable()
         s = io.StringIO()
-        sortby = pstats.SortKey.TIME  # 'cumulative'
+        sortby = pstats.SortKey.TIME
         ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
         ps.print_stats()
         print(s.getvalue())
@@ -112,10 +112,20 @@ class TestXLTEKStudy(ClassTest):
     def test_date_time_range_mount(self):
         s_id = "EC228"
         first = datetime.datetime(2020, 9, 22, 0, 00, 00)
-        second = datetime.datetime(2020, 9, 22, 0, 10, 00)
+        second = datetime.datetime(2020, 9, 22, 1, 00, 00)
+        pr = cProfile.Profile()
+        pr.enable()
 
         with XLTEKStudyFrame(s_id=s_id, studies_path=self.studies_path) as study_frame:
-            data = study_frame.get_time_range(first, second, aprox=True)
+            data, true_start, true_end = study_frame.get_time_range(first, second, aprox=True)
+            print(data.shape)
+
+        pr.disable()
+        s = io.StringIO()
+        sortby = pstats.SortKey.TIME
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
 
         assert data is not None
 
@@ -128,6 +138,24 @@ class TestXLTEKStudy(ClassTest):
         data, start, stop = study_frame.data_range_time(first, second, aprox=True)
 
         assert data is not None
+
+    def test_date_rang_time_mount(self):
+        s_id = "EC228"
+        first = datetime.datetime(2020, 9, 22, 0, 00, 00)
+        second = datetime.datetime(2020, 9, 22, 0, 20, 00)
+        pr = cProfile.Profile()
+        pr.enable()
+
+        with XLTEKStudyFrame(s_id=s_id, studies_path=self.studies_path) as study_frame:
+            data, true_start, true_end = study_frame.data_range_time(first, second, aprox=True)
+            print(data.shape)
+
+        pr.disable()
+        s = io.StringIO()
+        sortby = pstats.SortKey.TIME
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
 
     def test_validate_shape(self):
         s_id = "EC228"

@@ -38,14 +38,16 @@ class XLTEKStudyFrame(DirectoryTimeFrame):
 
     # Magic Methods #
     # Construction/Destruction
-    def __init__(self, s_id=None, studies_path=None, path=None, frames=None, update=True, init=True):
+    def __init__(self, s_id=None, studies_path=None, path=None, frames=None, update=True,
+                 open_=True, init=True, **kwargs):
         super().__init__(init=False)
 
         self._studies_path = None
         self.subject_id = ""
 
         if init:
-            self.construct(s_id=s_id, studies_path=studies_path, path=path, frames=frames, update=update)
+            self.construct(s_id=s_id, studies_path=studies_path, path=path, frames=frames, update=update,
+                           open_=open_, **kwargs)
 
     @property
     def studies_path(self):
@@ -60,7 +62,7 @@ class XLTEKStudyFrame(DirectoryTimeFrame):
 
     # Instance Methods
     # Constructors/Destructors
-    def construct(self, s_id=None, studies_path=None, path=None, frames=None, update=True):
+    def construct(self, s_id=None, studies_path=None, path=None, frames=None, update=True, open_=True, **kwargs):
         if s_id is not None:
             self.subject_id = s_id
 
@@ -70,4 +72,4 @@ class XLTEKStudyFrame(DirectoryTimeFrame):
         if path is None:
             path = pathlib.Path(self.studies_path, self.subject_id)
 
-        super().construct(path=path, frames=frames, update=update)
+        super().construct(path=path, frames=frames, update=update, open_=open_, **kwargs)
