@@ -17,470 +17,314 @@ import pathlib
 import datetime
 
 # Downloaded Libraries #
-import h5py
+from classversioning import VersionType, TriNumberVersion
+from bidict import bidict
+import numpy as np
 
 # Local Libraries #
+from .basehdf5 import BaseHDF5Map, BaseHDF5
+from ..datasets import TimeSeriesMap, ChannelAxisMap, SampleAxisMap, TimeAxisMap
 
 
-# Todo: Inherit from the AdvanceHDF5 object
-# Todo: Make one big HDF5 Package
 # Definitions #
 # Classes #
-class HDF5EEG:
-    structure = {'type': 'type',
-                 'name': 'name',
-                 'ID': 'ID',
-                 'start': 'start',
-                 'end': 'end',
-                 'data': 'EEG Array',
-                 'samplerate': 'samplerate',
-                 'nsamples': 'nsamples',
-                 'saxis': 'saxis',
-                 'taxis': 'taxis'}
+class HDF5EEGMap(BaseHDF5Map):
+    default_attributes = bidict({"file_type": "FileType",
+                                 "file_version": "FileVersion",
+                                 "subject_id": "subject_id",
+                                 "start": "start",
+                                 "end": "end"})
+    default_containers = bidict({"data": "EEG Array",
+                                 "channel_axis": "channel_axis",
+                                 "sample_axis": "sample_axis",
+                                 "time_axis": "time_axis"})
+    default_maps = {"data": TimeSeriesMap(name="data"),
+                    "channel_axis": ChannelAxisMap(name="channel_axis"),
+                    "sample_axis": SampleAxisMap(name="sample_axis"),
+                    "time_axis": TimeAxisMap(name="time_axis")}
 
-    def __init__(self, name, ID="", path=None, init=False):
-        self._type = 'EEG'
-        self._name = name
-        self._ID = ID
-        self._path = None
-        self.path = path
-        self.is_open = False
 
-        self._start = None
-        self._end = None
+class HDF5EEG(BaseHDF5):
+    _registration = False
+    _VERSION_TYPE = VersionType(name="HDF5EEG", class_=TriNumberVersion)
+    VERSION = TriNumberVersion(0, 0, 0)
+    FILE_TYPE = "EEG"
+    default_map = HDF5EEGMap()
 
-        self._data = None
-        self._start_sample = None
-        self._end_sample = None
-        self._sample_rate = None
-        self._n_samples = None
-        self._s_axis = None
-        self._t_axis = None
-        self._dt_axis = None
+    # Magic Methods
+    # Construction/Destruction
+    def __init__(self, file=None, s_id=None, s_dir=None, start=None, create=True, init=True, **kwargs):
+        super().__init__(init=False)
+        self._subject_id = ""
+        self._subject_dir = None
+        self._start = 0.0
+        self._end = 0.0
+        self._subject_dir = None
 
-        self.h5_fobj = None
+        self.eeg_data = None
 
-        self.cargs = {'compression': 'gzip', 'compression_opts': 6}
-        self.is_updating = False
-
-        if self.path.is_file():
-            self.open()
-            if not init:
-                self.close()
-        elif init:
-            self.build()
-
-    def __repr__(self):
-        return repr(self.start)
-
-    def __getstate__(self):
-        state = self.__dict__.copy()
-        name = str(state['path'])
-        open = state['is_open']
-        if open:
-            fobj = state['h5_fobj']
-            fobj.flush()
-            fobj.close()
-        state['h5_fobj'] = (name, open)
-        return state
-
-    def __setstate__(self, state):
-        name, open = state['h5_fobj']
-        state['h5_fobj'] = h5py.File(str(name), 'r+')
-        if not open:
-            state['h5_fobj'].close()
-        self.__dict__.is_updating(state)
-
-    def __len__(self):
-        return self.n_samples
-
-    def __getitem__(self, item):
-        op = self.is_open
-        self.open()
-
-        data = self.data[item]
-
-        if not op:
-            self.close()
-        return data
-
-    def __enter__(self):
-        self.open()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        return self.close()
-
-    @property
-    def type(self):
-        op = self.is_open
-        self.open()
-
-        if self.structure['type'] in self.h5_fobj.attrs and (self._type is None or self.is_updating):
-            self._type = self.h5_fobj.attrs[self.structure['type']]
-
-        if not op:
-            self.close()
-
-        return self._type
-
-    @property
-    def name(self):
-        op = self.is_open
-        self.open()
-
-        if self.structure['name'] in self.h5_fobj.attrs and (self._name is None or self.is_updating):
-            self._name = self.h5_fobj.attrs[self.structure['name']]
-
-        if not op:
-            self.close()
-
-        return self._name
-
-    @property
-    def ID(self):
-        op = self.is_open
-        self.open()
-
-        if self.structure['ID'] in self.h5_fobj.attrs and (self._ID is None or self.is_updating):
-            self._ID = self.h5_fobj.attrs[self.structure['ID']]
-
-        if not op:
-            self.close()
-
-        return self._ID
-
-    @property
-    def path(self):
-        return self._path
-
-    @path.setter
-    def path(self, value):
-        if isinstance(value, pathlib.Path) or value is None:
-            self._path = value
-        else:
-            self._path = pathlib.Path(value)
+        if init:
+            self.construct(file, s_id, s_dir, start, create, **kwargs)
 
     @property
     def start(self):
-        op = self.is_open
-        self.open()
+        try:
+            self._start = self.attributes[self.map.attributes["start"]]
+        finally:
+            return datetime.datetime.fromtimestamp(self._start)
 
-        if self.structure['start'] in self.h5_fobj.attrs and (self._start is None or self.is_updating):
-            self._start = datetime.datetime.fromtimestamp(self.h5_fobj.attrs[self.structure['start']])
-
-        if not op:
-            self.close()
-
-        return self._start
+    @start.setter
+    def start(self, value):
+        if isinstance(value, datetime.datetime):
+            value = value.timestamp()
+        try:
+            self.attributes[self.map.attributes["start"]] = value
+        finally:
+            self._start = value
 
     @property
     def end(self):
-        op = self.is_open
-        self.open()
+        try:
+            self._end = self.attributes[self.map.attributes["end"]]
+        finally:
+            return datetime.datetime.fromtimestamp(self._end)
 
-        if self.structure['end'] in self.h5_fobj.attrs and (self._end is None or self.is_updating):
-            self._end = datetime.datetime.fromtimestamp(self.h5_fobj.attrs[self.structure['end']])
-
-        if not op:
-            self.close()
-
-        return self._end
-
-    @property
-    def data(self):
-        op = self.is_open
-        self.open()
-
-        if self.structure['data'] in self.h5_fobj:
-            self._data = self.h5_fobj[self.structure['data']]
-
-        if not op:
-            self.close()
-
-        return self._data
+    @end.setter
+    def end(self, value):
+        if isinstance(value, datetime.datetime):
+            value = value.timestamp()
+        try:
+            self.attributes[self.map.attributes["end"]] = value
+        finally:
+            self._end = value
 
     @property
-    def start_sample(self):
-        op = self.is_open
-        self.open()
+    def subject_dir(self):
+        """:obj:`Path`: The path to the file.
 
-        if self.structure['saxis'] in self.h5_fobj and (self._start_sample is None or self.is_updating):
-            self._start_sample = self.h5_fobj[self.structure['saxis']][0]
+        The setter casts objects that are not Path to path before setting
+        """
+        return self._subject_dir
 
-        if not op:
-            self.close()
-
-        return self._start_sample
-
-    @property
-    def end_sample(self):
-        op = self.is_open
-        self.open()
-
-        if self.structure['saxis'] in self.h5_fobj and (self._end_sample is None or self.is_updating):
-            self._end_sample = self.h5_fobj[self.structure['saxis']][-1]
-
-        if not op:
-            self.close()
-
-        return self._end_sample
+    @subject_dir.setter
+    def subject_dir(self, value):
+        if isinstance(value, pathlib.Path) or value is None:
+            self._subject_dir = value
+        else:
+            self._subject_dir = pathlib.Path(value)
 
     @property
     def sample_rate(self):
-        op = self.is_open
-        self.open()
+        return self.eeg_data.sample_rate
 
-        if self.structure['data'] in self.h5_fobj and \
-           self.structure['samplerate'] in self.h5_fobj[self.structure['data']].attrs and \
-           (self._sample_rate is None or self.is_updating):
-            self._sample_rate = self.h5_fobj[self.structure['data']].attrs[self.structure['samplerate']]
-
-        if not op:
-            self.close()
-
-        return self._sample_rate
+    @sample_rate.setter
+    def sample_rate(self, value):
+        self.eeg_data.sample_rate = value
 
     @property
     def n_samples(self):
-        op = self.is_open
-        self.open()
+        return self.eeg_data.n_samples
 
-        if self.structure['data'] in self.h5_fobj and \
-           self.structure['nsamples'] in self.h5_fobj[self.structure['data']].attrs and \
-           (self._n_samples is None or self.is_updating):
-            self._n_samples = self.h5_fobj[self.structure['data']].attrs[self.structure['nsamples']]
-
-        if not op:
-            self.close()
-
-        return self._n_samples
+    @n_samples.setter
+    def n_samples(self, value):
+        self.eeg_data.n_samples = value
 
     @property
-    def s_axis(self):
-        op = self.is_open
-        self.open()
+    def channel_axis(self):
+        return self.eeg_data.channel_axis
 
-        if self.structure['saxis'] in self.h5_fobj and (self._s_axis is None or self.is_updating):
-            self._s_axis = self.h5_fobj[self.structure['saxis']][...]
-
-        if not op:
-            self.close()
-
-        return self._s_axis
+    @channel_axis.setter
+    def channel_axis(self, value):
+        self.eeg_data.channel_axis = value
 
     @property
-    def t_axis(self):
-        op = self.is_open
-        self.open()
+    def sample_axis(self):
+        return self.eeg_data.sample_axis
 
-        if self.structure['taxis'] in self.h5_fobj and (self._t_axis is None or self.is_updating):
-            self._t_axis = self.h5_fobj[self.structure['taxis']][...]
-
-        if not op:
-            self.close()
-
-        return self._t_axis
+    @sample_axis.setter
+    def sample_axis(self, value):
+        self.eeg_data.sample_axis = value
 
     @property
-    def dt_axis(self):
-        op = self.is_open
-        self.open()
+    def time_axis(self):
+        return self.eeg_data.time_axis
 
-        if self.structure['taxis'] in self.h5_fobj and (self._dt_axis is None or self.is_updating):
-            t_axis = self.h5_fobj[self.structure['taxis']][...]
-            self._dt_axis = [datetime.datetime.fromtimestamp(t) for t in t_axis]
+    @time_axis.setter
+    def time_axis(self, value):
+        self.eeg_data.time_axis = value
 
-        if not op:
-            self.close()
+    # Representation
+    def __repr__(self):
+        return repr(self.start)
 
-        return self._dt_axis
+    # Instance Methods
+    # Constructors/Destructors
+    def construct(self, file=None, s_id=None, s_dir=None, start=None, create=True, **kwargs):
+        """Constructs this object.
 
-    def build(self, start=None, data=None, saxis=None, taxis=None):
-        if self.path.is_dir():
-            if start is None:
-                f_name = self._name
-            else:
-                f_name = self._name + '_' + start.isoformat('_', 'seconds').replace(':', '~')
-            self.path = pathlib.Path(self.path, f_name + '.h5')
+        Args:
+            obj: An object to build this object from. It can be the path to the file or a File object.
+            update (bool): Determines if this object should constantly open the file for updating attributes.
+            open_ (bool): Determines if this object will remain open after construction.
+            **kwargs: The keyword arguments for the open method.
 
-        h5_fobj = h5py.File(str(self.path), "a")
+        Returns:
+            This object.
+        """
+        if s_dir is not None:
+            self.subject_dir = s_dir
 
-        h5_fobj.attrs[self.structure['type']] = self._type
-        h5_fobj.attrs[self.structure['name']] = self._name
-        h5_fobj.attrs[self.structure['ID']] = self._ID
-        h5_fobj.attrs[self.structure['start']] = self._start
-        h5_fobj.attrs[self.structure['end']] = self._end
+        super().construct(obj=file, create=False, **kwargs)
 
-        ecog = h5_fobj.create_dataset(self.structure['data'], dtype='f8', data=data, maxshape=(None, None), **self.cargs)
-        ecog.attrs[self.structure['samplerate']] = self._sample_rate
-        ecog.attrs[self.structure['nsamples']] = self._n_samples
-
-        sstamps = h5_fobj.create_dataset(self.structure['saxis'], dtype='i', data=saxis, maxshape=(None,), **self.cargs)
-        tstamps = h5_fobj.create_dataset(self.structure['taxis'], dtype='f8', data=taxis, maxshape=(None,), **self.cargs)
-
-        ecog.dims.create_scale(sstamps, 'sample axis')
-        ecog.dims.create_scale(tstamps, 'time axis')
-
-        ecog.dims[0].attach_scale(sstamps)
-        ecog.dims[0].attach_scale(tstamps)
-
-        h5_fobj.flush()
-
-        self.h5_fobj = h5_fobj
-        return h5_fobj
-
-    def open(self, exc=False):
-        if not self.is_open:
-            try:
-                self.h5_fobj = h5py.File(str(self.path))
-            except:
-                if exc:
-                    self.is_open = False
-                else:
-                    raise
-            else:
-                self.is_open = True
-        return self.h5_fobj
-
-    def close(self):
-        if self.is_open:
-            self.h5_fobj.flush()
-            self.h5_fobj.close()
-            self.is_open = False
-        return not self.is_open
-
-    def find_sample(self, s):
-        op = self.is_open
-        self.open()
-
-        s_axis = self.s_axis
-        if s in s_axis:
-            index = list(s_axis).index(s)
+        if self.path is not None:
+            self.load_eeg_data()
         else:
-            index = None
+            if s_id is not None:
+                self._subject_id = s_id
+            if isinstance(start, datetime.datetime):
+                self._start = start.timestamp()
+            elif isinstance(start, float):
+                self._start = start
 
-        if not op:
-            self.close()
-        return index
+            if create and self._subject_id is not None and self._start is not None and self._subject_dir is not None:
+                self.create_file()
 
-    def find_time(self, dt, tails=False):
-        op = self.is_open
-        self.open()
+    # File Creation/Construction
+    def generate_file_name(self):
+        return self.subject_id + '_' + self.start.isoformat('_', 'seconds').replace(':', '~') + ".h5"
 
-        dt_axis = self.dt_axis
+    def create_file(self, s_name=None, s_dir=None, start=None, f_path=None, **kwargs):
+        if s_name is not None:
+            self._subject_id = s_name
+        if s_dir is not None:
+            self.subject_dir = s_dir
+        if start is not None:
+            self._start = start
+
+        if f_path is None:
+            f_path = self.subject_dir.joinpath(self.generate_file_name())
+
+        self.path = f_path
+
+        super().create_file(**kwargs)
+
+    def construct_file_attributes(self, **kwargs):
+        self.attributes[self.map.attributes["subject_id"]] = self._subject_id
+        self.attributes[self.map.attributes["start"]] = self._start
+        self.attributes[self.map.attributes["end"]] = self._end
+        super().construct_file_attributes(**kwargs)
+
+    # EEG Data
+    def create_eeg_dataset(self, data=None, shape=None, maxshape=None, dtype=None, **kwargs):
+        if maxshape is None:
+            maxshape = (None, None)
+
+        if data is None:
+            if shape is None:
+                shape = (0, 0)
+            if dtype is None:
+                dtype = "f4"
+
+        kwargs["data"] = data
+        kwargs["shape"] = shape
+        kwargs["maxshape"] = maxshape
+        kwargs["dtype"] = dtype
+
+        self.eeg_data = self.map["data"].create_object(name=self.map.containers["data"], file=self, **kwargs)
+        self.eeg_data.axis_map["channel_axis"] = self.map.containers["channel_axis"]
+        self.eeg_data.axis_map["sample_axis"] = self.map.containers["sample_axis"]
+        self.eeg_data.axis_map["time_axis"] = self.map.containers["time_axis"]
+        self.structure[self.map.containers["data"]].object = self.eeg_data
+
+    def load_eeg_data(self):
+        with self.temp_open():
+            d_name = self.map.containers["data"]
+            if d_name in self.h5_fobj:
+                self.create_eeg_dataset(dataset=self.h5_fobj[d_name])
+            else:
+                self.create_eeg_dataset(name=d_name, create=False)
+
+    def set_eeg_data(self, data, sample_rate=None, start_sample=None, end_sample=None,
+                     start_time=None, end_time=None, dtype='f4', maxshape=(None, None), **kwargs):
+        d_kwargs = self.default_file_attributes.copy()
+        d_kwargs.update(kwargs)
+        d_name = self.map.containers["data"]
+        with self.temp_open():
+            if self.eeg_data is None:
+                self.create_eeg_dataset(name=d_name, create=False)
+            if sample_rate is not None:
+                self.eeg_data.sample_rate = sample_rate
+
+            self.eeg_data.set_data(self, data, sample_rate, start_sample, end_sample, start_time, end_time,
+                                   dtype=dtype, maxshape=maxshape, **d_kwargs)
+
+    # Data Manipulation
+    def find_sample(self, sample, aprox=False, tails=False):
+        # Setup
         index = None
 
-        if tails and dt < dt_axis[0]:
-            index = 0
-        elif tails and dt > dt_axis[-1]:
-            index = -1
-        else:
-            for i in range(1, len(dt_axis)):
-                if dt_axis[i-1] <= dt <= dt_axis[i]:
-                    if dt_axis[i-1] == dt:
-                        index = i-1
-                    else:
-                        index = i
-                    break
-
-        if not op:
-            self.close()
-        return index
-
-    def find_time_range(self, s=None, e=None, tails=False):
-        op = self.is_open
-        self.open()
-
-        dt_axis = self.dt_axis
-        start = None
-        end = None
-
-        if s is None or (tails and s < dt_axis[0]):
-            start = 0
-        if e is None or (tails and e > dt_axis[-1]):
-            end = -1
-
-        for i in range(1, len(dt_axis)):
-            if dt_axis[i - 1] <= s <= dt_axis[i]:
-                if dt_axis[i - 1] == s:
-                    start = i - 1
+        # Find
+        with self.temp_open():
+            if sample in self.sample_axis:
+                index = np.where(self.sample_axis[...] == sample)[0][0]
+            elif aprox or tails:
+                if sample < self.sample_axis[0]:
+                    if tails:
+                        index = 0
+                elif sample > self.sample_axis[-1]:
+                    if tails:
+                        index = self.sample_axis.shape[0]
                 else:
-                    start = i
-                if end == -1:
-                    break
-            if dt_axis[i - 1] <= e <= dt_axis[i]:
-                if dt_axis[i - 1] == s:
-                    end = i - 1
+                    index = np.where(self.sample_axis[...] > sample)[0][0] - 1  # Floor to the closest index
+
+            return index, self.sample_axis[index]
+
+    def find_sample_range(self, start=None, end=None, aprox=False, tails=False):
+        with self.temp_open():
+            start_index, true_start = self.find_sample(start, aprox, tails)
+            end_index, true_end = self.find_sample(end, aprox, tails)
+
+            return self.sample_axis[start_index:end_index], true_start, true_end
+
+    def data_range_sample(self, start=None, end=None, aprox=False, tails=False):
+        with self.temp_open():
+            start_index, true_start = self.find_sample(start, aprox, tails)
+            end_index, true_end = self.find_sample(end, aprox, tails)
+
+            return self.eeg_data[start_index:end_index], true_start, true_end
+
+    def find_time(self, timestamp, aprox=False, tails=False):
+        # Setup
+        if isinstance(timestamp, datetime.datetime):
+            timestamp = timestamp.timestamp()
+        index = None
+
+        # Find
+        with self.temp_open():
+            if timestamp in self.time_axis:
+                index = np.where(self.time_axis[...] == timestamp)[0][0]
+            elif aprox or tails:
+                if timestamp < self.time_axis[0]:
+                    if tails:
+                        index = 0
+                elif timestamp > self.time_axis[-1]:
+                    if tails:
+                        index = self.time_axis.shape[0]
                 else:
-                    end = i
-                break
+                    index = np.where(self.time_axis[...] > timestamp)[0][0] - 1  # Floor to the closest
 
-        if not op:
-            self.close()
-        return dt_axis[start:end]
+            return index, self.time_axis[index]
 
-    def data_range(self):
-        pass
+    def find_time_range(self, start=None, end=None, aprox=False, tails=False):
+        with self.temp_open():
+            start_index, true_start = self.find_time(start, aprox, tails)
+            end_index, true_end = self.find_time(end, aprox, tails)
 
-    def data_range_sample(self, s=None, e=None, tails=False):
-        op = self.is_open
-        self.open()
-        s_axis = list(self.s_axis)
-        start = None
-        end = None
-        d_range = None
+            return self.time_axis[start_index:end_index], true_start, true_end
 
-        if s is None or (tails and s < s_axis[0]):
-            start = 0
-        elif s in s_axis:
-            start = s_axis.index(s)
+    def data_range_time(self, start=None, end=None, aprox=False, tails=False):
+        with self.temp_open():
+            start_index, true_start = self.find_time(start, aprox, tails)
+            end_index, true_end = self.find_time(end, aprox, tails)
 
-        if e is None or (tails and e > s_axis[-1]):
-            end = 0
-        elif e in s_axis:
-            end = s_axis.index(e)
-
-        if start is not None and end is not None:
-            d_range = self.data[start:end]
-
-        if not op:
-            self.close()
-        return d_range, start, end
-
-    def data_range_time(self, s=None, e=None, tails=False):
-        op = self.is_open
-        self.open()
-        dt_axis = self.dt_axis
-        start = None
-        end = None
-        d_range = None
-
-        if s is None or (tails and s < dt_axis[0]):
-            start = 0
-
-        if e is None or (tails and e > dt_axis[-1]):
-            end = -1
-
-        if start is None or end is None:
-            for i in range(1, len(dt_axis)):
-                if dt_axis[i-1] <= s <= dt_axis[i]:
-                    if dt_axis[i-1] == s:
-                        start = i-1
-                    else:
-                        start = i
-                if dt_axis[i-1] <= e <= dt_axis[i]:
-                    if dt_axis[i-1] == e:
-                        end = i-1
-                    else:
-                        end = i
-                if start is not None and end is not None:
-                    break
-
-        if start is not None and end is not None:
-            d_range = self.data[start:end]
-
-        if not op:
-            self.close()
-        return d_range, start, end
-
+            return self.eeg_data[start_index:end_index], true_start, true_end

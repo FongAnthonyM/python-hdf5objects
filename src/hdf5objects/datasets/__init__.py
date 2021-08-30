@@ -17,6 +17,7 @@ __status__ = "Prototype"
 # Downloaded Libraries #
 
 # Local Libraries #
-from .basehdf5 import BaseHDF5
-from .hdf5eeg import HDF5EEG
-from .hdf5xltek import HDF5XLTEK
+from .channelaxis import ChannelAxis, ChannelAxisMap
+from .sampleaxis import SampleAxis, SampleAxisMap
+from .timeaxis import TimeAxis, TimeAxisMap
+from .timeseriesdataset import TimeSeriesDataset, TimeSeriesMap

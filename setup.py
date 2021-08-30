@@ -24,7 +24,7 @@ def read(*names, **kwargs):
 setup(
     name='hdf5objects',
     version='0.1.0',
-    license='BSD-2-Clause',
+    license='MIT',
     description='Extra objects for handling and typing HDF5 files.',
     long_description='%s\n%s' % (
         re.compile('^.. start-badges.*^.. end-badges', re.M | re.S).sub('', read('README.rst')),
@@ -71,7 +71,8 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        'baseobjects>=1.1.1', 'h5py>=3.2.1', 'numpy'
+        'baseobjects>=1.4.3', 'classversioning', 'dspobjects', 'h5py>=3.2.1', 'numpy', 'multipledispatch', 'pytz',
+        'tzlocal', 'bidict'
     ],
     extras_require={
         "dev": ['pytest>=6.2.3'],

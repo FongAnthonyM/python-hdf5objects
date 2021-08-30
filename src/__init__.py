@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ __init__.py
-Description: 
+Description:
 """
 __author__ = "Anthony Fong"
 __copyright__ = "Copyright 2021, Anthony Fong"
@@ -22,6 +22,3 @@ __status__ = "Prototype"
 # Definitions #
 # Classes #
 
-# Main #
-if __name__ == "__main__":
-    pass
