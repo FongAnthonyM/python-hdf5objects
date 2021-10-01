@@ -38,18 +38,18 @@ class XLTEKDayFrame(DirectoryTimeFrame):
 
     # Magic Methods #
     # Construction/Destruction
-    def __init__(self, path=None, frames=None, update=True, open_=False, init=True, **kwargs):
+    def __init__(self, path=None, frames=None, mode='r', update=True, open_=False, init=True, **kwargs):
         super().__init__(init=False)
 
         self.glob_condition = "*.h5"
 
         if init:
-            self.construct(path=path, frames=frames, update=update, open_=open_, **kwargs)
+            self.construct(path=path, frames=frames, mode=mode, update=update, open_=open_, **kwargs)
 
     # Instance Methods
     # Constructors/Destructors
-    def construct(self, path=None, frames=None, update=True, open_=False, **kwargs):
-        super().construct(path=path, frames=frames, update=update, open_=True, **kwargs)
+    def construct(self, path=None, frames=None, mode='r', update=True, open_=False, **kwargs):
+        super().construct(path=path, frames=frames, mode=mode, update=update, open_=True, **kwargs)
 
         if not self.frames:
             try:

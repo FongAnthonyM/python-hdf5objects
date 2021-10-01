@@ -139,7 +139,7 @@ class TestXLTEKStudy(ClassTest):
 
         assert data is not None
 
-    def test_date_rang_time_mount(self):
+    def test_date_rang_time(self):
         s_id = "EC228"
         first = datetime.datetime(2020, 9, 22, 0, 00, 00)
         second = datetime.datetime(2020, 9, 22, 0, 20, 00)
@@ -147,6 +147,25 @@ class TestXLTEKStudy(ClassTest):
         pr.enable()
 
         with XLTEKStudyFrame(s_id=s_id, studies_path=self.studies_path) as study_frame:
+            for i in range(0, 2):
+                data, true_start, true_end = study_frame.data_range_time(first, second, aprox=True)
+                print(data.shape)
+
+        pr.disable()
+        s = io.StringIO()
+        sortby = pstats.SortKey.TIME
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
+
+    def test_date_range_time_mount(self):
+        s_id = "EC228"
+        first = datetime.datetime(2020, 9, 22, 0, 00, 00)
+        second = datetime.datetime(2020, 9, 22, 0, 20, 00)
+        pr = cProfile.Profile()
+        pr.enable()
+
+        with XLTEKStudyFrame(s_id=s_id, studies_path=self.mount_path) as study_frame:
             data, true_start, true_end = study_frame.data_range_time(first, second, aprox=True)
             print(data.shape)
 
