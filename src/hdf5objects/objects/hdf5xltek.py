@@ -46,8 +46,8 @@ class HDF5EXLTEKMap(HDF5EEGMap):
                                  "total_samples": "total samples"})
     default_containers = bidict({"data": "ECoG Array",
                                  "channel_axis": "channel indices",
-                                 "sample_axis": "samplestamp axis",
-                                 "time_axis": "timestamp axis",
+                                 "sample_axis": "samplestamp vector",
+                                 "time_axis": "timestamp vector",
                                  "entry_axis": "entry vector"})
     default_maps = {"data": XLTEKDataMap(name="data"),
                     "channel_axis": ChannelAxisMap(name="channel_axis"),

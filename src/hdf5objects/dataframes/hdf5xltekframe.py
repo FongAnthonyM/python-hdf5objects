@@ -17,6 +17,7 @@ import datetime
 import pathlib
 
 # Downloaded Libraries #
+import h5py
 from multipledispatch import dispatch
 
 # Local Libraries #
@@ -47,31 +48,41 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
             self.mode = mode
 
         if file is not None:
-            self.set_file(file, s_id=s_id, s_dir=s_dir, start=start, mode=self.mode, **kwargs)
+            if isinstance(file, h5py.File):
+                self.file = file
+            else:
+                self.file = h5py.File(file, mode=mode)
         elif s_id is not None or s_dir is not None or start is not None or kwargs:
-            self.file = self.file_type(s_id=s_id, s_dir=s_dir, start=start, mode=self.mode, **kwargs)
+            path = pathlib.Path()
+            self.file = h5py.File(path, mode=self.mode)
 
         super().construct(file=None)
 
+    def open(self, mode=None, **kwargs):
+        if mode is None:
+            mode = self.mode
+        self.refresh()
+        return self
+
     # File
     def load_data(self):
-        self._data = self.file.eeg_data
+        self._data = self.file["ECoG Array"]
         return self._data
 
     def load_time_axis(self):
-        self._time_axis = self.file.time_axis[...]
-        return self.file.time_axis
+        self._time_axis = self.file["timestamp vector"][...]
+        return self._time_axis
 
     # Getters
     def get_start(self):
-        self._start = self.file.time_axis.start_datetime
+        self._start = datetime.datetime.fromtimestamp(self.file.attrs["start time"])
         return self._start
 
     def get_end(self):
-        self._end = self.file.time_axis.end_datetime
+        self._end = datetime.datetime.fromtimestamp(self.file.attrs["end time"])
         return self._end
 
     def get_sample_rate(self):
-        self._sample_rate = self.file.eeg_data.sample_rate
+        self._sample_rate = self.file["ECoG Array"].attrs["Sampling Rate"]
         return self._sample_rate
 

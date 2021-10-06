@@ -64,7 +64,8 @@ class XLTEKDayFrame(DirectoryTimeFrame):
     def construct_frames(self, **kwargs):
         for path in self.path.glob(self.glob_condition):
             if path not in self.frame_names:
-                file_frame = self.frame_type.new_validated(path, **kwargs)
+                file_frame = self.frame_type(path, **kwargs)
+                # file_frame = self.frame_type.new_validated(path, **kwargs)
                 if self.frame_creation_condition(file_frame):
                     self.frames.append(file_frame)
                     self.frame_names.add(path)
