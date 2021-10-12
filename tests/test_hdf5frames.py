@@ -142,15 +142,18 @@ class TestXLTEKStudy(ClassTest):
 
     def test_date_range_time_mount(self):
         s_id = "EC228"
-        first = datetime.datetime(2020, 9, 22, 0, 00, 00)
-        second = datetime.datetime(2020, 9, 22, 0, 20, 00)
+        timestamps = [{"first": datetime.datetime(2020, 9, 22, 0, 00, 00),
+                       "second": datetime.datetime(2020, 9, 22, 0, 20, 00)},
+                      {"first": datetime.datetime(2020, 9, 23, 11, 00, 00),
+                       "second": datetime.datetime(2020, 9, 23, 11, 20, 00)}]
         pr = cProfile.Profile()
         pr.enable()
 
         study_frame = XLTEKStudyFrame(s_id=s_id, studies_path=self.mount_path)
-        for i in range(0, 2):
-            data, true_start, true_end = study_frame.data_range_time(first, second, aprox=True)
+        for timestamp in timestamps:
+            data, true_start, true_end = study_frame.data_range_time(timestamp["first"], timestamp["second"], aprox=True)
             print(data.shape)
+        study_frame.close()
 
         pr.disable()
         s = io.StringIO()
