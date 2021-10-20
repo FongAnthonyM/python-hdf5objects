@@ -71,10 +71,6 @@ class HDF5BaseFrame(FileTimeFrame):
     def load_data(self):
         pass
 
-    @abstractmethod
-    def load_time_axis(self):
-        pass
-
     # Setters
     def set_data(self, value):
         if self.mode == 'r':

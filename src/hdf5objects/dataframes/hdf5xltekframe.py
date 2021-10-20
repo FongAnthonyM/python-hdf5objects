@@ -17,6 +17,7 @@ import datetime
 import pathlib
 
 # Downloaded Libraries #
+from baseobjects.cachingtools import timed_keyless_cache_method
 from multipledispatch import dispatch
 
 # Local Libraries #
@@ -54,24 +55,23 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
         super().construct(file=None)
 
     # File
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def load_data(self):
-        self._data = self.file.eeg_data
-        return self._data
-
-    def load_time_axis(self):
-        self._time_axis = self.file.time_axis[...]
-        return self.file.time_axis
+        return self.file.eeg_data
 
     # Getters
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_start(self):
-        self._start = self.file.time_axis.start_datetime
-        return self._start
+        return self.file.time_axis.start_datetime
 
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_end(self):
-        self._end = self.file.time_axis.end_datetime
-        return self._end
+        return self.file.time_axis.end_datetime
 
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_time_axis(self):
+        return self.file.time_axis[...]
+
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_sample_rate(self):
-        self._sample_rate = self.file.eeg_data.sample_rate
-        return self._sample_rate
-
+        return self.file.eeg_data.sample_rate
