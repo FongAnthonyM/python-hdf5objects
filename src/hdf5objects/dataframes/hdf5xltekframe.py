@@ -17,6 +17,7 @@ import datetime
 import pathlib
 
 # Downloaded Libraries #
+from baseobjects.cachingtools import timed_keyless_cache_method
 import h5py
 from multipledispatch import dispatch
 
@@ -65,24 +66,23 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
         return self
 
     # File
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def load_data(self):
-        self._data = self.file["ECoG Array"]
-        return self._data
+        return self.file["ECoG Array"]
 
-    def load_time_axis(self):
-        self._time_axis = self.file["timestamp vector"][...]
-        return self._time_axis
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_time_axis(self):
+        return self.file["timestamp vector"][...]
 
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     # Getters
     def get_start(self):
-        self._start = datetime.datetime.fromtimestamp(self.file.attrs["start time"])
-        return self._start
+        return datetime.datetime.fromtimestamp(self.file.attrs["start time"])
 
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_end(self):
-        self._end = datetime.datetime.fromtimestamp(self.file.attrs["end time"])
-        return self._end
+        return datetime.datetime.fromtimestamp(self.file.attrs["end time"])
 
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_sample_rate(self):
-        self._sample_rate = self.file["ECoG Array"].attrs["Sampling Rate"]
-        return self._sample_rate
-
+        return self.file["ECoG Array"].attrs["Sampling Rate"]

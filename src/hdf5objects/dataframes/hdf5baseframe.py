@@ -72,7 +72,7 @@ class HDF5BaseFrame(FileTimeFrame):
         pass
 
     @abstractmethod
-    def load_time_axis(self):
+    def get_time_axis(self):
         pass
 
     # Setters
