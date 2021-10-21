@@ -62,7 +62,6 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
     def open(self, mode=None, **kwargs):
         if mode is None:
             mode = self.mode
-        self.refresh()
         return self
 
     # File
