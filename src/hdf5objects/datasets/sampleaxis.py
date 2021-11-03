@@ -49,7 +49,7 @@ class SampleAxis(HDF5Dataset):
         self.label = "samples"
 
         if init:
-            self.construct(obj, start, stop, step, rate, size, create, **kwargs)
+            self.construct(obj, start=start, stop=stop, step=step, rate=rate, size=size, create=create, **kwargs)
 
     # Instance Methods
     # Constructors/Destructors
