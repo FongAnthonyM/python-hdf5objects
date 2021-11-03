@@ -61,6 +61,10 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
 
     # Getters
     @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_shape(self):
+        return self.file["ECoG Array"].shape
+
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_start(self):
         return self.file.time_axis.start_datetime
 
