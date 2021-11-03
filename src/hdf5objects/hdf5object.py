@@ -273,7 +273,9 @@ class HDF5Attributes(HDF5BaseWrapper):
             self.is_updating = update
 
         if load:
-            self.load_attributes()
+            with self._file.temp_open():
+                if self._name in self._file.h5_fobj:
+                    self.load_attributes()
 
     # Getters/Setters
     @dispatch(object)
