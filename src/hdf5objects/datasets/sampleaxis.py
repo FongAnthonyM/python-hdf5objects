@@ -59,15 +59,15 @@ class SampleAxis(HDF5Dataset):
             self.set_dataset(obj)
         elif create:
             if obj is None:
-                self.from_range(start, stop, step, rate, size, **kwargs)
+                self.from_range(start, stop, step, rate, size)
             elif isinstance(obj, (int, float)):
-                self.from_range(obj, stop, step, rate, size, **kwargs)
+                self.from_range(obj, stop, step, rate, size)
             elif isinstance(obj, h5py.Dataset):
                 self._dataset = obj
             elif isinstance(obj, HDF5Dataset):
                 self._dataset = obj._dataset
             else:
-                self.require(data=obj, **kwargs)
+                self.require(data=obj)
 
     def from_range(self, start=None, stop=None, step=1, rate=None, size=None, **kwargs):
         d_kwargs = self.default_kwargs.copy()
