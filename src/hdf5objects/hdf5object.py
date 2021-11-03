@@ -775,14 +775,14 @@ class HDF5Dataset(HDF5BaseWrapper):
             dataset = dataset._dataset
 
         with self:
-            self._dataset.dim[axis].attach_scale(dataset)
+            self._dataset.dims[axis].attach_scale(dataset)
 
     def detach_axis(self, dataset, axis=0):
         if isinstance(dataset, HDF5Dataset):
             dataset = dataset._dataset
 
         with self:
-            self._dataset.dim[axis].detach_scale(dataset)
+            self._dataset.dims[axis].detach_scale(dataset)
 
     def require(self, name=None, **kwargs):
         if name is not None:
