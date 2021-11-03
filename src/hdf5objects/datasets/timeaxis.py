@@ -187,7 +187,7 @@ class TimeAxis(HDF5Dataset):
 
     def require(self, name=None, **kwargs):
         super().require(name=name, **kwargs)
-        if not self.map.attributes["timezone"] in self.attributes:
+        if "timezone" in self.map.attributes and not self.map.attributes["timezone"] in self.attributes:
             if self._timezone is None:
                 self._timezone = self.local_timezone
             self.attributes[self.map.attributes["timezone"]] = self._timezone
