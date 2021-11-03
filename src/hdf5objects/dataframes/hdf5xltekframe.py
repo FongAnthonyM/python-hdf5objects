@@ -18,6 +18,7 @@ import pathlib
 
 # Downloaded Libraries #
 from baseobjects.cachingtools import timed_keyless_cache_method
+import h5py
 from multipledispatch import dispatch
 
 # Local Libraries #
@@ -48,30 +49,40 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
             self.mode = mode
 
         if file is not None:
-            self.set_file(file, s_id=s_id, s_dir=s_dir, start=start, mode=self.mode, **kwargs)
+            if isinstance(file, h5py.File):
+                self.file = file
+            else:
+                self.file = h5py.File(file, mode=mode)
         elif s_id is not None or s_dir is not None or start is not None or kwargs:
-            self.file = self.file_type(s_id=s_id, s_dir=s_dir, start=start, mode=self.mode, **kwargs)
+            path = pathlib.Path()
+            self.file = h5py.File(path, mode=self.mode)
 
         super().construct(file=None)
+
+    def open(self, mode=None, **kwargs):
+        if mode is None:
+            mode = self.mode
+        return self
 
     # File
     @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def load_data(self):
-        return self.file.eeg_data
-
-    # Getters
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def get_start(self):
-        return self.file.time_axis.start_datetime
-
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def get_end(self):
-        return self.file.time_axis.end_datetime
+        return self.file["ECoG Array"]
 
     @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_time_axis(self):
-        return self.file.time_axis[...]
+        return self.file["timestamp vector"][...]
+
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    # Getters
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_start(self):
+        return datetime.datetime.fromtimestamp(self.file.attrs["start time"])
+
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_end(self):
+        return datetime.datetime.fromtimestamp(self.file.attrs["end time"])
 
     @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_sample_rate(self):
-        return self.file.eeg_data.sample_rate
+        return self.file["ECoG Array"].attrs["Sampling Rate"]
