@@ -30,7 +30,7 @@ from .hdf5eeg import HDF5EEG, HDF5EEGMap
 # Classes #
 class XLTEKDataMap(TimeSeriesMap):
     default_attributes = {"sample_rate": "Sampling Rate",
-                          "n_samples": "n_samples",
+                          "n_samples": "total samples",
                           "c_axis": "c_axis",
                           "t_axis": "t_axis"}
 
@@ -38,7 +38,7 @@ class XLTEKDataMap(TimeSeriesMap):
 class HDF5EXLTEKMap(HDF5EEGMap):
     default_attributes = bidict({"file_type": "type",
                                  "file_version": "version",
-                                 "subject_id": "subject_id",
+                                 "subject_id": "name",
                                  "start": "start time",
                                  "end": "end time",
                                  "start_entry": "start entry",
