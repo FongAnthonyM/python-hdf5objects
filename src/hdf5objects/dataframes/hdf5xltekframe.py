@@ -75,6 +75,7 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
 
     @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     # Getters
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_start(self):
         return datetime.datetime.fromtimestamp(self.file.attrs["start time"])
 
