@@ -73,8 +73,11 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
     def get_time_axis(self):
         return self.file["timestamp vector"][...]
 
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     # Getters
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_shape(self):
+        return self.file["ECoG Array"].shape
+
     @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_start(self):
         return datetime.datetime.fromtimestamp(self.file.attrs["start time"])
