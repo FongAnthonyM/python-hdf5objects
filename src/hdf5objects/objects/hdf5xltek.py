@@ -156,9 +156,6 @@ class HDF5XLTEK(HDF5EEG):
 
     # EEG Data
     def create_eeg_dataset(self, data=None, shape=None, maxshape=None, dtype=None, **kwargs):
-        if maxshape is None:
-            maxshape = (None, None)
-
         if data is None:
             if shape is None:
                 shape = (0, 0)

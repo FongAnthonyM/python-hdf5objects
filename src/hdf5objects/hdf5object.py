@@ -788,6 +788,12 @@ class HDF5Dataset(HDF5BaseWrapper):
         if name is not None:
             self._name = name
 
+        if "data" in kwargs:
+            if "shape" not in kwargs:
+                kwargs["shape"] = kwargs["data"].shape
+            if "maxshape" not in kwargs:
+                kwargs["maxshape"] = kwargs["data"].shape
+
         with self._file.temp_open():
             self._dataset = self._file.h5_fobj.require_dataset(name=name, **kwargs)
 
