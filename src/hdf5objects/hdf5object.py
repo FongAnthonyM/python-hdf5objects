@@ -795,7 +795,7 @@ class HDF5Dataset(HDF5BaseWrapper):
                 kwargs["maxshape"] = kwargs["data"].shape
 
         with self._file.temp_open():
-            self._dataset = self._file.h5_fobj.require_dataset(name=name, **kwargs)
+            self._dataset = self._file.h5_fobj.require_dataset(name=self._name, **kwargs)
 
         return self
 
