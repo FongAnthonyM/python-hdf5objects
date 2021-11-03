@@ -66,7 +66,7 @@ class TimeAxis(HDF5Dataset):
         self._end = None
 
         if init:
-            self.construct(obj, start, stop, step, rate, size, create, **kwargs)
+            self.construct(obj, start=start, stop=stop, step=step, rate=rate, size=size, create=create, **kwargs)
 
     @property
     def timezone(self):

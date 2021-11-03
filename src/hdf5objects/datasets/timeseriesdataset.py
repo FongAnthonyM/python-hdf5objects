@@ -158,7 +158,7 @@ class TimeSeriesDataset(HDF5Dataset):
         if size is None:
             size = self._dataset[self.c_axis]
         if "name" not in kwargs:
-            kwargs["name"] = self._dataset.parent + self.axis_map["channel_axis"]
+            kwargs["name"] = self._dataset.parent.name + self.axis_map["channel_axis"]
 
         self.channel_axis = ChannelAxis(start=start, stop=stop, step=step, size=size, file=self._file, **kwargs)
         self.channel_axis_label = self.channel_axis_label
@@ -184,7 +184,7 @@ class TimeSeriesDataset(HDF5Dataset):
         if rate is None:
             rate = self.sample_rate
         if "name" not in kwargs:
-            kwargs["name"] = self._dataset.parent + self.axis_map["sample_axis"]
+            kwargs["name"] = self._dataset.parent.name + self.axis_map["sample_axis"]
 
         self.sample_axis = SampleAxis(start=start, stop=stop, step=step,
                                       rate=rate, size=size, file=self._file, **kwargs)
@@ -211,7 +211,7 @@ class TimeSeriesDataset(HDF5Dataset):
         if rate is None:
             rate = self.sample_rate
         if "name" not in kwargs:
-            kwargs["name"] = self._dataset.parent + self.axis_map["time_axis"]
+            kwargs["name"] = self._dataset.parent.name + self.axis_map["time_axis"]
 
         self.time_axis = TimeAxis(start=start, stop=stop, step=step, rate=rate, size=size, file=self._file, **kwargs)
         self.time_axis.label = self.time_axis_label
