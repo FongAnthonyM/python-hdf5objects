@@ -12,13 +12,13 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Beta"
 
-# Default Libraries #
+# Standard Libraries #
 from typing import Dict, Tuple
 
-# Downloaded Libraries #
+# Third-Party Packages #
 import pytest
 
-# Local Libraries #
+# Local Packages #
 
 
 # Definitions #

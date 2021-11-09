@@ -12,18 +12,18 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import datetime
 import time
 import uuid
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from bidict import bidict
 import h5py
 import numpy as np
 
 
-# Local Libraries #
+# Local Packages #
 from .basehdf5 import BaseHDF5, HDF5hierarchicalDatasets
 
 

@@ -12,17 +12,17 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import pathlib
 from warnings import warn
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from baseobjects import AutomaticProperties
 from bidict import bidict
 from classversioning import VersionedInitMeta, VersionedClass, VersionType, TriNumberVersion
 import h5py
 
-# Local Libraries #
+# Local Packages #
 from ..hdf5object import HDF5Map, HDF5Group, HDF5Object
 
 

@@ -12,11 +12,11 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import pathlib
 import datetime
 
-# Downloaded Libraries #
+# Third-Party Packages #
 import numpy as np
 
 import matplotlib.pyplot as pyplot
@@ -24,7 +24,7 @@ import matplotlib.animation as animation
 import matplotlib.widgets as widgets
 from matplotlib import style
 
-# Local Libraries #
+# Local Packages #
 
 
 # Definitions #

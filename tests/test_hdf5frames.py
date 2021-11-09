@@ -12,7 +12,7 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import cProfile
 import io
 import os
@@ -21,11 +21,11 @@ import datetime
 import pathlib
 import timeit
 
-# Downloaded Libraries #
+# Third-Party Packages #
 import pytest
 import numpy as np
 
-# Local Libraries #
+# Local Packages #
 from src.hdf5objects import *
 from src.hdf5objects.dataframes import *
 

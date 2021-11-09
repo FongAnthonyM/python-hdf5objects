@@ -12,15 +12,15 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import pathlib
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from classversioning import VersionType, TriNumberVersion
 from bidict import bidict
 import h5py
 
-# Local Libraries #
+# Local Packages #
 from ..datasets import TimeSeriesDataset, TimeSeriesMap, ChannelAxisMap, SampleAxisMap, TimeAxisMap
 from ..hdf5object import HDF5Map, HDF5Dataset, HDF5Object
 from .hdf5eeg import HDF5EEG, HDF5EEGMap

@@ -12,14 +12,14 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import datetime
 import pathlib
 
-# Downloaded Libraries #
+# Third-Party Packages #
 import pytest
 
-# Local Libraries #
+# Local Packages #
 from src.hdf5objects.xltek import *
 from src.hdf5objects.xltek.ui import EEGScanner
 

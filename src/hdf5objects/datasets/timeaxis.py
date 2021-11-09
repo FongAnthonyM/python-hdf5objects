@@ -12,17 +12,17 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import datetime
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from bidict import bidict
 import h5py
 import numpy as np
 import pytz
 import tzlocal
 
-# Local Libraries #
+# Local Packages #
 from ..hdf5object import HDF5Map, HDF5Dataset
 
 

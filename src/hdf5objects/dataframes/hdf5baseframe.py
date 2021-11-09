@@ -12,16 +12,16 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 from abc import abstractmethod
 import pathlib
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from framestructure import FileTimeFrame
 from multipledispatch import dispatch
 import numpy as np
 
-# Local Libraries #
+# Local Packages #
 from ..objects import BaseHDF5
 
 

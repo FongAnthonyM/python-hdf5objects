@@ -12,14 +12,14 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import collections
 import uuid
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from baseobjects import BaseObject, DynamicWrapper
 
-# Local Libraries #
+# Local Packages #
 from .referncedataset import HDF5ReferenceDataset
 
 

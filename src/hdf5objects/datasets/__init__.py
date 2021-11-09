@@ -12,11 +12,11 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 
-# Downloaded Libraries #
+# Third-Party Packages #
 
-# Local Libraries #
+# Local Packages #
 from .channelaxis import ChannelAxis, ChannelAxisMap
 from .sampleaxis import SampleAxis, SampleAxisMap
 from .timeaxis import TimeAxis, TimeAxisMap

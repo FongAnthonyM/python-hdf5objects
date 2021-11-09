@@ -12,16 +12,16 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import os
 import pathlib
 import configparser
 import datetime
 
-# Downloaded Libraries #
+# Third-Party Packages #
 import numpy as np
 
-# Local Libraries #
+# Local Packages #
 from .eegframe import EEGFrame
 from ..objects.hdf5xltek import HDF5XLTEK
 

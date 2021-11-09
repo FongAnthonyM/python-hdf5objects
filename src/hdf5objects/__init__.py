@@ -12,11 +12,11 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 
-# Downloaded Libraries #
+# Third-Party Packages #
 
-# Local Libraries #
+# Local Packages #
 from .hdf5object import HDF5BaseWrapper, HDF5Attributes, HDF5Map, HDF5Group, HDF5Dataset
 from .hdf5object import HDF5Structure, HDF5Object
 from .objects import *

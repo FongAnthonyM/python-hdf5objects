@@ -12,17 +12,17 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import datetime
 import uuid
 from warnings import warn
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from baseobjects import BaseObject, DynamicWrapper
 from bidict import bidict
 import numpy as np
 
-# Local Libraries #
+# Local Packages #
 
 
 # Definitions #

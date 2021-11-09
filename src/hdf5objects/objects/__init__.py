@@ -12,11 +12,11 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 
-# Downloaded Libraries #
+# Third-Party Packages #
 
-# Local Libraries #
+# Local Packages #
 from .basehdf5 import BaseHDF5
 from .hdf5eeg import HDF5EEG
 from .hdf5xltek import HDF5XLTEK

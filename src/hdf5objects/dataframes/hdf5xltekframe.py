@@ -12,15 +12,15 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import datetime
 import pathlib
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from baseobjects.cachingtools import timed_keyless_cache_method
 from multipledispatch import dispatch
 
-# Local Libraries #
+# Local Packages #
 from ..objects import HDF5XLTEK
 from .hdf5baseframe import HDF5BaseFrame
 

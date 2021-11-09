@@ -12,16 +12,16 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import pathlib
 import datetime
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from classversioning import VersionType, TriNumberVersion
 from bidict import bidict
 import numpy as np
 
-# Local Libraries #
+# Local Packages #
 from .basehdf5 import BaseHDF5Map, BaseHDF5
 from ..datasets import TimeSeriesMap, ChannelAxisMap, SampleAxisMap, TimeAxisMap
 

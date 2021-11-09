@@ -12,13 +12,13 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import pathlib
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from framestructure import DirectoryTimeFrame
 
-# Local Libraries #
+# Local Packages #
 from .xltekdayframe import XLTEKDayFrame
 
 

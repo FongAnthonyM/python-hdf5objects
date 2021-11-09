@@ -12,19 +12,19 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 from abc import abstractmethod
 from contextlib import contextmanager
 import pathlib
 from warnings import warn
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from baseobjects import BaseObject, StaticWrapper
 from bidict import bidict
 import h5py
 from multipledispatch import dispatch
 
-# Local Libraries #
+# Local Packages #
 
 
 # Definitions #

@@ -12,13 +12,13 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from bidict import bidict
 import numpy as np
 
-# Local Libraries #
+# Local Packages #
 from ..hdf5object import HDF5Map, HDF5Dataset
 from .channelaxis import ChannelAxis
 from .sampleaxis import SampleAxis
