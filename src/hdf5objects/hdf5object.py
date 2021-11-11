@@ -17,9 +17,11 @@ from abc import abstractmethod
 from contextlib import contextmanager
 import pathlib
 from warnings import warn
+from functools import singledispatchmethod
 
 # Third-Party Packages #
 from baseobjects import BaseObject, StaticWrapper
+from baseobjects.cachingtools import MetaCachingInit, CachingObject, timed_keyless_cache_method
 from bidict import bidict
 import h5py
 from multipledispatch import dispatch
@@ -29,7 +31,135 @@ from multipledispatch import dispatch
 
 # Definitions #
 # Classes #
-class HDF5BaseWrapper(StaticWrapper):
+class HDF5Map(BaseObject):
+    """
+
+    Class Attributes:
+
+    Attributes:
+
+    Args:
+
+    """
+    __slots__ = ["name", "parent", "attributes_type", "attribute_names", "type", "attributes", "map_names", "maps"]
+    sentinel = object()
+    default_name = None
+    default_parent = ""
+    default_attributes_type = None
+    default_attribute_names = {}
+    default_attributes = {}
+    default_type = None
+    default_map_names = {}
+    default_maps = {}
+
+    # Magic Methods
+    # Construction/Destruction
+    def __init__(self, name:str=None, type_=None, attributes:dict=None, memebers:dict=None, maps:dict=None,
+                 parent:str=None, init:bool=True):
+        self.name = self.default_name
+        self.parent = self.default_parent
+
+        self.attributes_type = self.default_attributes_type
+        self.attribute_names = bidict(self.default_attribute_names)
+        self.attributes = self.default_attributes
+
+        self.type = self.default_type
+        self.map_names = bidict(self.default_members)
+        self.maps = self.default_maps.copy()
+
+        if init:
+            self.construct(name=name, type_=type_, attributes=attributes, memebers=memebers, maps=maps, parent=parent)
+
+    @property
+    def full_name(self):
+        return self.parent + "/" + self.name
+
+    # Container Methods
+    def __getitem__(self, key: str):
+        """Gets a map within this object."""
+        return self.get_item(key)
+
+    def __setitem__(self, key: str, value):
+        """Sets a map within this object."""
+        self.set_item(key, value)
+
+    def __delitem__(self, key: str):
+        """Deletes a map within this object."""
+        self.del_item(key)
+
+    def __iter__(self):
+        """Iterates over the maps within this object."""
+        return self.maps.__iter__()
+
+    def __contains__(self, item: str):
+        """Determines if a map is within this object."""
+        return item in self.map_names or item in self.map_names.inverse
+
+    # Instance Methods
+    # Constructors/Destructors
+    def construct(self, name:str=None, type_=None, attributes:dict=None, memebers:dict=None, maps:dict=None,
+                  parent:str=None):
+        if name is not None:
+            self.name = name
+
+        if parent is not None:
+            self.parent = parent
+
+        if type_ is not None:
+            self.type = type_
+
+        if attributes is not None:
+            self.attributes = attributes
+
+        if containers is not None:
+            self.containers = containers
+
+        if maps is not None:
+            self.maps = maps
+
+        self.set_children()
+
+    # Parsers
+    def _parse_name(self, name:str):
+        new_name = self.map_names(key, self.sentinel)
+        if new_key is not self.sentinel:
+            key = new_key
+        return key
+
+    # Getters/Setters
+    def get_item(self, key:str):
+        key = self._parse_name(key)
+        return self.maps[key]
+
+    def set_item(self, name:str, map, python_name:str= None):
+        self.maps[name] = map
+        if python_name is None:
+            self.map_names[name] = name
+        else:
+            self.map_names[python_name] = name
+
+    def del_item(self, key: str):
+        key = self._parse_name(key)
+        del self.maps[key]
+        del self.map_names.inverse[key]
+
+    def set_children(self):
+        for child in self.maps.values():
+            child.parent = self.full_name
+            child.set_children()
+
+    # Container
+    def items(self):
+        return self.maps.items()
+
+    def keys(self):
+        return self.maps.keys()
+
+    def values(self):
+        return self.maps.values()
+
+
+class HDF5BaseWrapper(StaticWrapper, CachingObject, metaclass=MetaCachingInit):
     """An abstract wrapper which wraps object from an HDF5 file and gives more functionality.
 
     Attributes:
@@ -41,11 +171,14 @@ class HDF5BaseWrapper(StaticWrapper):
         file: The file which the dataset originates from.
         init (bool): Determines if this object should initialize.
     """
+    sentinel = object()
+    default_map = HDF5Map()
+
     # Class Methods
     # Wrapped Attribute Callback Functions
     @classmethod
     def _get_attribute(cls, obj, wrap_name, attr_name):
-        """Gets an attribute from a wrapped dataset.
+        """Gets an attribute from a wrapped HDF5 object.
 
         Args:
             obj (Any): The target object to get the wrapped object from.
@@ -60,7 +193,7 @@ class HDF5BaseWrapper(StaticWrapper):
 
     @classmethod
     def _set_attribute(cls, obj, wrap_name, attr_name, value):
-        """Sets an attribute in a wrapped dataset.
+        """Sets an attribute in a wrapped HDF5 object.
 
         Args:
             obj (Any): The target object to set.
@@ -73,7 +206,7 @@ class HDF5BaseWrapper(StaticWrapper):
 
     @classmethod
     def _del_attribute(cls, obj, wrap_name, attr_name):
-        """Deletes an attribute in a wrapped dataset.
+        """Deletes an attribute in a wrapped HDF5 object.
 
         Args:
             obj (Any): The target object to set.
@@ -85,14 +218,16 @@ class HDF5BaseWrapper(StaticWrapper):
 
     # Magic Methods
     # Constructors/Destructors
-    def __init__(self, file=None, init=True):
+    def __init__(self, name:str=None, map_:HDF5Map=None, file=None, init:bool=True):
         self._file_was_open = None
         self._file = None
 
         self._name = None
 
+        self.map = self.default_map.copy()
+
         if init:
-            self.construct(file=file)
+            self.construct(name=name, map_=map_, file=file)
 
     # Container Methods
     def __getitem__(self, key):
@@ -113,8 +248,7 @@ class HDF5BaseWrapper(StaticWrapper):
     # Context Managers
     def __enter__(self):
         """The enter context which opens the file to make this dataset usable"""
-        self.open()
-        return self
+        return self.open()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """The exit context which close the file."""
@@ -131,12 +265,20 @@ class HDF5BaseWrapper(StaticWrapper):
 
     # Instance Methods
     # Constructors/Destructors
-    def construct(self, file=None):
+    def construct(self, name:str=None, map_:HDF5Map=None, file=None):
         """Constructs this object from the provided arguments.
 
         Args:
             file: The file which the dataset originates from.
         """
+        if map_ is not None:
+            self.map = map_
+
+        if name is not None:
+            self._name = name
+        elif map_ is not None:
+            self._name = self.map.full_name
+
         if file is not None:
             self.set_file(file)
 
@@ -208,17 +350,21 @@ class HDF5Attributes(HDF5BaseWrapper):
     _wrapped_types = [h5py.AttributeManager]
     _wrap_attributes = ["_attribute_manager"]
 
-    # Magic Methods
+    # Magic Methods #
     # Constructors/Destructors
-    def __init__(self, attributes=None, name=None, file=None, update=None, load=True, init=True):
+    def __init__(self, attributes=None, name:str=None, map_:HDF5Map=None, file=None, build:bool=False, init:bool=True):
         super().__init__(file=file, init=False)
         self._attribute_manager = None
 
-        self._attribute_names = set()
-        self.is_updating = True
-
         if init:
-            self.construct(attributes, name, file, update, load)
+            self.construct(attributes=attributes, name=name, map_=map_, file=file, build=build)
+
+    @property
+    def attributes_dict(self):
+        try:
+            return self.get_attributes.caching_call()
+        except AttributeError:
+            return self.get_attributes()
 
     # Container Methods
     def __getitem__(self, name):
@@ -235,17 +381,15 @@ class HDF5Attributes(HDF5BaseWrapper):
 
     def __iter__(self):
         """Ensures HDF5 object is open for iter"""
-        with self:
-            return self._attribute_manager.__iter__()
+        return self.attributes_dict.__iter__()
 
     def __contains__(self, item):
         """Ensures HDF5 object is open for contains"""
-        with self:
-            return item in self._attribute_manager
+        return self.attributes_dict.__containes__(item)
 
-    # Instance Methods
+    # Instance Methods #
     # Constructors/Destructors
-    def construct(self, attributes=None, name=None, file=None, update=None, load=True):
+    def construct(self, attributes=None, name:str=None, map_:HDF5Map=None, file=None, build:bool=False):
         """Constructs this object from the provided arguments.
 
         Args:
@@ -255,27 +399,34 @@ class HDF5Attributes(HDF5BaseWrapper):
             update (bool): Determines if this object should constantly open the file for updating attributes.
             load (bool): Determines if the attributes should be loaded immediately.
         """
-        if name is None and not (isinstance(attributes, str) and isinstance(attributes, HDF5BaseWrapper)):
-            raise ValueError("name must be given if or an object with the name.")
-        if file is None and (isinstance(attributes, str) or attributes is None):
-            raise ValueError("A file must be given if giving attribute manager name")
+        if file is None and attributes is None:
+            raise ValueError("A file or an attribute manager must be given")
+
+        super().construct(name=name, map_=map_, file=file)
 
         if attributes is not None:
             self.set_attribute_manager(attributes)
 
-        if name is not None:
-            self._name = name
+        if build:
+            self.construct_attributes()
 
-        if file is not None:
-            self.set_file(file)
+    def construct_attributes(self, map_=None):
+        if map_ is not None:
+            self.map = map_
 
-        if update is not None:
-            self.is_updating = update
+        with self:
+            for name, value in map_.attributes.items():
+                if name not in self._attribute_manager:
+                    self._attribute_manager.create(name, value)
 
-        if load:
-            with self._file.temp_open():
-                if self._name in self._file.h5_fobj:
-                    self.load_attributes()
+        self.get_attributes.clear_cache()
+
+    # Parsers
+    def _parse_name(self, name):
+        new_name = self.map.attributes.get(key, self.sentinel)
+        if new_name is not self.sentinel:
+            name = new_name
+        return name
 
     # Getters/Setters
     @dispatch(object)
@@ -293,14 +444,112 @@ class HDF5Attributes(HDF5BaseWrapper):
         else:
             raise ValueError("attribute_manager must be a Dataset or HDF5Dataset")
 
-    @dispatch(str)
+    @dispatch(h5py.AttributeManager)
     def set_attribute_manager(self, attributes):
-        """Sets the wrapped attribute_manager base on a str.
+        if not attributes:
+            raise ValueError("Attributes needs to be open")
+        if self._file is None:
+            self._file = HDF5Object(attributes.file)
+        self._name = attributes.name
+        self._attribute_manager = attributes
+    
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_attributes(self):
+        """Gets all file attributes from the HDF5 file.
+
+        Returns:
+            dict: The file attributes.
+        """
+        with self:
+            attributes = dict(self._attribute_manager.items())
+
+        return attributes
+
+    def get_attribute(self, name):
+        """Gets an attribute from the HDF5 file.
 
         Args:
-            attributes (str): The name of the attributes
+            name (str): The name of the file attribute to get.
+
+        Returns:
+            The attribute requested.
         """
-        self._name = attributes
+        name = self._parse_name(name)
+        return self.attributes_dict[name]
+
+    def set_attribute(self, name, value):
+        """Sets a file attribute for the HDF5 file.
+
+        Args:
+            name (str): The name of the file attribute to set.
+            value (Any): The object to set the file attribute to.
+        """
+        name = self._parse_name(name)
+        with self:
+            self._attribute_manager[name] = value
+        self.get_attributes.clear_cache()
+
+    def del_attribute(self, name):
+        """Deletes an attribute from the HDF5 file.
+
+        Args:
+            name (str): The name of the file attribute to delete.
+
+        """
+        name = self._parse_name(name)
+        with self:
+            del self._attribute_manager[name]
+        self.get_attributes.clear_cache()
+
+    # Attribute Modification
+    def create(self, name, data, shape=None, dtype=None):
+        name = self._parse_name(name)
+        with self:
+            self._attribute_manager.create(name, data, shape=shape, dtype=None)
+        self.get_attributes.clear_cache()
+
+    def modify(self, name, vaule):
+        name = self._parse_name(name)
+        with self:
+            self._attribute_manager(name, vaule)
+        self.get_attributes.clear_cache()
+
+    # Mapping
+    def get(self, key, *args):
+        key = self._parse_name(key)
+        self.attributes_dict(key, *args)
+
+    def keys(self):
+        return self.attributes_dict.keys()
+
+    def values(self):
+        return self.attributes_dict.values()
+
+    def items(self):
+        return self.attributes_dict.values()
+
+    def update(self, **items):
+        """Updates the file attributes based on the dictionary update scheme.
+
+        Args:
+            **items: The keyword arguments which are the attributes an their values.
+        """
+        with self:
+            for name, value in items.items():
+                name = self._parse_name(name)
+                self._attribute_manager[name] = value
+        self.get_attributes.clear_cache()
+
+    def pop(self, key):
+        key = self._parse_name(key)
+        with self:
+            self._attribute_manager.pop(key)
+        self.get_attributes.clear_cache()
+
+    def clear(self):
+        with self:
+            self._attribute_manager.clear()
+        self.get_attributes.clear_cache()
 
     # File
     def open(self, mode='a', **kwargs):
@@ -322,229 +571,6 @@ class HDF5Attributes(HDF5BaseWrapper):
             self._file.open(mode=mode, **kwargs)
             self._attribute_manager = self._file.h5_fobj[self._name].attrs
 
-    # Names
-    def get_attribute_names(self):
-        """Gets the file attributes names from the HDF5 file.
-
-        Returns:
-            set: All the file attribute names in the HDF5 file.
-        """
-        self.get_attributes()
-        return self._attribute_names
-
-    def list_attributes(self):
-        """Gets the file attributes names from the HDF5 file.
-
-        Returns:
-            list: All the file attribute names in the HDF5 file.
-        """
-        return list(self.get_attribute_names())
-
-    # Getters/Setters
-    def get_attribute(self, name):
-        """Gets an attribute from the HDF5 file.
-
-        Args:
-            name (str): The name of the file attribute to get.
-
-        Returns:
-            The attribute requested.
-        """
-        __name = "__" + name
-
-        if __name not in self._attribute_names or self.is_updating:
-            try:
-                with self:
-                    setattr(self, __name, self._attribute_manager[name])
-            except Exception as e:
-                warn("Could not update attribute due to error: " + str(e), stacklevel=2)
-
-        return getattr(self, __name)
-
-    def get_attributes(self):
-        """Gets all file attributes from the HDF5 file.
-
-        Returns:
-            dict: The file attributes.
-        """
-        with self:
-            attrs = dict(self._attribute_manager.items())
-
-        for name, value in attrs.items():
-            self._attribute_names.update((name,))
-            setattr(self, "__" + name, value)
-
-        return attrs
-
-    def set_attribute(self, name, value):
-        """Sets a file attribute for the HDF5 file.
-
-        Args:
-            name (str): The name of the file attribute to set.
-            value (Any): The object to set the file attribute to.
-        """
-        __name = "__" + name
-
-        try:
-            with self:
-                self._attribute_manager[name] = value
-                if name not in self._attribute_names:
-                    self._attribute_names.update((name,))
-                setattr(self, __name, value)
-        except Exception as e:
-            warn("Could not set attribute due to error: " + str(e), stacklevel=2)
-
-    def del_attribute(self, name):
-        """Deletes an attribute from the HDF5 file.
-
-        Args:
-            name (str): The name of the file attribute to delete.
-
-        """
-        __name = "__" + name
-        try:
-            with self:
-                del self._attribute_manager[name]
-                delattr(self, __name)
-        except Exception as e:
-            warn("Could not update attribute due to error: " + str(e), stacklevel=2)
-
-    def update_attributes(self, **items):
-        """Updates the file attributes based on the dictionary update scheme.
-
-        Args:
-            **items: The keyword arguments which are the attributes an their values.
-        """
-        with self:
-            for name, value in items.items():
-                __name = "__" + name
-                try:
-                    self._attribute_manager[name] = value
-                    if name not in self._attribute_names:
-                        self._attribute_names.update((name,))
-                    setattr(self, __name, value)
-                except Exception as e:
-                    warn("Could not set attribute due to error: " + str(e), stacklevel=2)
-
-    def clear_attributes(self):
-        """Clears set tracking the file attributes and the local object attributes."""
-        for key in self._attribute_names:
-            self.__delattr__("__" + key)
-        self._attribute_names.clear()
-
-    def load_attributes(self):
-        """Loads all the file attributes from the HDF5 file in this object."""
-        self.get_attributes()
-
-
-class HDF5Map(BaseObject):
-    """
-
-    Class Attributes:
-
-    Attributes:
-
-    Args:
-
-    """
-    __slots__ = ["name", "parent", "type", "attribute_type", "attributes", "containers", "maps"]
-    default_name = ""
-    default_parent = ""
-    default_type = None
-    default_attributes_type = HDF5Attributes
-    default_attributes = bidict()
-    default_containers = bidict()
-    default_maps = {}
-
-    # Magic Methods
-    # Construction/Destruction
-    def __init__(self, name=None, type_=None, attributes=None, containers=None, maps=None, parent=None, init=True):
-        self.name = self.default_name
-        self.parent = self.default_parent
-        self.type = self.default_type
-        self.attributes_type = self.default_attributes_type
-        self.attributes = self.default_attributes.copy()
-        self.containers = self.default_containers.copy()
-        self.maps = self.default_maps.copy()
-
-        if init:
-            self.construct(name, type_, attributes, containers, maps, parent)
-
-    @property
-    def full_name(self):
-        return self.parent + "/" + self.name
-
-    # Container Methods
-    def __getitem__(self, name):
-        """Gets a map within this object."""
-        return self.maps[name]
-
-    def __setitem__(self, name, value):
-        """Sets a map within this object."""
-        self.maps[name] = value
-
-    def __delitem__(self, name):
-        """Deletes a map within this object."""
-        del self.maps[name]
-
-    def __iter__(self):
-        """Iterates over the maps within this object."""
-        return self.maps.__iter__()
-
-    def __contains__(self, item):
-        """Determines if a map is within this object."""
-        return item in self.maps
-
-    # Instance Methods
-    # Constructors/Destructors
-    def construct(self, name=None, type_=None, attributes=None, containers=None, maps=None, parent=None):
-        if name is not None:
-            self.name = name
-
-        if parent is not None:
-            self.parent = parent
-
-        if type_ is not None:
-            self.type = type_
-
-        if attributes is not None:
-            self.attributes = attributes
-
-        if containers is not None:
-            self.containers = containers
-
-        if maps is not None:
-            self.maps = maps
-            self.construct_maps()
-
-    def construct_maps(self):
-        pass
-
-    def create_object(self, obj=None, file=None, **kwargs):
-        if obj is None:
-            new_obj = self.type(a_type=self.attributes_type, file=file, **kwargs)
-        elif isinstance(obj, h5py.AttributeManager):
-            new_obj = self.type(attributes=obj, a_type=self.attributes_type, file=file, **kwargs)
-        elif isinstance(obj, h5py.Group):
-            new_obj = self.type(group=obj, a_type=self.attributes_type, file=file, **kwargs)
-        elif isinstance(obj, h5py.Dataset):
-            new_obj = self.type(dataset=obj, a_type=self.attributes_type, file=file, **kwargs)
-        else:
-            new_obj = self.type(obj, a_type=self.attributes_type, file=file, **kwargs)
-
-        new_obj.map = self
-        return new_obj
-
-    # Container
-    def items(self):
-        return self.maps.items()
-
-    def keys(self):
-        return self.maps.keys()
-
-    def values(self):
-        return self.maps.values()
-
 
 class HDF5Group(HDF5BaseWrapper):
     """A wrapper object which wraps a HDF5 group and gives more functionality.
@@ -563,60 +589,64 @@ class HDF5Group(HDF5BaseWrapper):
     """
     _wrapped_types = [h5py.Group]
     _wrap_attributes = ["_group"]
-    _attributes_type = HDF5Attributes
-    default_map = HDF5Map()
+    default_group = None
+    default_dataset = HDF5Dataset
 
-    # Magic Methods
+    # Magic Methods #
     # Constructors/Destructors
-    def __init__(self, group=None, name=None, a_type=None, map_=None, file=None, init=True):
+    def __init__(self, group=None, name:str=None, map_:HDF5Map=None, file=None,
+                 load:bool=False, build:bool=False, init:bool=True):
         super().__init__(file=file, init=False)
         self._group = None
-        self.map = self.default_map.copy()
-        self.attributes_type = self._attributes_type
         self.attributes = None
 
+        self.members = {}
+
         if init:
-            self.construct(group=group, name=name, a_type=a_type, map_=map_, file=file)
+            self.construct(group=group, name=name, map_=map_, file=file)
 
     # Container Methods
     def __getitem__(self, key):
         """Ensures HDF5 object is open for getitem"""
-        with self:
-            h_object = self._group[key]
-            if isinstance(h_object, h5py.Dataset):
-                return HDF5Dataset(h_object, self._file)
-            else:
-                return type(self)(h_object, self._file)
+        return self.get_item(key)
 
-    # Instance Methods
+    # Instance Methods #
     # Constructors/Destructors
-    def construct(self, group=None, name=None, a_type=None, map_=None, file=None):
+    def construct(self, group=None, name:str=None, map_:HDF5Map=None, file=None, load:bool=False, build:bool=False):
         """Constructs this object from the provided arguments.
 
         Args:
             group: The HDF5 group to build this group around.
             file: The file which the group originates from.
         """
-        if file is None and isinstance(group, str):
-            raise ValueError("A file must be given if giving a group name")
+        if file is None and group is None:
+            raise ValueError("A file or group must be given")
 
-        if name is not None:
-            self._name = name
-
-        if map_ is not None:
-            self.map = map_
-
-        if file is not None:
-            self.set_file(file)
+        super().construct(name=name, map_=map_, file=file)
 
         if group is not None:
             self.set_group(group)
 
-        if a_type is not None:
-            self.attributes_type = a_type
+        self.construct_attributes(build=build)
 
-        if self.attributes is None:
-            self.attributes = self.attributes_type(name=self._name, file=self._file)
+        if load:
+            self.get_members(load=load, build=build)
+
+        if build:
+            self.construct_members(load=load, build=build)
+
+    def construct_attributes(self, map_=None, build=False):
+        if map_ is None:
+            map_ = self.map
+        self.attributes = map_.attributes_type(name=self._name, map_=map_, file=self._file, build=build)
+
+    def construct_members(self, map_=None, load=False, build=False):
+        if map_ is not None:
+            self.map = map_
+
+        for name, value in self.map.items():
+            if name not in self.members:
+                self.members[name] = value.type(map_=value, load=load, build=build)
 
     # Getters/Setters
     @dispatch(object)
@@ -642,20 +672,44 @@ class HDF5Group(HDF5BaseWrapper):
             group (:obj:`Group`): The group this object will wrap.
         """
         if not group:
-            raise ValueError("Dataset needs to be open")
+            raise ValueError("Group needs to be open")
         if self._file is None:
             self._file = HDF5Object(group.file)
         self._name = group.name
         self._group = group
 
-    @dispatch(str)
-    def set_group(self, group):
-        """Sets the wrapped group base on a str.
+    def get_member(self, name: str, load=False, build=False):
+        with self:
+            item = self._group[name]
+            map_ = self.map.maps.get(name, self.sentinel)
+            if map_ is not self.sentinel:
+                self.members[name] = map_.type(item, map_=map_, file=self._file, load=load, build=build)
+            else:
+                if isinstance(item, h5py.Dataset):
+                    self.members[name] = self.default_dataset(item, file=self._file, load=load, build=build)
+                elif isinstance(item, h5py.Group):
+                    self.members[name] = self.default_group(item, file=self._file, load=load, build=build)
+        return self.members[name]
 
-        Args:
-            group (str): The name of the group.
-        """
-        self._name = group
+    def get_members(self, load=False, build=False):
+        with self:
+            for name, value in self._group.items():
+                map_ = self.map.maps.get(name, self.sentinel)
+                if map_ is not self.sentinel:
+                    self.members[name] = map_.type(item, map_=map_, load=load, build=build)
+                else:
+                    if isinstance(item, h5py.Dataset):
+                        self.members[name] = self.default_dataset(item, load=load, build=build)
+                    elif isinstance(item, h5py.Group):
+                        self.members[name] = self.default_group(item, load=load, build=build)
+        return self.members
+
+    def get_item(self, key:str):
+        item = self.members.get(key, self.sentinel)
+        if item is not self.sentinel:
+            return item
+        else:
+            return self.construct_member(key)
 
 
 class HDF5Dataset(HDF5BaseWrapper):
@@ -675,20 +729,18 @@ class HDF5Dataset(HDF5BaseWrapper):
     """
     _wrapped_types = [h5py.Dataset]
     _wrap_attributes = ["_dataset"]
-    _attributes_type = HDF5Attributes
     default_map = HDF5Map()
 
     # Magic Methods
     # Constructors/Destructors
-    def __init__(self, dataset=None, name=None, a_type=None, map_=None, file=None, init=True, **kwargs):
+    def __init__(self, dataset=None, name:str=None, map_:HDF5Map=None, file=None,
+                 load:bool=False, build:bool=False, init:bool=True, **kwargs):
         super().__init__(file=file, init=False)
         self._dataset = None
-        self.map = self.default_map.copy()
-        self.attributes_type = self._attributes_type
         self.attributes = None
 
         if init:
-            self.construct(dataset=dataset, name=name, a_type=a_type, map_=map_, file=file, **kwargs)
+            self.construct(dataset=dataset, name=name, map_=map_, file=file, load=load, build=build, **kwargs)
 
     def __array__(self, dtype=None):
         with self:
@@ -696,7 +748,8 @@ class HDF5Dataset(HDF5BaseWrapper):
 
     # Instance Methods
     # Constructors/Destructors
-    def construct(self, dataset=None, name=None, a_type=None, map_=None, file=None, create=False, **kwargs):
+    def construct(self, dataset=None, name:str=None, map_:HDF5Map=None, file=None,
+                  load:bool=False, build:bool=False, **kwargs):
         """Constructs this object from the provided arguments.
 
         Args:
@@ -709,26 +762,26 @@ class HDF5Dataset(HDF5BaseWrapper):
         if file is None and isinstance(dataset, str):
             raise ValueError("A file must be given if giving dataset name")
 
-        if name is not None:
-            self._name = name
-
-        if map_ is not None:
-            self.map = map_
-
-        if file is not None:
-            self.set_file(file)
+        super().construct(name=name, map_=map_, file=file)
 
         if dataset is not None:
             self.set_dataset(dataset)
 
-        if create and not self._dataset:
-            self.require(name=self._name, **kwargs)
+        self.construct_attributes(build=build)
 
-        if a_type is not None:
-            self.attributes_type = a_type
+        if load:
+            self.get_dataset()
 
-        if self.attributes is None:
-            self.attributes = self.attributes_type(name=self._name, file=self._file)
+        if build:
+            self.construct_dataset(**kwargs)
+
+    def construct_attributes(self, map_=None, build=False):
+        if map_ is None:
+            map_ = self.map
+        self.attributes = map_.attributes_type(name=self._name, map_=map_, file=self._file, build=build)
+
+    def construct_dataset(self, **kwargs):
+        self.require(name=self._name, **kwargs)
 
     # Getters/Setters
     @dispatch(object)
@@ -837,7 +890,7 @@ class HDF5Structure(BaseObject):
     Args:
 
     """
-    __slots__ = ["name", "parent", "map", "object", "structures"]
+    substructure = None
     attribute_type = HDF5Attributes
     group_type = HDF5Group
     dataset_type = HDF5Dataset
@@ -853,7 +906,7 @@ class HDF5Structure(BaseObject):
 
     # Magic Methods
     # Construction/Destruction
-    def __init__(self, name=None, obj=None, structures=None, map_=None, parent=None, file=None, init=True):
+    def __init__(self, name:str=None, obj=None, structures=None, map_=None, parent=None, file=None, init=True):
         self.name = self.default_name
         self.parent = self.default_parent
 
@@ -863,7 +916,7 @@ class HDF5Structure(BaseObject):
         self.structures = {}
 
         if init:
-            self.construct(name, obj, structures, map_, parent, file)
+            self.construct(name=name, obj=obj, structures=structures, map_=map_, parent=parent, file=file)
 
     @property
     def full_name(self):
@@ -913,12 +966,6 @@ class HDF5Structure(BaseObject):
         if obj is not None:
             self.object = obj
 
-        if parent is not None:
-            self.parent = parent
-
-        if structures is not None:
-            self.structures = structures
-
         if map_ is not None:
             self.map = map_
             self.construct_from_map(map_=map_)
@@ -949,8 +996,8 @@ class HDF5Structure(BaseObject):
     def construct_structures(self, file=None):
         if file is not None:
             self.file = file
-        if isinstance(self.file.h5_fobj[self.full_name], h5py.Group):
-            for name, obj in self.file.h5_fobj[self.full_name].items():
+        if isinstance(self.file._h5_file[self.full_name], h5py.Group):
+            for name, obj in self.file._h5_file[self.full_name].items():
                 if self.map and name in self.map:
                     map_ = self.map[name]
                 else:
@@ -959,8 +1006,8 @@ class HDF5Structure(BaseObject):
                 if name not in self.structures:
                     self.structures[name] = type(self)(name=name, map_=map_, parent=self.full_name, file=self.file)
                 elif self.structures[name].object is None:
-                    self.structures[name].construct_object(self.file)
-                    self.structures[name].construct_structures(self.file)
+                    self.structures[name].construct_object(file=self.file)
+                    self.structures[name].construct_structures(file=self.file)
 
     # General
     def assign_type(self, obj, file=None):
@@ -1029,7 +1076,7 @@ class HDF5Structure(BaseObject):
 
 
 # File Object
-class HDF5Object(BaseObject):
+class HDF5Object(StaticWrapper, CachingObject, metaclass=MetaCachingInit):
     """A class which wraps a HDF5 File and gives more functionality.
 
     Class Attributes:
@@ -1057,12 +1104,56 @@ class HDF5Object(BaseObject):
         **kwargs: The keyword arguments for the open method.
     """
     # Todo: Rethink about how Errors and Warnings are handled in this object.
+    _wrapped_types = [h5py.File]
+    _wrap_attributes = ["_h5_file"]
     attribute_type = HDF5Attributes
     group_type = HDF5Group
     dataset_type = HDF5Dataset
     default_map = None
 
-    # Class Methods #
+    # Class Methods
+    # Wrapped Attribute Callback Functions
+    @classmethod
+    def _get_attribute(cls, obj, wrap_name, attr_name):
+        """Gets an attribute from a wrapped HDF5 file.
+
+        Args:
+            obj (Any): The target object to get the wrapped object from.
+            wrap_name (str): The attribute name of the wrapped object.
+            attr_name (str): The attribute name of the attribute to get from the wrapped object.
+
+        Returns:
+            (Any): The wrapped object.
+        """
+        with obj:  # Ensures the hdf5 file is open when accessing attributes
+            return super()._get_attribute(obj, wrap_name, attr_name)
+
+    @classmethod
+    def _set_attribute(cls, obj, wrap_name, attr_name, value):
+        """Sets an attribute in a wrapped HDF5 file.
+
+        Args:
+            obj (Any): The target object to set.
+            wrap_name (str): The attribute name of the wrapped object.
+            attr_name (str): The attribute name of the attribute to set from the wrapped object.
+            value (Any): The object to set the wrapped objects attribute to.
+        """
+        with obj:  # Ensures the hdf5 file is open when accessing attributes
+            super()._set_attribute(obj, wrap_name, attr_name, value)
+
+    @classmethod
+    def _del_attribute(cls, obj, wrap_name, attr_name):
+        """Deletes an attribute in a wrapped HDF5 file.
+
+        Args:
+            obj (Any): The target object to set.
+            wrap_name (str): The attribute name of the wrapped object.
+            attr_name (str): The attribute name of the attribute to delete from the wrapped object.
+        """
+        with obj:  # Ensures the hdf5 file is open when accessing attributes
+            super()._del_attribute(obj, wrap_name, attr_name)
+
+    # Validation #
     @classmethod
     def validate_openable(cls, path):
         if not isinstance(path, pathlib.Path):
@@ -1083,15 +1174,10 @@ class HDF5Object(BaseObject):
         self._path = None
         self.map = self.default_map.copy() if self.default_map is not None else None
         self.structure = HDF5Structure(name="", map_=self.map)
-        self.is_updating = True
 
-        self.attributes = None
+        self._attributes = None
 
-        self.default_dataset_kwargs = {"compression": "gzip", "compression_opts": 4}
-        self.default_file_attributes = {}
-        self.default_datasets = {}
-
-        self.h5_fobj = None
+        self._h5_file = None
 
         if init:
             self.construct(obj, update, open_, create, **kwargs)
@@ -1119,6 +1205,12 @@ class HDF5Object(BaseObject):
         except:
             return False
 
+    @property
+    def attributes(self):
+        if self._attributes is None:
+            self._attributes = self.attribute_type(name="/", file=self)
+        return self._attributes
+
     def __del__(self):
         """Closes the file when this object is deleted."""
         self.close()
@@ -1132,6 +1224,7 @@ class HDF5Object(BaseObject):
         """
         state = self.__dict__.copy()
         state["open_state"] = self.is_open
+        del state["_h5_file"]
         return state
 
     def __setstate__(self, state):
@@ -1140,22 +1233,12 @@ class HDF5Object(BaseObject):
         Args:
             state (dict): The attributes to build this object from.
         """
-        state["h5_fobj"] = h5py.File(state["path"].as_posix(), "r+")
+        state["_h5_file"] = h5py.File(state["path"].as_posix(), "r+")
         if not state.pop("open_state"):
-            state["h5_fobj"].close()
+            state["_h5_file"].close()
         self.__dict__.update(state)
 
     # Container Methods
-    def __len__(self):
-        """Returns the length of the HDF5 file.
-
-        Returns:
-            int: The length of HDF5 file.
-        """
-        with self.temp_open():
-            length = len(self.h5_fobj)
-        return length
-
     def __getitem__(self, item):
         """Gets a container from the HDF5 file based on the arguments.
 
@@ -1165,7 +1248,8 @@ class HDF5Object(BaseObject):
         Returns:
             The container requested.
         """
-        return self.h5_fobj[item]
+        # Todo: Change this to structure?
+        return self._h5_file[item]
 
     # Context Managers
     def __enter__(self):
@@ -1174,7 +1258,7 @@ class HDF5Object(BaseObject):
         Returns:
             This object.
         """
-        if self.h5_fobj is None:
+        if self._h5_file is None:
             self.construct(open_=True)
         else:
             self.open()
@@ -1210,17 +1294,12 @@ class HDF5Object(BaseObject):
         if obj is not None:
             self._set_path(obj)
 
-        if update is not None:
-            self.is_updating = update
-
         is_path = self.path is not None
 
         if not is_path and create:
             self.require_file(open_, **kwargs)
         elif is_path and open_:
             self.open(**kwargs)
-
-        self._construct_attributes(load=is_path)
 
         return self
 
@@ -1251,9 +1330,6 @@ class HDF5Object(BaseObject):
         else:
             raise ValueError("The supplied HDF5 File must be open.")
 
-    def _construct_attributes(self, load=True):
-        self.attributes = self.attribute_type(name="/", file=self, load=load)
-
     def construct_structure(self, override=False):
         with self.temp_open():
             if self.structure is None:
@@ -1266,7 +1342,7 @@ class HDF5Object(BaseObject):
                 self.structure.construct_structures()
 
     # File Creation/Construction
-    def create_file(self, attr={}, data={}, construct=True, open_=False, **kwargs):
+    def create_file(self, attr={}, data={}, construct=True, open_=True, **kwargs):
         """Creates the HDF5 file.
 
         Args:
@@ -1281,7 +1357,6 @@ class HDF5Object(BaseObject):
         self.open(**kwargs)
         if construct:
             self.construct_file(attr, data)
-
         elif not open_:
             self.close()
 
@@ -1343,13 +1418,13 @@ class HDF5Object(BaseObject):
         """
         if not self.is_open:
             try:
-                self.h5_fobj = h5py.File(self.path.as_posix(), mode=mode, **kwargs)
+                self._h5_file = h5py.File(self.path.as_posix(), mode=mode, **kwargs)
                 self.construct_structure()
                 return self
             except Exception as error:
                 if exc:
                     warn("Could not open" + self.path.as_posix() + "due to error: " + str(error), stacklevel=2)
-                    self.h5_fobj = None
+                    self._h5_file = None
                     return self
                 else:
                     raise error
@@ -1379,8 +1454,8 @@ class HDF5Object(BaseObject):
             bool: If the file was successfully closed.
         """
         if self.is_open:
-            self.h5_fobj.flush()
-            self.h5_fobj.close()
+            self._h5_file.flush()
+            self._h5_file.close()
         return not self.is_open
 
     # General
@@ -1446,3 +1521,7 @@ class HDF5Object(BaseObject):
 
     def clear(self):
         self.structure.clear()
+
+
+# Assign Cyclic Definitions
+HDF5Structure.substructure = HDF5Structure

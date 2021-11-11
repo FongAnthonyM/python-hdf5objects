@@ -49,9 +49,9 @@ class ClassTest:
 
 class TestHDF5XLTEK(ClassTest):
     class_ = HDF5XLTEK
-    studies_path = pathlib.Path("/Users/changlab/Documents/Projects/Epilepsy Spike Detection")
-    load_path = pathlib.Path("/Users/changlab/PycharmProjects/python-hdf5objects/tests/EC228_2020-09-21_14~53~19.h5")
-    save_path = pathlib.Path("/Users/changlab/PycharmProjects/python-hdf5objects/tests/")
+    studies_path = pathlib.Path("/common/subjects")
+    load_path = pathlib.Path.cwd().joinpath("pytest_cache/EC228_2020-09-21_14~53~19.h5")
+    save_path = pathlib.Path.cwd().joinpath("pytest_cache/")
 
     @pytest.fixture
     def load_file(self):
