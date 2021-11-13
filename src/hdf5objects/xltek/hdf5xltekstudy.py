@@ -23,7 +23,7 @@ import numpy as np
 
 # Local Packages #
 from .eegframe import EEGFrame
-from ..objects.hdf5xltek import HDF5XLTEK
+from ..fileobjects.hdf5xltek import HDF5XLTEK
 
 
 # Configurations

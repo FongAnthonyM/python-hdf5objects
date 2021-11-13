@@ -16,14 +16,14 @@ __status__ = "Prototype"
 import datetime
 
 # Third-Party Packages #
-from bidict import bidict
+from baseobjects.cachingtools import timed_keyless_cache_method
 import h5py
 import numpy as np
 import pytz
 import tzlocal
 
 # Local Packages #
-from ..hdf5object import HDF5Map, HDF5Dataset
+from ..hdf5objects import HDF5Map, HDF5Dataset
 
 
 # Definitions #
@@ -35,7 +35,7 @@ def datetimes_to_timestamps(iter_):
 
 # Classes #
 class TimeAxisMap(HDF5Map):
-    default_attributes = bidict({"time_zone": "time_zone"})
+    default_attributes = {"time_zone": "time_zone"}
 
 
 class TimeAxis(HDF5Dataset):
@@ -48,7 +48,7 @@ class TimeAxis(HDF5Dataset):
     Args:
 
     """
-    default_map = TimeAxisMap()
+    default_map = None
     local_timezone = tzlocal.get_localzone()
 
     # Magic Methods
@@ -56,39 +56,24 @@ class TimeAxis(HDF5Dataset):
     def __init__(self, obj=None, start=None, stop=None, step=None, rate=None, size=None,
                  create=True, init=True, **kwargs):
         super().__init__(init=False)
-        self._timezone = None
-        self.is_updating = True
         self.default_kwargs = {"dtype": 'f8', "maxshape": (None,)}
         self.label = "timestamps"
 
         self._datetimes = None
-        self._start = None
-        self._end = None
 
         if init:
             self.construct(obj, start=start, stop=stop, step=step, rate=rate, size=size, create=create, **kwargs)
 
     @property
-    def timezone(self):
+    def time_zone(self):
         try:
-            tz_str = self.attributes[self.map.attributes["timezone"]]
-            if isinstance(tz_str, h5py.Empty) or tz_str == "":
-                self._timezone = None
-            else:
-                self._timezone = pytz.timezone(tz_str)
-        finally:
-            return self._timezone
+            return self.get_time_zone.caching_call()
+        except AttributeError:
+            return self.get_time_zone()
 
-    @timezone.setter
-    def timezone(self, value):
-        try:
-            if value is None:
-                tz_str = h5py.Empty('S')
-            else:
-                tz_str = value
-            self.attributes[self.map.attributes["timezone"]] = tz_str
-        finally:
-            self._timezone = None
+    @time_zone.setter
+    def time_zone(self, value):
+        self.set_time_zone(value)
 
     @property
     def datetimes(self):
@@ -99,27 +84,25 @@ class TimeAxis(HDF5Dataset):
 
     @property
     def start(self):
-        if self._start is None or self.is_updating:
-            with self:
-                self._start = self._dataset[0]
-
-        return self._start
+        try:
+            return self.get_start.caching_call()
+        except AttributeError:
+            return self.get_start()
 
     @property
     def start_datetime(self):
-        return datetime.datetime.fromtimestamp(self.start, self.timezone)
+        return datetime.datetime.fromtimestamp(self.start, self.time_zone)
 
     @property
     def end(self):
-        if self._end is None or self.is_updating:
-            with self:
-                self._end = self._dataset[-1]
-
-        return self._end
+        try:
+            return self.get_start.caching_call()
+        except AttributeError:
+            return self.get_start()
 
     @property
     def end_datetime(self):
-        return datetime.datetime.fromtimestamp(self.end, self.timezone)
+        return datetime.datetime.fromtimestamp(self.end, self.time_zone)
 
     # Instance Methods
     # Constructors/Destructors
@@ -139,6 +122,34 @@ class TimeAxis(HDF5Dataset):
             else:
                 self.from_datetimes(obj)
 
+    # Getters/Setters
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_time_zone(self):
+        tz_str = self.attributes["time_zone"]
+        if isinstance(tz_str, h5py.Empty) or tz_str == "":
+            return None
+        else:
+            return pytz.timezone(tz_str)
+
+    def set_time_zone(self, value):
+        if value is None:
+            tz_str = h5py.Empty('S')
+        else:
+            tz_str = value
+        self.attributes["time_zone"] = tz_str
+        self.get_time_zone.clear_cache()
+
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_start(self):
+        with self:
+            return self._dataset[0]
+
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_end(self):
+        with self:
+            return self._dataset[-1]
+
+    # Modification
     def from_range(self, start=None, stop=None, step=None, rate=None, size=None, **kwargs):
         d_kwargs = self.default_kwargs.copy()
         d_kwargs.update(kwargs)
@@ -193,6 +204,7 @@ class TimeAxis(HDF5Dataset):
             self.attributes[self.map.attributes["timezone"]] = self._timezone
 
         return self
+
 
 # Assign Cyclic Definitions
 TimeAxisMap.default_type = TimeAxis

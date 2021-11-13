@@ -23,7 +23,7 @@ from classversioning import VersionedInitMeta, VersionedClass, VersionType, TriN
 import h5py
 
 # Local Packages #
-from ..hdf5object import HDF5Map, HDF5Group, HDF5Object
+from ..hdf5objects import HDF5Map, HDF5Group, HDF5File
 
 
 # Definitions #
@@ -33,7 +33,7 @@ class BaseHDF5Map(HDF5Map):
     default_attributes = bidict({"file_type": "FileType", "file_version": "FileVersion"})
 
 
-class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=VersionedInitMeta):
+class BaseHDF5(HDF5File, AutomaticProperties, VersionedClass, metaclass=VersionedInitMeta):
     _registration = False
     _VERSION_TYPE = VersionType(name="BaseHDF5", class_=TriNumberVersion)
     FILE_TYPE = "Abstract"
@@ -123,7 +123,7 @@ class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=Versio
                     return False
             else:
                 return False
-        elif isinstance(obj, HDF5Object):
+        elif isinstance(obj, HDF5File):
             obj = obj.h5_fobj
             return t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]
 
@@ -148,7 +148,7 @@ class BaseHDF5(HDF5Object, AutomaticProperties, VersionedClass, metaclass=Versio
                     return None
             else:
                 return None
-        elif isinstance(obj, HDF5Object):
+        elif isinstance(obj, HDF5File):
             obj = obj.h5_fobj
             if t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]:
                 return cls(obj=obj, **kwargs)

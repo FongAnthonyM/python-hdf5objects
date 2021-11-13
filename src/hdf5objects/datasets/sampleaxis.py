@@ -19,7 +19,7 @@ import h5py
 import numpy as np
 
 # Local Packages #
-from ..hdf5object import HDF5Map, HDF5Dataset
+from ..hdf5objects import HDF5Map, HDF5Dataset
 
 
 # Definitions #

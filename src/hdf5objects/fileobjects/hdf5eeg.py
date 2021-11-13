@@ -102,7 +102,7 @@ class HDF5EEG(BaseHDF5):
     def subject_dir(self):
         """:obj:`Path`: The path to the file.
 
-        The setter casts objects that are not Path to path before setting
+        The setter casts fileobjects that are not Path to path before setting
         """
         return self._subject_dir
 

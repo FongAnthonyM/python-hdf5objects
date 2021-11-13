@@ -25,7 +25,7 @@ setup(
     name='hdf5objects',
     version='0.1.0',
     license='MIT',
-    description='Extra objects for handling and typing HDF5 files.',
+    description='Extra fileobjects for handling and typing HDF5 files.',
     long_description='%s\n%s' % (
         re.compile('^.. start-badges.*^.. end-badges', re.M | re.S).sub('', read('README.rst')),
         re.sub(':[a-z]+:`~?(.*?)`', r'``\1``', read('CHANGELOG.rst'))

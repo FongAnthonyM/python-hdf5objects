@@ -22,7 +22,7 @@ import h5py
 
 # Local Packages #
 from ..datasets import TimeSeriesDataset, TimeSeriesMap, ChannelAxisMap, SampleAxisMap, TimeAxisMap
-from ..hdf5object import HDF5Map, HDF5Dataset, HDF5Object
+from ..hdf5objects import HDF5Map, HDF5Dataset, HDF5File
 from .hdf5eeg import HDF5EEG, HDF5EEGMap
 
 
@@ -81,7 +81,7 @@ class HDF5XLTEK(HDF5EEG):
                     return False
             else:
                 return False
-        elif isinstance(obj, HDF5Object):
+        elif isinstance(obj, HDF5File):
             obj = obj.h5_fobj
             return start_name in obj.attrs and end_name in obj.attrs
 
@@ -103,7 +103,7 @@ class HDF5XLTEK(HDF5EEG):
                     return None
             else:
                 return None
-        elif isinstance(obj, HDF5Object):
+        elif isinstance(obj, HDF5File):
             obj = obj.h5_fobj
             if start_name in obj.attrs and end_name in obj.attrs:
                 return cls(file=obj, **kwargs)

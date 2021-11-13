@@ -22,7 +22,7 @@ from multipledispatch import dispatch
 import numpy as np
 
 # Local Packages #
-from ..objects import BaseHDF5
+from ..fileobjects import BaseHDF5
 
 
 # Definitions #
@@ -61,7 +61,7 @@ class HDF5BaseFrame(FileTimeFrame):
         if isinstance(file, self.file_type):
             self.file = file
         else:
-            raise ValueError("file must be a path, File, or HDF5Object")
+            raise ValueError("file must be a path, File, or HDF5File")
 
     @dispatch((str, pathlib.Path))
     def set_file(self, file, **kwargs):

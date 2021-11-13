@@ -21,7 +21,7 @@ from baseobjects.cachingtools import timed_keyless_cache_method
 from multipledispatch import dispatch
 
 # Local Packages #
-from ..objects import HDF5XLTEK
+from ..fileobjects import HDF5XLTEK
 from .hdf5baseframe import HDF5BaseFrame
 
 
