@@ -13,11 +13,8 @@ __maintainer__ = __maintainer__
 __email__ = __email__
 
 # Imports #
-# Standard Libraries #
-
-# Third-Party Packages #
-
 # Local Packages #
-from .basehdf5 import BaseHDF5
-from .hdf5eeg import HDF5EEG
-from .hdf5xltek import HDF5XLTEK
+from .axis import Axis, AxisMap
+from .channelaxis import ChannelAxis, ChannelAxisMap
+from .sampleaxis import SampleAxis, SampleAxisMap
+from .timeaxis import TimeAxis, TimeAxisMap
