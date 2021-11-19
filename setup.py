@@ -71,7 +71,7 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        'baseobjects>=1.4.3', 'classversioning', 'framestructure', 'dspobjects', 'h5py>=3.2.1', 'numpy',
+        'baseobjects>=1.5.1', 'classversioning', 'framestructure', 'dspobjects', 'h5py>=3.2.1', 'numpy',
         'multipledispatch', 'pytz', 'tzlocal', 'bidict'
     ],
     extras_require={
