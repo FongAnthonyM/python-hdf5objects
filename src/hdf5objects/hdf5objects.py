@@ -3,15 +3,17 @@
 """ hdf5objects.py
 Description:
 """
-__author__ = "Anthony Fong"
-__copyright__ = "Copyright 2021, Anthony Fong"
-__credits__ = ["Anthony Fong"]
-__license__ = ""
-__version__ = "1.0.0"
-__maintainer__ = "Anthony Fong"
-__email__ = ""
-__status__ = "Prototype"
+# Package Header #
+from .__header__ import *
 
+# Header #
+__author__ = __author__
+__credits__ = __credits__
+__maintainer__ = __maintainer__
+__email__ = __email__
+
+
+# Imports #
 # Standard Libraries #
 from abc import abstractmethod
 from contextlib import contextmanager
@@ -22,7 +24,7 @@ from functools import singledispatchmethod
 
 # Third-Party Packages #
 from baseobjects import BaseObject, StaticWrapper, search_sentinel
-from baseobjects.cachingtools import MetaCachingInit, CachingObject, timed_keyless_cache_method
+from baseobjects.cachingtools import CachingInitMeta, CachingObject, timed_keyless_cache_method
 from bidict import bidict
 import h5py
 from multipledispatch import dispatch
@@ -42,7 +44,7 @@ class HDF5Map(BaseObject):
     Args:
 
     """
-    __slots__ = ["name", "parent", "attributes_type", "attribute_names", "type", "attributes", "map_names", "maps"]
+    __slots__ = ["_name", "parents", "attributes_type", "attribute_names", "attributes", "type", "map_names", "maps"]
     sentinel = search_sentinel
     default_name = None
     default_parent = None
@@ -98,7 +100,10 @@ class HDF5Map(BaseObject):
 
     @property
     def full_name(self):
-        return self.parent + "/" + self.name
+        if self._name is None:
+            return None
+        else:
+            return self.parent + "/" + self._name
 
     # Container Methods
     def __getitem__(self, key: str):
@@ -150,21 +155,37 @@ class HDF5Map(BaseObject):
 
     # Parsers
     def _parse_attribute_name(self, name: str):
-        new_name = self.attribute_names.get(name, self.sentinel)
-        if new_name is not self.sentinel:
-            name = new_name
-        return name
+        if name in self.attributes:
+            return name
+        else: 
+            new_name = self.attribute_names.inverse.get(name, self.sentinel)
+            if new_name in self.attributes:
+                return new_name
+            else:
+                return name
 
     def _parse_map_name(self, name: str):
-        new_name = self.map_names.get(name, self.sentinel)
-        if new_name is not self.sentinel:
-            name = new_name
-        return name
+        if name in self.maps:
+            return name
+        else:
+            new_name = self.map_names.inverse.get(name, self.sentinel)
+            if new_name in self.maps:
+                return new_name
+            else:
+                return name
 
     # Getters/Setters
-    def get_attribute(self, key: str):
-        key = self._parse_attribute_name(key)
-        return self.attributes[key]
+    def get_attribute(self, key: str, *args):
+        attribute = self.attributes.get(key, self.sentinel)
+        if attribute is self.sentinel:
+            key = self.attribute_names.inverse.get(key, self.sentinel)
+            attribute = self.attributes.get(key, self.sentinel)
+            if attribute is self.sentinel:
+                if args:
+                    attribute = args[0]
+                else:
+                    return self.attributes.get(key)
+        return attribute
     
     def set_attribute(self, name: str, value, python_name: str = None):
         if python_name is None:
@@ -180,9 +201,17 @@ class HDF5Map(BaseObject):
         else:
             self.attributes[name] = value
     
-    def get_item(self, key: str):
-        key = self._parse_map_name(key)
-        return self.maps[key]
+    def get_item(self, key: str, *args):
+        map_ = self.maps.get(key, self.sentinel)
+        if map_ is self.sentinel:
+            key = self.map_names.inverse.get(key, self.sentinel)
+            map_ = self.maps.get(key, self.sentinel)
+            if map_ is self.sentinel:
+                if args:
+                    map_ = args[0]
+                else:
+                    return self.maps.get(key)
+        return map_
 
     def set_item(self, name: str, map_, python_name: str = None):
         if python_name is None:
@@ -194,9 +223,9 @@ class HDF5Map(BaseObject):
         self.map_names[python_name] = name
 
         if python_name in self.maps:
-            self.maps[python_name] = value
+            self.maps[python_name] = map_
         else:
-            self.maps[name] = value
+            self.maps[name] = map_
 
     def del_item(self, key: str):
         key = self._parse_map_name(key)
@@ -204,9 +233,12 @@ class HDF5Map(BaseObject):
         del self.map_names.inverse[key]
 
     def set_parent(self, parent: str):
-        parent = parent.lstrip('/')
-        parts = parent.split('/')
-        self.parents = parts
+        if parent is None:
+            self.parents = None
+        else:
+            parent = parent.lstrip('/')
+            parts = parent.split('/')
+            self.parents = parts
 
     def set_name(self, name: str):
         name = name.lstrip('/')
@@ -216,8 +248,14 @@ class HDF5Map(BaseObject):
             self.parents = parts
 
     def set_children(self):
-        for child in self.maps.values():
+        for name, child in self.maps.items():
             child.set_parent(parent=self.full_name)
+            child_name = child.name
+            if child_name is None:
+                child_name = self.map_names.get(name, self.sentinel)
+                if child_name is self.sentinel:
+                    child_name = name
+                child.name = child_name
             child.set_children()
 
     # Container
@@ -231,7 +269,7 @@ class HDF5Map(BaseObject):
         return self.maps.values()
 
 
-class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=MetaCachingInit):
+class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
     """An abstract wrapper which wraps object from an HDF5 file and gives more functionality.
 
     Attributes:
@@ -244,7 +282,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=MetaCachingInit):
         init (bool): Determines if this object should initialize.
     """
     sentinel = search_sentinel
-    default_map = HDF5Map()
+    default_map = None
 
     # Class Methods
     # Wrapped Attribute Callback Functions
@@ -338,17 +376,17 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=MetaCachingInit):
         return self.is_exist()
 
     # Container Methods
-    def __getitem__(self, key: str):
+    def __getitem__(self, key: Any):
         """Ensures HDF5 object is open for getitem"""
         with self:
             return getattr(self, self._wrap_attributes[0])[key]
 
-    def __setitem__(self, key: str, value: Any):
+    def __setitem__(self, key: Any, value: Any):
         """Ensures HDF5 object is open for setitem"""
         with self:
             getattr(self, self._wrap_attributes[0])[key] = value
 
-    def __delitem__(self, key: str):
+    def __delitem__(self, key: Any):
         """Ensures HDF5 object is open for delitem"""
         with self:
             del getattr(self, self._wrap_attributes[0])[key]
@@ -398,7 +436,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=MetaCachingInit):
     def is_exist(self):
         with self._file.temp_open():
             try:
-                self._file.h5_fobj[self._full_name]
+                self._file._file[self._full_name]
                 return True
             except KeyError:
                 return False
@@ -431,11 +469,20 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=MetaCachingInit):
         self._parents = parts
 
     def set_name(self, name: str):
-        name = name.lstrip('/')
-        parts = name.split('/')
-        self._name = parts.pop(-1)
-        if parts:
-            self._parents = parts
+        if name is None:
+            self._name_ = None
+        else:
+            name = name.lstrip('/')
+            parts = name.split('/')
+            name = parts.pop(-1)
+
+            if name == "":
+                self._name_ = "/"
+            else:
+                self._name_ = name
+
+            if parts:
+                self._parents = parts
 
     # File
     def open(self, mode: str = 'a', **kwargs):
@@ -451,7 +498,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=MetaCachingInit):
         self._file_was_open = self._file.is_open
         if not getattr(self, self._wrap_attributes[0]):
             self._file.open(mode=mode, **kwargs)
-            setattr(self, self._wrap_attributes[0], self._file.h5_fobj[self._full_name])
+            setattr(self, self._wrap_attributes[0], self._file._file[self._full_name])
 
         return self
 
@@ -520,7 +567,7 @@ class HDF5Attributes(HDF5BaseObject):
 
     def __contains__(self, item):
         """Ensures HDF5 object is open for contains"""
-        return self.attributes_dict.__containes__(item)
+        return item in self.attributes_dict
 
     # Instance Methods #
     # Constructors/Destructors
@@ -535,26 +582,23 @@ class HDF5Attributes(HDF5BaseObject):
             update (bool): Determines if this object should constantly open the file for updating attributes.
             load (bool): Determines if the attributes should be loaded immediately.
         """
-        if file is None and attributes is None:
-            raise ValueError("A file or an attribute manager must be given")
-
         super().construct(name=name, map_=map_, file=file, parent=parent)
 
         if attributes is not None:
             self.set_attribute_manager(attributes)
 
         if load and self.exists:
-                self.load()
+            self.load()
 
         if build:
             self.construct_attributes()
 
-    def construct_attributes(self, map_ = None, override: bool = False):
+    def construct_attributes(self, map_=None, override: bool = False):
         if map_ is not None:
             self.map = map_
 
         with self:
-            for name, value in map_.attributes.items():
+            for name, value in self.map.attributes.items():
                 name = self._parse_name(name)
                 if name not in self._attribute_manager:
                     self._attribute_manager.create(name, value)
@@ -603,11 +647,9 @@ class HDF5Attributes(HDF5BaseObject):
             dict: The file attributes.
         """
         with self:
-            attributes = dict(self._attribute_manager.items())
+            return dict(self._attribute_manager.items())
 
-        return attributes
-
-    def get_attribute(self, name: str):
+    def get_attribute(self, name: str, *args):
         """Gets an attribute from the HDF5 file.
 
         Args:
@@ -617,7 +659,15 @@ class HDF5Attributes(HDF5BaseObject):
             The attribute requested.
         """
         name = self._parse_name(name)
-        return self.attributes_dict[name]
+        value = self.attributes_dict.get(name, self.sentinel)
+        if value is self.sentinel:
+            value = self.map.get_attribute(name, self.sentinel)
+            if value is self.sentinel:
+                if args:
+                    value = args[0]
+                else:
+                    return self.attributes_dict[name]
+        return value
 
     def set_attribute(self, name: str, value: Any):
         """Sets a file attribute for the HDF5 file.
@@ -629,7 +679,10 @@ class HDF5Attributes(HDF5BaseObject):
         name = self._parse_name(name)
         with self:
             if self.exists:
-                self._attribute_manager[name] = value
+                if name in self._attribute_manager:
+                    self._attribute_manager[name] = value
+                else:
+                    self._attribute_manager.create(name, value)
             else:
                 self.map.attributes[name] = value
         self.get_attributes.clear_cache()
@@ -662,7 +715,7 @@ class HDF5Attributes(HDF5BaseObject):
     # Mapping
     def get(self, key: str, *args):
         key = self._parse_name(key)
-        self.attributes_dict.get(key, *args)
+        return self.attributes_dict.get(key, *args)
 
     def keys(self):
         return self.attributes_dict.keys()
@@ -711,10 +764,10 @@ class HDF5Attributes(HDF5BaseObject):
         try:
             if not self._attribute_manager:
                 self._file.open(mode=mode, **kwargs)
-                self._attribute_manager = self._file.h5_fobj[self._name].attrs
+                self._attribute_manager = self._file._file[self._name].attrs
         except ValueError:
             self._file.open(mode=mode, **kwargs)
-            self._attribute_manager = self._file.h5_fobj[self._name].attrs
+            self._attribute_manager = self._file._file[self._name].attrs
 
     def load(self):
         self.get_attributes()
@@ -724,14 +777,14 @@ class HDF5Attributes(HDF5BaseObject):
 
 
 class HDF5Group(HDF5BaseObject):
-    """A wrapper object which wraps a HDF5 group and gives more functionality.
+    """A wrapper object which wraps a HDF5 _group_ and gives more functionality.
 
     Attributes:
         _file_was_open (bool): Determines if the file object was open when this dataset was accessed.
         _file: The file this dataset is from.
         _name (str): The name of this dataset.
-        _group: The HDF5 group to wrap.
-        attributes (:obj:`HDF5Attributes`): The attributes of this group.
+        _group: The HDF5 _group_ to wrap.
+        attributes (:obj:`HDF5Attributes`): The attributes of this _group_.
 
     Args:
         group: The HDF5 dataset to build this dataset around.
@@ -768,21 +821,24 @@ class HDF5Group(HDF5BaseObject):
         """Constructs this object from the provided arguments.
 
         Args:
-            group: The HDF5 group to build this group around.
-            file: The file which the group originates from.
+            group: The HDF5 _group_ to build this _group_ around.
+            file: The file which the _group_ originates from.
         """
-        if file is None and group is None:
-            raise ValueError("A file or group must be given")
-
         super().construct(name=name, map_=map_, file=file, parent=parent)
+
+        if self.map.name is None:
+            self.map.name = "/"
+
+        if self.map.type is None:
+            self.map.type = self.default_group
 
         if group is not None:
             self.set_group(group)
 
-        self.construct_attributes()
+        self.construct_attributes(build=build)
 
         if load and self.exists:
-            self.load(load=load, build=build)
+            self.load(load=load)
 
         if build:
             self.require()
@@ -791,7 +847,7 @@ class HDF5Group(HDF5BaseObject):
     def construct_attributes(self, map_: HDF5Map = None, load: bool = False, build: bool = False):
         if map_ is None:
             map_ = self.map
-        self.attributes = map_.attributes_type(name=self._name, map_=map_, file=self._file, load=load, build=build)
+        self.attributes = map_.attributes_type(name=self._full_name, map_=map_, file=self._file, load=load, build=build)
 
     def construct_members(self, map_: HDF5Map = None, load: bool = False, build: bool = False):
         if map_ is not None:
@@ -800,7 +856,7 @@ class HDF5Group(HDF5BaseObject):
         for name, value in self.map.items():
             name = self._parse_name(name)
             if name not in self.members:
-                self.members[name] = value.type(map_=value, load=load, build=build)
+                self.members[name] = value.type(map_=value, load=load, build=build, file=self._file)
 
     # Parsers
     def _parse_name(self, name: str):
@@ -812,10 +868,10 @@ class HDF5Group(HDF5BaseObject):
     # Getters/Setters
     @dispatch(object)
     def set_group(self, group):
-        """Sets the wrapped group.
+        """Sets the wrapped _group_.
 
         Args:
-            group: The group this object will wrap.
+            group: The _group_ this object will wrap.
         """
         if isinstance(group, HDF5Group):
             if self._file is None:
@@ -823,14 +879,14 @@ class HDF5Group(HDF5BaseObject):
             self._name = group._name
             self._group = group._group
         else:
-            raise ValueError("group must be a Dataset or HDF5Dataset")
+            raise ValueError("_group_ must be a Dataset or HDF5Dataset")
 
     @dispatch(h5py.Group)
     def set_group(self, group):
-        """Sets the wrapped group.
+        """Sets the wrapped _group_.
 
         Args:
-            group (:obj:`Group`): The group this object will wrap.
+            group (:obj:`Group`): The _group_ this object will wrap.
         """
         if not group:
             raise ValueError("Group needs to be open")
@@ -839,30 +895,42 @@ class HDF5Group(HDF5BaseObject):
         self._name = group.name
         self._group = group
 
-    def get_member(self, name: str, load: bool = False, build: bool = False):
+    def get_member(self, name: str, load: bool = False, build: bool = False, **kwargs):
+        name = self._parse_name(name)
         with self:
             item = self._group[name]
-            map_ = self.map.maps.get(name, self.sentinel)
+            map_ = self.map.get_item(name, self.sentinel)
             if map_ is not self.sentinel:
-                self.members[name] = map_.type(item, map_=map_, file=self._file, load=load, build=build)
+                if isinstance(map_.type, HDF5Group):
+                    kwargs["_group_"] = item
+                else:
+                    kwargs["dataset"] = item
+                self.members[name] = map_.type(map_=map_, file=self._file, load=load, build=build, **kwargs)
             else:
                 if isinstance(item, h5py.Dataset):
-                    self.members[name] = self.default_dataset(item, file=self._file, load=load, build=build)
+                    self.members[name] = self.default_dataset(dataset=item, file=self._file,
+                                                              load=load, build=build, **kwargs)
                 elif isinstance(item, h5py.Group):
-                    self.members[name] = self.default_group(item, file=self._file, load=load, build=build)
+                    self.members[name] = self.default_group(group=item, file=self._file,
+                                                            load=load, build=build, **kwargs)
         return self.members[name]
 
     def get_members(self,  load: bool = False, build: bool = False):
         with self:
             for name, value in self._group.items():
-                map_ = self.map.maps.get(name, self.sentinel)
+                map_ = self.map.get_item(name, self.sentinel)
                 if map_ is not self.sentinel:
-                    self.members[name] = map_.type(value, map_=map_, load=load, build=build)
+                    if isinstance(map_.type, HDF5Group):
+                        kwargs = {"_group_": value}
+                    else:
+                        kwargs = {"dataset": value}
+                    self.members[name] = map_.type(map_=map_, file=self._file, load=load, build=build, **kwargs)
                 else:
                     if isinstance(value, h5py.Dataset):
-                        self.members[name] = self.default_dataset(dataset=value, load=load, build=build)
+                        self.members[name] = self.default_dataset(dataset=value, file=self._file,
+                                                                  load=load, build=build)
                     elif isinstance(value, h5py.Group):
-                        self.members[name] = self.default_group(group=value, load=load, build=build)
+                        self.members[name] = self.default_group(group=value, file=self._file, load=load, build=build)
         return self.members
 
     def get_item(self, key: str):
@@ -875,6 +943,7 @@ class HDF5Group(HDF5BaseObject):
 
     # File
     def load(self, load: bool = False, build: bool = False):
+        self.attributes.load()
         self.get_members(load=load, build=build)
 
     def refresh(self):
@@ -886,7 +955,7 @@ class HDF5Group(HDF5BaseObject):
             self._name = name
 
         with self._file.temp_open():
-            self._group = self._file.create_group(name=self._name, track_order=track_order)
+            self._group = self._file._file.create_group(name=self._full_name, track_order=track_order)
             self.attributes.construct_attributes()
 
         return self
@@ -896,9 +965,8 @@ class HDF5Group(HDF5BaseObject):
             self._name = name
 
         with self._file.temp_open():
-            existed = self.exists
-            self._group = self._file.create_group(name=self._name)
-            if not existed:
+            if not self.exists:
+                self._group = self._file._file.create_group(name=self._full_name)
                 self.attributes.construct_attributes()
 
         return self
@@ -921,7 +989,6 @@ class HDF5Dataset(HDF5BaseObject):
     """
     _wrapped_types = [h5py.Dataset]
     _wrap_attributes = ["_dataset"]
-    default_map = HDF5Map()
 
     # Magic Methods
     # Constructors/Destructors
@@ -973,10 +1040,13 @@ class HDF5Dataset(HDF5BaseObject):
 
         super().construct(name=name, map_=map_, file=file, parent=parent)
 
+        if self.map.type is None:
+            self.map.type = type(self)
+
         if dataset is not None:
             self.set_dataset(dataset)
 
-        self.construct_attributes()
+        self.construct_attributes(build=build)
 
         if load and self.exists:
             self.load()
@@ -987,10 +1057,10 @@ class HDF5Dataset(HDF5BaseObject):
     def construct_attributes(self, map_: HDF5Map = None, load: bool = False, build: bool = False):
         if map_ is None:
             map_ = self.map
-        self.attributes = map_.attributes_type(name=self._name, map_=map_, file=self._file, load=load, build=build)
+        self.attributes = map_.attributes_type(name=self._full_name, map_=map_, file=self._file, load=load, build=build)
 
     def construct_dataset(self, **kwargs):
-        self.require(name=self._name, **kwargs)
+        self.require(name=self._full_name, **kwargs)
 
     # Getters/Setters
     @dispatch(object)
@@ -1003,7 +1073,7 @@ class HDF5Dataset(HDF5BaseObject):
         if isinstance(dataset, HDF5Dataset):
             if self._file is None:
                 self._file = dataset._file
-            self._name = dataset._name
+            self.set_name(dataset._name)
             self._dataset = dataset._dataset
         else:
             raise ValueError("dataset must be a Dataset or HDF5Dataset")
@@ -1019,7 +1089,7 @@ class HDF5Dataset(HDF5BaseObject):
             raise ValueError("Dataset needs to be open")
         if self._file is None:
             self._file = HDF5File(dataset.file)
-        self._name = dataset.name
+        self.set_name(dataset.name)
         self._dataset = dataset
 
     @dispatch(str)
@@ -1029,7 +1099,7 @@ class HDF5Dataset(HDF5BaseObject):
         Args:
             dataset (str): The name of the dataset.
         """
-        self._name = dataset
+        self.set_name(dataset)
 
     @timed_keyless_cache_method(call_method="clearing_call", collective=False)
     def get_shape(self):
@@ -1043,7 +1113,7 @@ class HDF5Dataset(HDF5BaseObject):
 
     # File
     def load(self):
-        pass
+        self.attributes.load()
 
     def refresh(self):
         with self:
@@ -1064,8 +1134,9 @@ class HDF5Dataset(HDF5BaseObject):
                 kwargs["maxshape"] = kwargs["data"].shape
 
         with self._file.temp_open():
-            self._dataset = self._file.create_dataset(name=self._name, **kwargs)
+            self._dataset = self._file._file.create_dataset(name=self._full_name, **kwargs)
             self.attributes.construct_attributes()
+            self.make_scale()
 
         return self
 
@@ -1076,16 +1147,29 @@ class HDF5Dataset(HDF5BaseObject):
         if "data" in kwargs:
             if "shape" not in kwargs:
                 kwargs["shape"] = kwargs["data"].shape
-            if "maxshape" not in kwargs:
-                kwargs["maxshape"] = kwargs["data"].shape
+            if "dtype" not in kwargs:
+                kwargs["dtype"] = kwargs["data"].dtype
 
         with self._file.temp_open():
             existed = self.exists
-            self._dataset = self._file.require_dataset(name=self._name, **kwargs)
+            self._dataset = self._file._file.require_dataset(name=self._full_name, **kwargs)
             if not existed:
                 self.attributes.construct_attributes()
+                self.make_scale()
 
         return self
+
+    def replace_data(self, data):
+        with self:
+            # Assign Data
+            self._dataset.resize(data.shape)  # Reshape for new data
+            self._dataset[...] = data
+
+    def set_data(self, data, **kwargs):
+        if self.exists:
+            self.replace_data(data=data)
+        else:
+            self.require(data=data, **kwargs)
 
     def append(self, data, axis=0):
         """Append data to the dataset along a specified axis.
@@ -1108,17 +1192,12 @@ class HDF5Dataset(HDF5BaseObject):
             self._dataset.resize(new_shape)  # Reshape for new data
             self._dataset[slicing] = data    # Assign data to the new location
 
-    def replace_data(self, data):
-        with self:
-            # Assign Data
-            self._dataset.resize(data.shape)  # Reshape for new data
-            self._dataset[...] = data
-
     def make_scale(self, name: str = None):
         if name is not None:
             self._scale_name = name
-        with self:
-            self._dateset.make_scale(self._scale_name)
+        if self._scale_name is not None and self.exists:
+            with self:
+                self._dataset.make_scale(self._scale_name)
 
     def attach_axis(self, dataset, axis=0):
         if isinstance(dataset, HDF5Dataset):
@@ -1135,12 +1214,21 @@ class HDF5Dataset(HDF5BaseObject):
             self._dataset.dims[axis].detach_scale(dataset)
 
 
+# Assign Cyclic Definitions
+HDF5Map.default_attributes_type = HDF5Attributes
+
+HDF5BaseObject.default_map = HDF5Map()
+
+HDF5Group.default_group = HDF5Group
+HDF5Group.default_dataset = HDF5Dataset
+
+
 class HDF5File(HDF5BaseObject):
     """A class which wraps a HDF5 File and gives more functionality.
 
     Class Attributes:
         attribute_type: The class to cast the HDF5 attribute manager as.
-        group_type: The class to cast the HDF5 group as.
+        group_type: The class to cast the HDF5 _group_ as.
         dataset_type: The class to cast the HDF5 dataset as.
 
     Attributes:
@@ -1164,7 +1252,7 @@ class HDF5File(HDF5BaseObject):
     """
     # Todo: Rethink about how Errors and Warnings are handled in this object.
     _wrapped_types = [HDF5Group, h5py.File]
-    _wrap_attributes = ["_group", "_file"]
+    _wrap_attributes = ["_group_", "_file"]
     attribute_type = HDF5Attributes
     group_type = HDF5Group
     dataset_type = HDF5Dataset
@@ -1228,17 +1316,17 @@ class HDF5File(HDF5BaseObject):
 
     # Magic Methods
     # Construction/Destruction
-    def __init__(self, file=None, open_: bool = False, load: bool = False,
+    def __init__(self, file=None, open_: bool = False, map_: HDF5Map = None, load: bool = False,
                  create: bool = False, build: bool = False, init: bool = True, **kwargs):
         super().__init__(init=False)
 
         self._path = None
-        self._name_ = ""
+        self._name_ = "/"
 
-        self._group = None
+        self._group_ = None
 
         if init:
-            self.construct(file=file, open_=open_, load=load, create=create, build=build, **kwargs)
+            self.construct(file=file, open_=open_, map_=map_, load=load, create=create, build=build, **kwargs)
 
     @property
     def path(self):
@@ -1262,6 +1350,10 @@ class HDF5File(HDF5BaseObject):
             return bool(self._file)
         except:
             return False
+
+    @property
+    def attributes(self):
+        return self._group_.attributes
 
     def __del__(self):
         """Closes the file when this object is deleted."""
@@ -1300,8 +1392,7 @@ class HDF5File(HDF5BaseObject):
         Returns:
             The container requested.
         """
-        # Todo: Change this to structure?
-        return self._file[item]
+        return self._group_[item]
 
     # Context Managers
     def __enter__(self):
@@ -1329,9 +1420,9 @@ class HDF5File(HDF5BaseObject):
         """
         return self.is_open
 
-    # Instance Methods
+    # Instance Methods #
     # Constructors/Destructors
-    def construct(self, file=None, open_: bool = False, load: bool = False,
+    def construct(self, file=None, open_: bool = True, map_: HDF5Map = None, load: bool = False,
                   create: bool = False, build: bool = False, **kwargs):
         """Constructs this object.
 
@@ -1344,27 +1435,42 @@ class HDF5File(HDF5BaseObject):
         Returns:
             This object.
         """
+        if map_ is not None:
+            self.map = map_
+
+        if self.map.name is None:
+            self.map.name = "/"
+
         if file is not None:
             self._set_path(file)
 
-        if self.path is None:
+        if not self.path.is_file():
             if create:
                 self.require_file(open_, **kwargs)
             elif load:
                 raise ValueError("A file is required to load this file.")
             elif build:
                 raise ValueError("A file is required to build this file.")
-        elif open_:
+        elif open_ or load or build:
             self.open(**kwargs)
 
         self.construct_group(load=load, build=build)
 
+        if build:
+            self.construct_file_attributes()
+
+        if not open_:
+            self.close()
+
         return self
+
+    def construct_file_attributes(self):
+        pass
 
     def construct_group(self, map_: HDF5Map = None, load: bool = False, build: bool = False):
         if map_ is not None:
             self.map = map_
-        self._group = self.group_type(name=self._name_, map_=self.map, file=self, load=load, build=build)
+        self._group_ = self.group_type(name=self._name_, map_=self.map, file=self, load=load, build=build)
 
     # Getters/Setters
     @dispatch(object)
@@ -1395,7 +1501,7 @@ class HDF5File(HDF5BaseObject):
             raise ValueError("The supplied HDF5 File must be open.")
 
     # File Creation/Construction
-    def create_file(self, open_=True, map_: HDF5Map = None, build: bool = False, **kwargs):
+    def create_file(self, name=None, open_=True, map_: HDF5Map = None, build: bool = False, **kwargs):
         """Creates the HDF5 file.
 
         Args:
@@ -1407,12 +1513,15 @@ class HDF5File(HDF5BaseObject):
         Returns:
             This object.
         """
+        if name is not None:
+            self.path = name
+
         if map_ is not None:
             self.map = map_
 
         self.open(**kwargs)
         if build:
-            self._group.construct_members(build=True)
+            self._group_.construct_members(build=True)
         elif not open_:
             self.close()
 
@@ -1422,7 +1531,7 @@ class HDF5File(HDF5BaseObject):
         if self.path.is_file():
             self.open(**kwargs)
             if load:
-                self._group.load(load=True, build=build)
+                self._group_.load(load=True, build=build)
             if not open_:
                 self.close()
         else:
@@ -1485,10 +1594,3 @@ class HDF5File(HDF5BaseObject):
             self._file.flush()
             self._file.close()
         return not self.is_open
-
-
-# Assign Cyclic Definitions
-HDF5Map.attributes_type = HDF5Attributes
-
-HDF5Group.default_group = HDF5Group
-HDF5Group.default_dataset = HDF5Dataset

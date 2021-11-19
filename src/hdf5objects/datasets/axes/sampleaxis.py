@@ -4,7 +4,7 @@
 Description:
 """
 # Package Header #
-from ..__header__ import *
+from ...__header__ import *
 
 # Header #
 __author__ = __author__
@@ -16,8 +16,6 @@ __email__ = __email__
 # Standard Libraries #
 
 # Third-Party Packages #
-import h5py
-import numpy as np
 
 # Local Packages #
 from .axis import AxisMap, Axis
@@ -42,11 +40,10 @@ class SampleAxis(Axis):
     # Magic Methods #
     # Construction/Destruction
     def __init__(self, start: int = None, stop: int = None, step: int = None, rate: float = None, size: int = None,
-                 data=None,
-                 s_name: str = None, build: bool = True, init: bool = True, **kwargs):
+                 s_name: str = None, build: bool = None, init: bool = True, **kwargs):
         super().__init__(init=False)
         self.default_kwargs = {"dtype": 'i', "maxshape": (None,)}
-        self._scale_name = "samples"
+        self._scale_name = "sample axis"
 
         if init:
             self.construct(start=start, stop=stop, step=step, rate=rate, size=size,

@@ -19,7 +19,6 @@ import datetime
 
 # Third-Party Packages #
 from classversioning import VersionType, TriNumberVersion
-from bidict import bidict
 import numpy as np
 
 # Local Packages #
@@ -30,19 +29,13 @@ from ..datasets import TimeSeriesMap, ChannelAxisMap, SampleAxisMap, TimeAxisMap
 # Definitions #
 # Classes #
 class HDF5EEGMap(BaseHDF5Map):
-    default_attributes = bidict({"file_type": "FileType",
-                                 "file_version": "FileVersion",
-                                 "subject_id": "subject_id",
-                                 "start": "start",
-                                 "end": "end"})
-    default_containers = bidict({"data": "EEG Array",
-                                 "channel_axis": "channel_axis",
-                                 "sample_axis": "sample_axis",
-                                 "time_axis": "time_axis"})
-    default_maps = {"data": TimeSeriesMap(name="data"),
-                    "channel_axis": ChannelAxisMap(name="channel_axis"),
-                    "sample_axis": SampleAxisMap(name="sample_axis"),
-                    "time_axis": TimeAxisMap(name="time_axis")}
+    default_attribute_names = {"file_type": "FileType",
+                               "file_version": "FileVersion",
+                               "subject_id": "subject_id",
+                               "start": "start",
+                               "end": "end"}
+    default_map_names = {"data": "EEG Array"}
+    default_maps = {"data": TimeSeriesMap()}
 
 
 class HDF5EEG(BaseHDF5):
@@ -52,52 +45,40 @@ class HDF5EEG(BaseHDF5):
     FILE_TYPE = "EEG"
     default_map = HDF5EEGMap()
 
-    # Magic Methods
+    # Magic Methods #
     # Construction/Destruction
-    def __init__(self, file=None, s_id=None, s_dir=None, start=None, create=True, init=True, **kwargs):
+    def __init__(self, file=None, s_id=None, s_dir=None, start=None, init=True, **kwargs):
         super().__init__(init=False)
         self._subject_id = ""
         self._subject_dir = None
-        self._start = 0.0
-        self._end = 0.0
-        self._subject_dir = None
-
-        self.eeg_data = None
 
         if init:
-            self.construct(file, s_id, s_dir, start, create, **kwargs)
+            self.construct(file=file, s_id=s_id, s_dir=s_dir, start=start, **kwargs)
+
+    @property
+    def subject_id(self):
+        return self.attributes["subject_id"]
+
+    @subject_id.setter
+    def subject_id(self, value):
+        self.attributes.set_attribute("subject_id", value)
+        self._subject_id = value
 
     @property
     def start(self):
-        try:
-            self._start = self.attributes[self.map.attributes["start"]]
-        finally:
-            return datetime.datetime.fromtimestamp(self._start)
+        return self.attributes["start"]
 
     @start.setter
     def start(self, value):
-        if isinstance(value, datetime.datetime):
-            value = value.timestamp()
-        try:
-            self.attributes[self.map.attributes["start"]] = value
-        finally:
-            self._start = value
+        self.attributes.set_attribute("start", value)
 
     @property
     def end(self):
-        try:
-            self._end = self.attributes[self.map.attributes["end"]]
-        finally:
-            return datetime.datetime.fromtimestamp(self._end)
+        return self.attributes["end"]
 
     @end.setter
     def end(self, value):
-        if isinstance(value, datetime.datetime):
-            value = value.timestamp()
-        try:
-            self.attributes[self.map.attributes["end"]] = value
-        finally:
-            self._end = value
+        self.attributes.set_attribute("end", value)
 
     @property
     def subject_dir(self):
@@ -116,51 +97,81 @@ class HDF5EEG(BaseHDF5):
 
     @property
     def sample_rate(self):
-        return self.eeg_data.sample_rate
+        return self["data"].sample_rate
 
     @sample_rate.setter
     def sample_rate(self, value):
-        self.eeg_data.sample_rate = value
+        self["data"].sample_rate = value
 
     @property
     def n_samples(self):
-        return self.eeg_data.n_samples
-
-    @n_samples.setter
-    def n_samples(self, value):
-        self.eeg_data.n_samples = value
+        return self["data"].n_samples
 
     @property
     def channel_axis(self):
-        return self.eeg_data.channel_axis
-
-    @channel_axis.setter
-    def channel_axis(self, value):
-        self.eeg_data.channel_axis = value
+        return self["data"].channel_axis
 
     @property
     def sample_axis(self):
-        return self.eeg_data.sample_axis
-
-    @sample_axis.setter
-    def sample_axis(self, value):
-        self.eeg_data.sample_axis = value
+        return self["data"].sample_axis
 
     @property
     def time_axis(self):
-        return self.eeg_data.time_axis
+        return self["data"].time_axis
 
-    @time_axis.setter
-    def time_axis(self, value):
-        self.eeg_data.time_axis = value
+    @property
+    def data(self):
+        return self["data"]
 
     # Representation
-    def __repr__(self):
-        return repr(self.start)
+    def __hash__(self):
+        """Overrides hash to make the class hashable.
+
+        Returns:
+            The system ID of the class.
+        """
+        return id(self)
+
+    # Comparison
+    def __eq__(self, other):
+        if isinstance(other, HDF5EEG):
+            return self.start == other.start
+        else:
+            return self.start == other
+
+    def __ne__(self, other):
+        if isinstance(other, HDF5EEG):
+            return self.start != other.start
+        else:
+            return self.start != other
+
+    def __lt__(self, other):
+        if isinstance(other, HDF5EEG):
+            return self.start < other.start
+        else:
+            return self.start < other
+
+    def __gt__(self, other):
+        if isinstance(other, HDF5EEG):
+            return self.start > other.start
+        else:
+            return self.start > other
+
+    def __le__(self, other):
+        if isinstance(other, HDF5EEG):
+            return self.start <= other.start
+        else:
+            return self.start <= other
+
+    def __ge__(self, other):
+        if isinstance(other, HDF5EEG):
+            return self.start >= other.start
+        else:
+            return self.start >= other
 
     # Instance Methods
     # Constructors/Destructors
-    def construct(self, file=None, s_id=None, s_dir=None, start=None, create=True, **kwargs):
+    def construct(self, file=None, s_id=None, s_dir=None, start=None, **kwargs):
         """Constructs this object.
 
         Args:
@@ -175,89 +186,60 @@ class HDF5EEG(BaseHDF5):
         if s_dir is not None:
             self.subject_dir = s_dir
 
-        super().construct(obj=file, create=False, **kwargs)
+        if s_id is not None:
+            self._subject_id = s_id
 
-        if self.path is not None:
-            self.load_eeg_data()
-        else:
-            if s_id is not None:
-                self._subject_id = s_id
-            if isinstance(start, datetime.datetime):
-                self._start = start.timestamp()
-            elif isinstance(start, float):
-                self._start = start
+        if file is None and self.path is None and start is not None:
+            self.path = self.subject_dir.joinpath(self.generate_file_name(s_id=s_id, start=start))
 
-            if create and self._subject_id is not None and self._start is not None and self._subject_dir is not None:
-                self.create_file()
+        super().construct(file=file, **kwargs)
 
-    # File Creation/Construction
-    def generate_file_name(self):
-        return self.subject_id + '_' + self.start.isoformat('_', 'seconds').replace(':', '~') + ".h5"
+        return self
 
-    def create_file(self, s_name=None, s_dir=None, start=None, f_path=None, **kwargs):
-        if s_name is not None:
-            self._subject_id = s_name
+    def construct_file_attributes(self, start=None):
+        super().construct_file_attributes()
+        if isinstance(start, datetime.datetime):
+            self.attributes["start"] = start.timestamp()
+        elif isinstance(start, float):
+            self.attributes["start"] = start
+        self.attributes["subject_id"] = self._subject_id
+
+    def construct_dataset(self, load=False, build=False, **kwargs):
+        self._group_.get_member(name="data", load=load, build=build, **kwargs)
+
+    # File
+    def generate_file_name(self, s_id=None, start=None):
+        if s_id is None:
+            s_id = self.subject_id
+
+        if start is None:
+            start = self.start
+
+        if isinstance(start, float):
+            start = datetime.datetime.fromtimestamp(start)
+
+        return s_id + '_' + start.isoformat('_', 'seconds').replace(':', '~') + ".h5"
+
+    def create_file(self, name=None, s_id=None, s_dir=None, start=None, **kwargs):
+        if s_id is not None:
+            self._subject_id = s_id
         if s_dir is not None:
             self.subject_dir = s_dir
-        if start is not None:
-            self._start = start
 
-        if f_path is None:
-            f_path = self.subject_dir.joinpath(self.generate_file_name())
+        if name is None and self.path is None and start is not None:
+            self.path = self.subject_dir.joinpath(self.generate_file_name(s_id=s_id, start=start))
 
-        self.path = f_path
+        super().create_file(name=name, **kwargs)
 
-        super().create_file(**kwargs)
+    # Attributes Modification
+    def validate_attributes(self):
+        return self.start == self.data._time_axis.start and self.end == self.data._time_axis.end
 
-    def construct_file_attributes(self, **kwargs):
-        self.attributes[self.map.attributes["subject_id"]] = self._subject_id
-        self.attributes[self.map.attributes["start"]] = self._start
-        self.attributes[self.map.attributes["end"]] = self._end
-        super().construct_file_attributes(**kwargs)
-
-    # EEG Data
-    def create_eeg_dataset(self, data=None, shape=None, maxshape=None, dtype=None, **kwargs):
-        if maxshape is None:
-            maxshape = (None, None)
-
-        if data is None:
-            if shape is None:
-                shape = (0, 0)
-            if dtype is None:
-                dtype = "f4"
-
-        kwargs["data"] = data
-        kwargs["shape"] = shape
-        kwargs["maxshape"] = maxshape
-        kwargs["dtype"] = dtype
-
-        self.eeg_data = self.map["data"].create_object(name=self.map.containers["data"], file=self, **kwargs)
-        self.eeg_data.axis_map["channel_axis"] = self.map.containers["channel_axis"]
-        self.eeg_data.axis_map["sample_axis"] = self.map.containers["sample_axis"]
-        self.eeg_data.axis_map["time_axis"] = self.map.containers["time_axis"]
-        self.structure[self.map.containers["data"]].object = self.eeg_data
-
-    def load_eeg_data(self):
-        with self.temp_open():
-            d_name = self.map.containers["data"]
-            if d_name in self.h5_fobj:
-                self.create_eeg_dataset(dataset=self.h5_fobj[d_name])
-            else:
-                self.create_eeg_dataset(name=d_name, create=False)
-
-    def set_eeg_data(self, data, sample_rate=None, start_sample=None, end_sample=None,
-                     start_time=None, end_time=None, dtype='f4', maxshape=(None, None), **kwargs):
-        d_kwargs = self.default_file_attributes.copy()
-        d_kwargs.update(kwargs)
-        d_name = self.map.containers["data"]
-        with self.temp_open():
-            if self.eeg_data is None:
-                self.create_eeg_dataset(name=d_name, create=False)
-            if sample_rate is not None:
-                self.eeg_data.sample_rate = sample_rate
-
-            self.eeg_data.set_data(self, data, sample_rate, start_sample, end_sample, start_time, end_time,
-                                   dtype=dtype, maxshape=maxshape, **d_kwargs)
+    def standardize_attributes(self):
+        if self.data.exists:
+            self.data.standardize_attributes()
+            self.start = self.data._time_axis.start
+            self.end = self.data._time_axis.end
 
     # Data Manipulation
     def find_sample(self, sample, aprox=False, tails=False):
@@ -292,7 +274,7 @@ class HDF5EEG(BaseHDF5):
             start_index, true_start = self.find_sample(start, aprox, tails)
             end_index, true_end = self.find_sample(end, aprox, tails)
 
-            return self.eeg_data[start_index:end_index], true_start, true_end
+            return self.data[start_index:end_index], true_start, true_end
 
     def find_time(self, timestamp, aprox=False, tails=False):
         # Setup
@@ -328,4 +310,4 @@ class HDF5EEG(BaseHDF5):
             start_index, true_start = self.find_time(start, aprox, tails)
             end_index, true_end = self.find_time(end, aprox, tails)
 
-            return self.eeg_data[start_index:end_index], true_start, true_end
+            return self.data[start_index:end_index], true_start, true_end

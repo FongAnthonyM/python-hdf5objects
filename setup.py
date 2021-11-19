@@ -1,6 +1,20 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
+""" setup.py
+The setup for this package.
+"""
+# Package Header #
+from src.hdf5objects.__header__ import *
 
+# Header #
+__author__ = __author__
+__credits__ = __credits__
+__maintainer__ = __maintainer__
+__email__ = __email__
+
+
+# Imports #
+# Standard Libraries #
 import io
 import re
 from glob import glob
@@ -9,10 +23,13 @@ from os.path import dirname
 from os.path import join
 from os.path import splitext
 
+# Third-Party Packages #
 from setuptools import find_packages
 from setuptools import setup
 
 
+# Definitions #
+# Functions #
 def read(*names, **kwargs):
     with io.open(
         join(dirname(__file__), *names),
@@ -21,6 +38,7 @@ def read(*names, **kwargs):
         return fh.read()
 
 
+# Main #
 setup(
     name='hdf5objects',
     version='0.1.0',

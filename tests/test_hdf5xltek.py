@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" test_hdf5objects.py
+""" test_hdf5xltek.py
 Description:
 """
 # Package Header #
@@ -25,6 +25,7 @@ import numpy as np
 
 # Local Packages #
 from src.hdf5objects import *
+from .test_hdf5objects import HDF5File, ClassTest
 
 
 # Definitions #
@@ -36,28 +37,17 @@ def tmp_dir(tmpdir):
 
 
 # Classes #
-class ClassTest:
-    """Default class tests that all classes should pass."""
-    class_ = None
-    timeit_runs = 2
-    speed_tolerance = 200
-
-    def get_log_lines(self, tmp_dir, logger_name):
-        path = tmp_dir.joinpath(f"{logger_name}.log")
-        with path.open() as f_object:
-            lines = f_object.readlines()
-        return lines
-
-
-class TestHDF5File(ClassTest):
-    class_ = HDF5File
-    studies_path = pathlib.Path("/common/subjects")
-    load_path = pathlib.Path.cwd().joinpath("pytest_cache/EC228_2020-09-21_14~53~19.h5")
-    save_path = pathlib.Path.cwd().joinpath("pytest_cache/")
+class TestHDF5XLTEK(ClassTest):
+    class_ = HDF5XLTEK
+    load_path = pathlib.Path.cwd().joinpath("tests/pytest_cache/EC228_2020-09-21_14~53~19.h5")
+    save_path = pathlib.Path.cwd().joinpath("tests/pytest_cache/")
 
     @pytest.fixture
     def load_file(self):
         return self.class_(file=self.load_path)
+
+    def test_validate_file(self):
+        assert self.class_.validate_file_type(self.load_path)
 
     @pytest.mark.parametrize("mode", ['r', 'r+', 'a'])
     def test_new_object(self, mode):
@@ -79,7 +69,7 @@ class TestHDF5File(ClassTest):
 
     def test_load_from_property(self):
         f_obj = self.class_(file=self.load_path)
-        data = f_obj.eeg_data
+        data = f_obj.data
         f_obj.close()
         assert data is not None
 
@@ -97,7 +87,7 @@ class TestHDF5File(ClassTest):
 
     def test_get_data(self):
         f_obj = self.class_(file=self.load_path)
-        data = f_obj.eeg_data[0:1]
+        data = f_obj.data[0:1]
         f_obj.close()
         assert data.shape is not None
 
@@ -107,8 +97,35 @@ class TestHDF5File(ClassTest):
         f_obj.close()
         assert start is not None
 
-    def test_validate_file(self):
-        assert self.class_.validate_file_type(self.load_path)
+    @pytest.mark.xfail
+    def test_activate_swmr_mode(self):
+        f_obj = self.class_(file=self.load_path)
+        f_obj.swmr_mode = True
+        assert f_obj.swmr_mode
+        f_obj.close()
+        assert True
+
+    def test_create_file_build_empty(self, tmpdir):
+        start = datetime.datetime.now()
+        f_obj = self.class_(s_id="EC_test", s_dir=tmpdir, start=start, create=True, mode="a", build=True)
+        assert f_obj.is_open
+        f_obj.close()
+        assert True
+
+    def test_create_file_build_data(self, tmpdir):
+        sample_rate = 1024
+        n_channels = 128
+        n_samples = 2048
+        data = np.random.rand(n_samples, n_channels)
+        start = datetime.datetime.now()
+
+        f_obj = self.class_(s_id="EC_test", s_dir=tmpdir, start=start, create=True, mode="a", build=True)
+
+        dataset = f_obj.data
+        dataset.require(data=data, sample_rate=sample_rate, start=start)
+
+        f_obj.close()
+        assert True
 
     @pytest.mark.xfail
     def test_data_speed(self, load_file):
@@ -124,12 +141,6 @@ class TestHDF5File(ClassTest):
 
         print(f"\nNew speed {mean_new:.3f} μs took {percent:.3f}% of the time of the old function.")
         assert percent < self.speed_tolerance
-
-    def test_create_file(self):
-        start = datetime.datetime.now()
-        f_obj = self.class_(s_id="EC_test", s_dir=self.save_path, start=start)
-        f_obj.create_eeg_dataset()
-        assert 1
 
 
 # Main #

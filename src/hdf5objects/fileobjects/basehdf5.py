@@ -18,9 +18,7 @@ import pathlib
 from warnings import warn
 
 # Third-Party Packages #
-from baseobjects import AutomaticProperties
-from bidict import bidict
-from classversioning import VersionedInitMeta, VersionedClass, VersionType, TriNumberVersion
+from classversioning import CachingVersionedInitMeta, VersionedClass, VersionType, TriNumberVersion
 import h5py
 
 # Local Packages #
@@ -31,86 +29,21 @@ from ..hdf5objects import HDF5Map, HDF5Group, HDF5File
 # Classes #
 class BaseHDF5Map(HDF5Map):
     default_type = HDF5Group
-    default_attributes = bidict({"file_type": "FileType", "file_version": "FileVersion"})
+    default_attribute_names = {"file_type": "FileType", "file_version": "FileVersion"}
 
 
-class BaseHDF5(HDF5File, AutomaticProperties, VersionedClass, metaclass=VersionedInitMeta):
+class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     _registration = False
     _VERSION_TYPE = VersionType(name="BaseHDF5", class_=TriNumberVersion)
     FILE_TYPE = "Abstract"
     VERSION = TriNumberVersion(0, 0, 0)
     default_map = BaseHDF5Map()
 
-    # Class Methods
-    # Property Creation
-    # Callbacks
-    @classmethod
-    def _get_attribute(cls, obj, name):
-        try:
-            setattr(obj, "_" + name, obj.attributes[obj.map.attributes[name]])
-        finally:
-            return getattr(obj, "_" + name)
-
-    @classmethod
-    def _set_attribute(cls, obj, name, value):
-        try:
-            obj.attributes[obj.map.attributes[name]] = value
-        finally:
-            setattr(obj, "_" + name, value)
-
-    @classmethod
-    def _del_attribute(cls, obj, name):
-        try:
-            del obj.attrs[obj.map.attributes[name]]
-        finally:
-            delattr(obj, "_" + name)
-
-    # Callback Factories
-    @classmethod
-    def _attribute_callback_factory(cls, name):
-        """A factory for creating property modification functions.
-
-        Args:
-            name (str): An object that can be use to create the get, set, and delete functions
-
-        Returns:
-            get_: The get function for a property object.
-            set_: The wet function for a property object.
-            del_: The del function for a property object.
-        """
-
-        def get_(obj):
-            """Gets the object."""
-            return cls._get_attribute(obj, name)
-
-        def set_(obj, value):
-            """Sets the wrapped object."""
-            cls._set_attribute(obj, name, value)
-
-        def del_(obj):
-            """Deletes the wrapped object."""
-            cls._del_attribute(obj, name)
-
-        return get_, set_, del_
-
-    # Property Constructors
-    @classmethod
-    def _hdf5map_to_properties(cls, map_, callback_factory):
-        for name in map_.attributes.keys():
-            if not hasattr(cls, name):
-                get_, set_, del_ = callback_factory(name)
-                setattr(cls, name, property(get_, set_, del_))
-
-    # Property Mapping
-    @classmethod
-    def _construct_properties_map(cls):
-        file_attributes = ["default_map", cls._hdf5map_to_properties, cls._attribute_callback_factory]
-        cls._properties_map.append(file_attributes)
-
+    # Class Methods #
     # File Validation
     @classmethod
     def validate_file_type(cls, obj):
-        t_name = cls.default_map.attributes["file_type"]
+        t_name = cls.default_map.attribute_names["file_type"]
 
         if isinstance(obj, (str, pathlib.Path)):
             if not isinstance(obj, pathlib.Path):
@@ -125,7 +58,7 @@ class BaseHDF5(HDF5File, AutomaticProperties, VersionedClass, metaclass=Versione
             else:
                 return False
         elif isinstance(obj, HDF5File):
-            obj = obj.h5_fobj
+            obj = obj._file
             return t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]
 
     @classmethod
@@ -134,7 +67,7 @@ class BaseHDF5(HDF5File, AutomaticProperties, VersionedClass, metaclass=Versione
 
     @classmethod
     def new_validated(cls, obj, **kwargs):
-        t_name = cls.default_map.attributes["file_type"]
+        t_name = cls.default_map.attribute_names["file_type"]
 
         if isinstance(obj, (str, pathlib.Path)):
             if not isinstance(obj, pathlib.Path):
@@ -150,14 +83,14 @@ class BaseHDF5(HDF5File, AutomaticProperties, VersionedClass, metaclass=Versione
             else:
                 return None
         elif isinstance(obj, HDF5File):
-            obj = obj.h5_fobj
+            obj = obj._file
             if t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]:
                 return cls(obj=obj, **kwargs)
 
     @classmethod
     def get_version_from_object(cls, obj):
         """An optional abstract method that must return a version from an object."""
-        v_name = cls.default_map.attributes["file_version"]
+        v_name = cls.default_map.attribute_names["file_version"]
 
         if isinstance(obj, pathlib.Path):
             obj = obj.as_posix()
@@ -167,7 +100,7 @@ class BaseHDF5(HDF5File, AutomaticProperties, VersionedClass, metaclass=Versione
 
         return TriNumberVersion(obj.attrs[v_name])
 
-    # Magic Methods
+    # Magic Methods #
     # Construction/Destruction
     def __new__(cls, *args, **kwargs):
         """With given input, will return the correct subclass."""
@@ -181,51 +114,52 @@ class BaseHDF5(HDF5File, AutomaticProperties, VersionedClass, metaclass=Versione
         else:
             return super().__new__(cls)
 
-    def __init__(self, init=True, **kwargs):
-        self._h5_fobj = None
+    def __init__(self, file=None, open_: bool = True, map_: HDF5Map = None, load: bool = False,
+                 create: bool = False, build: bool = False, init: bool = True, **kwargs):
         super().__init__(init=False)
         self._file_type = ""
         self._file_version = ""
 
         if init:
-            self.construct(**kwargs)
-
+            self.construct(file=file, open_=open_, map_=map_, load=load, create=create, build=build, **kwargs)
+    
     @property
-    def h5_fobj(self):
-        return self._h5_fobj
+    def file_type(self):
+        return self.attributes["file_type"]
 
-    @h5_fobj.setter
-    def h5_fobj(self, value):
-        for attribute, name in self.map.attributes.items():
-            try:
-                new = getattr(self, "_" + attribute)
-                value.attr[name] = new
-            except AttributeError:
-                pass
-        self._h5_fobj = value
+    @file_type.setter
+    def file_type(self, value):
+        self.attributes.set_attribute("file_type", value)
+        
+    @property
+    def file_version(self):
+        return self.attributes["file_version"]
 
-    # Instance Methods
+    @file_version.setter
+    def file_version(self, value):
+        self.attributes.set_attribute("file_version", value)
+    
+    # Instance Methods #
+    # Constructors/Destructors
+    def construct_file_attributes(self):
+        self.attributes["file_type"] = self.FILE_TYPE
+        self.attributes["file_version"] = self.VERSION.str()
+
     # File
     def open(self, mode="a", exc=False, validate=False, **kwargs):
         if not self.is_open:
             try:
-                self.h5_fobj = h5py.File(self.path.as_posix(), mode=mode)
-                self.construct_structure()
+                self._file = h5py.File(self.path.as_posix(), mode=mode, **kwargs)
                 if validate:
                     self.validate_file_structure(**kwargs)
-                return self.h5_fobj
+                return self
             except Exception as e:
                 if exc:
                     warn("Could not open" + self.path.as_posix() + "due to error: " + str(e), stacklevel=2)
-                    self.h5_fobj = None
+                    self._file = None
                     return None
                 else:
                     raise e
-
-    def construct_file_attributes(self, **kwargs):
-        self.attributes[self.map.attributes["file_type"]] = self.FILE_TYPE
-        self.attributes[self.map.attributes["file_version"]] = self.VERSION.str()
-        super().construct_file_attributes(**kwargs)
 
     # General Methods # Todo: Maybe implement this.
     # def report_file_structure(self):
@@ -238,27 +172,27 @@ class BaseHDF5(HDF5File, AutomaticProperties, VersionedClass, metaclass=Versione
     #               "datasets": {"valid": False, "differences": {"object": None, "file": None}}}
     #
     #     # Check H5 File Type
-    #     if "FileType" in self.h5_fobj.attrs:
-    #         if self.h5_fobj.attrs["FileType"] == self.FILE_TYPE:
+    #     if "FileType" in self._file.attrs:
+    #         if self._file.attrs["FileType"] == self.FILE_TYPE:
     #             report["file_type"]["valid"] = True
     #             report["file_type"]["differences"]["object"] = None
     #         else:
-    #             report["file_type"]["differences"]["file"] = self.h5_fobj.attrs["FileType"]
+    #             report["file_type"]["differences"]["file"] = self._file.attrs["FileType"]
     #
     #     # Check File Attributes
-    #     if self.h5_fobj.attrs.keys() == self.attributes:
+    #     if self._file.attrs.keys() == self.attributes:
     #         report["attrs"]["valid"] = True
     #     else:
-    #         f_attr_set = set(self.h5_fobj.attrs.keys())
+    #         f_attr_set = set(self._file.attrs.keys())
     #         o_attr_set = self.attributes
     #         report["attrs"]["differences"]["object"] = o_attr_set - f_attr_set
     #         report["attrs"]["differences"]["file"] = f_attr_set - o_attr_set
     #
     #     # Check File Datasets
-    #     if self.h5_fobj.keys() == self._datasets:
+    #     if self._file.keys() == self._datasets:
     #         report["attrs"]["valid"] = True
     #     else:
-    #         f_attr_set = set(self.h5_fobj.keys())
+    #         f_attr_set = set(self._file.keys())
     #         o_attr_set = self._datasets
     #         report["datasets"]["differences"]["object"] = o_attr_set - f_attr_set
     #         report["datasets"]["differences"]["file"] = f_attr_set - o_attr_set

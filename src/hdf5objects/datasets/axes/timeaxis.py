@@ -4,7 +4,7 @@
 Description:
 """
 # Package Header #
-from ..__header__ import *
+from ...__header__ import *
 
 # Header #
 __author__ = __author__
@@ -55,10 +55,10 @@ class TimeAxis(Axis):
     # Construction/Destruction
     def __init__(self, start: datetime.datetime = None, stop: datetime.datetime = None, step = None,
                  rate: float = None, size: int = None, datetimes=None, s_name: str = None,
-                 build: bool = True, init: bool = True, **kwargs):
+                 build: bool = None, init: bool = True, **kwargs):
         super().__init__(init=False)
         self.default_kwargs = {"dtype": 'f8', "maxshape": (None,)}
-        self._scale_name = "timestamps"
+        self._scale_name = "time axis"
 
         if init:
             self.construct(start=start, stop=stop, step=step, rate=rate, size=size,
@@ -98,17 +98,17 @@ class TimeAxis(Axis):
     # Constructors/Destructors
     def construct(self, start: datetime.datetime = None, stop: datetime.datetime = None, step = None,
                   rate: float = None, size: int = None, datetimes=None, s_name: str = None,
-                  build: bool = True, **kwargs):
+                  build: bool = None, **kwargs):
         if "data" in kwargs:
             kwargs["build"] = build
             build = False
 
         super().construct(s_name=s_name, **kwargs)
 
-        if build:
+        if build or build is None:
             if datetimes is not None:
                 self.from_datetimes(datetimes)
-            else:
+            elif start is not None:
                 self.from_range(start, stop, step, rate, size)
 
     # Getters/Setters
@@ -123,11 +123,10 @@ class TimeAxis(Axis):
 
     def set_time_zone(self, value: str = None):
         if value is None:
-            value = h5py.Empty('S')
+            value = ""
         elif value.lower() == "local":
             value = self.local_timezone
         self.attributes["time_zone"] = value
-        self.get_time_zone.clear_cache()
 
     def get_timestamps(self):
         return self.get_all_data()
@@ -137,11 +136,18 @@ class TimeAxis(Axis):
         origin_tz = self.time_zone
         timestamps = self.get_all_data()
         if tz is not None:
-            return (datetime.datetime.fromtimestamp(t, origin_tz).astimezone(tz) for t in timestamps)
+            return tuple(datetime.datetime.fromtimestamp(t, origin_tz).astimezone(tz) for t in timestamps)
         else:
-            return (datetime.datetime.fromtimestamp(t, origin_tz) for t in timestamps)
+            return tuple(datetime.datetime.fromtimestamp(t, origin_tz) for t in timestamps)
 
     # Modification
+    def create(self, name=None, **kwargs):
+        super().create(name=name, **kwargs)
+        if "time_zone" not in self.attributes:
+            tz = self.map.attributes.get("time_zone", None)
+            self.set_time_zone(tz)
+        return self
+
     def require(self, name=None, **kwargs):
         super().require(name=name, **kwargs)
         if "time_zone" not in self.attributes:
@@ -154,12 +160,6 @@ class TimeAxis(Axis):
         d_kwargs = self.default_kwargs.copy()
         d_kwargs.update(kwargs)
 
-        if isinstance(start, datetime.datetime):
-            start = start.timestamp()
-
-        if isinstance(stop, datetime.datetime):
-            stop = stop.timestamp()
-
         if step is None and rate is not None:
             step = 1 / rate
         elif isinstance(step, datetime.timedelta):
@@ -167,23 +167,25 @@ class TimeAxis(Axis):
 
         if start is None:
             start = stop - step * size
+        elif isinstance(start, datetime.datetime):
+            start = start.timestamp()
 
         if stop is None:
             stop = start + step * size
 
         if size is not None:
-            self.require(data=np.linspace(start, stop, size), **d_kwargs)
+            self.set_data(data=np.linspace(start, stop, size), **d_kwargs)
         else:
-            self.require(data=np.arange(start, stop, step), **d_kwargs)
+            self.set_data(data=np.arange(start, stop, step), **d_kwargs)
 
     def from_datetimes(self, iter_, **kwargs):
         d_kwargs = self.default_kwargs.copy()
         d_kwargs.update(kwargs)
 
-        stamps = np.array([])
-        for dt in iter_:
-            stamps = np.append(stamps, dt.timestamp())
-        self.require(data=stamps, **d_kwargs)
+        stamps = np.zeros(shape=(len(iter_),))
+        for index, dt in enumerate(iter_):
+            stamps[index] = dt.timestamp()
+        self.set_data(data=stamps, **d_kwargs)
 
 
 # Assign Cyclic Definitions

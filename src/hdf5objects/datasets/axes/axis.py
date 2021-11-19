@@ -4,7 +4,7 @@
 An HDF5 Dataset subclass whose prupose is to be an Axis.
 """
 # Package Header #
-from ..__header__ import *
+from ...__header__ import *
 
 # Header #
 __author__ = __author__
@@ -16,11 +16,11 @@ __email__ = __email__
 # Standard Libraries #
 
 # Third-Party Packages #
-import h5py
+from baseobjects.cachingtools import timed_keyless_cache_method
 import numpy as np
 
 # Local Packages #
-from ..hdf5objects import HDF5Map, HDF5Dataset
+from ...hdf5objects import HDF5Map, HDF5Dataset
 
 
 # Definitions #
@@ -42,7 +42,7 @@ class Axis(HDF5Dataset):
     # Magic Methods #
     # Construction/Destruction
     def __init__(self, start=None, stop=None, step=None, rate: float = None, size: int = None,
-                 data=None, s_name: str = None, build: bool = True, init: bool = True, **kwargs):
+                 s_name: str = None, build: bool = None, init: bool = True, **kwargs):
         super().__init__(init=False)
         self.default_kwargs = None  # {"dtype": 'i', "maxshape": (None,)}
         # self._scale_name = None  # Set this to the name of the axis
@@ -68,7 +68,7 @@ class Axis(HDF5Dataset):
     # Instance Methods #
     # Constructors/Destructors
     def construct(self, start: int = None, stop: int = None, step: int = None, rate: float = None, size: int = None,
-                  s_name: str = None, build: bool = True, init: bool = True, **kwargs):
+                  s_name: str = None, build: bool = None, init: bool = True, **kwargs):
         if "data" in kwargs:
             kwargs["build"] = build
             build = False
@@ -78,7 +78,7 @@ class Axis(HDF5Dataset):
         if s_name is not None:
             self.scale_name = s_name
 
-        if build:
+        if (build or build is None) and start is not None:
             self.from_range(start, stop, step, rate, size)
 
     # Getters/Setters
@@ -93,11 +93,6 @@ class Axis(HDF5Dataset):
             return self._dataset[-1]
 
     # Modification
-    def require(self, name=None, **kwargs):
-        super().require(name=name, **kwargs)
-        self.make_scale()
-        return self
-
     def from_range(self, start: int = None, stop: int = None, step: int = 1, rate: float = None, size: int = None,
                    **kwargs):
         d_kwargs = self.default_kwargs.copy()
@@ -113,12 +108,12 @@ class Axis(HDF5Dataset):
             stop = start + step * size
 
         if size is not None:
-            self.require(data=np.linspace(start, stop, size), **d_kwargs)
+            self.set_data(data=np.linspace(start, stop, size), **d_kwargs)
         else:
-            self.require(data=np.arange(start, stop, step), **d_kwargs)
+            self.set_data(data=np.arange(start, stop, step), **d_kwargs)
 
 
 # Assign Cyclic Definitions
-AxisMap.default_type = SampleAxis
-Axis.default_map = SampleAxisMap()
+AxisMap.default_type = Axis
+Axis.default_map = AxisMap()
 
