@@ -18,6 +18,7 @@ from abc import abstractmethod
 import pathlib
 
 # Third-Party Packages #
+from baseobjects.cachingtools import timed_keyless_cache_method
 from framestructure import FileTimeFrame
 from multipledispatch import dispatch
 import numpy as np
@@ -55,7 +56,7 @@ class HDF5BaseFrame(FileTimeFrame):
 
         return None
 
-    # Instance Methods
+    # Instance Methods #
     # File
     @dispatch(object)
     def set_file(self, file, **kwargs):
@@ -68,11 +69,28 @@ class HDF5BaseFrame(FileTimeFrame):
     def set_file(self, file, **kwargs):
         self.file = self.file_type(file=file, **kwargs)
 
-    @abstractmethod
     def load_data(self):
-        pass
+        self.file.data.get_all_data()
 
-    # Setters
+    # Setters/Getters
+    def get_shape(self):
+        return self.file.data.shape
+
+    def get_start(self):
+        return self.file.start
+
+    def get_end(self):
+        return self.file.end
+
+    def get_time_axis(self):
+        return self.file.time_axis.all_data
+
+    def get_sample_rate(self):
+        return self.file.data.sample_rate
+
+    def get_data(self):
+        return self.file.data
+
     def set_data(self, value):
         if self.mode == 'r':
             raise IOError("not writable")
@@ -143,6 +161,26 @@ class HDF5BaseFrame(FileTimeFrame):
 
         for frame in frames:
             self.append_frame(frame, axis=axis, truncate=truncate)
+
+    def get_intervals(self, start=None, stop=None, step=None):
+        return self.file.time_axis.get_intervals(start=start, stop=stop, step=step)
+
+    # Find
+    def find_time_index(self, timestamp, aprox=False, tails=False):
+        return self.file.time_axis.find_time_index(timestamp=timestamp, aprox=aprox, tails=tails)
+
+    # Get data
+    def get_timestamp_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        return self.file.data.get_timstamp_range_time(start=start, stop=stop, step=step, aprox=aprox, tails=tails)
+
+    def get_datetime_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        return self.file.data.get_datetime_range_time(start=start, stop=stop, step=step, aprox=aprox, tails=tails)
+
+    def get_data_range_sample(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        return self.file.data.get_data_range_sample(start=start, stop=stop, step=step, aprox=aprox, tails=tails)
+
+    def get_data_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        return self.file.data.get_data_range_time(start=start, stop=stop, step=step, aprox=aprox, tails=tails)
 
     # Sample Rate
     def resample(self, sample_rate, **kwargs):

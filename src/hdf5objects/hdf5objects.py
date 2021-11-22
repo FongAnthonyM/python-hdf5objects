@@ -440,7 +440,30 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
                 return True
             except KeyError:
                 return False
-    
+
+    # File
+    def open(self, mode: str = 'a', **kwargs):
+        """Opens the file to make this dataset usable.
+
+        Args:
+            mode (str, optional): The file mode to open the file with.
+            **kwargs (dict, optional): The additional keyword arguments to open the file with.
+
+        Returns:
+            This object.
+        """
+        self._file_was_open = self._file.is_open
+        if not getattr(self, self._wrap_attributes[0]):
+            self._file.open(mode=mode, **kwargs)
+            setattr(self, self._wrap_attributes[0], self._file._file[self._full_name])
+
+        return self
+
+    def close(self):
+        """Closes the file of this dataset."""
+        if not self._file_was_open:
+            self._file.close()
+
     # Getters/Setters
     @dispatch(object)
     def set_file(self, file):
@@ -483,29 +506,6 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
 
             if parts:
                 self._parents = parts
-
-    # File
-    def open(self, mode: str = 'a', **kwargs):
-        """Opens the file to make this dataset usable.
-
-        Args:
-            mode (str, optional): The file mode to open the file with.
-            **kwargs (dict, optional): The additional keyword arguments to open the file with.
-
-        Returns:
-            This object.
-        """
-        self._file_was_open = self._file.is_open
-        if not getattr(self, self._wrap_attributes[0]):
-            self._file.open(mode=mode, **kwargs)
-            setattr(self, self._wrap_attributes[0], self._file._file[self._full_name])
-
-        return self
-
-    def close(self):
-        """Closes the file of this dataset."""
-        if not self._file_was_open:
-            self._file.close()
 
 
 class HDF5Attributes(HDF5BaseObject):
@@ -865,6 +865,14 @@ class HDF5Group(HDF5BaseObject):
             name = new_name
         return name
 
+    # File
+    def load(self, load: bool = False, build: bool = False):
+        self.attributes.load()
+        self.get_members(load=load, build=build)
+
+    def refresh(self):
+        self.attributes.refresh()
+
     # Getters/Setters
     @dispatch(object)
     def set_group(self, group):
@@ -941,14 +949,6 @@ class HDF5Group(HDF5BaseObject):
         else:
             return self.get_member(key)
 
-    # File
-    def load(self, load: bool = False, build: bool = False):
-        self.attributes.load()
-        self.get_members(load=load, build=build)
-
-    def refresh(self):
-        self.attributes.refresh()
-
     # Group Modification
     def create(self, name: str = None, track_order=None):
         if name is not None:
@@ -1018,6 +1018,13 @@ class HDF5Dataset(HDF5BaseObject):
         except AttributeError:
             return self.get_shape()
 
+    @property
+    def all_data(self):
+        try:
+            return self.get_all_data.caching_call()
+        except AttributeError:
+            return self.get_all_data()
+
     def __array__(self, dtype=None):
         with self:
             return self._dataset.__array__(dtype=dtype)
@@ -1061,6 +1068,17 @@ class HDF5Dataset(HDF5BaseObject):
 
     def construct_dataset(self, **kwargs):
         self.require(name=self._full_name, **kwargs)
+
+    # File
+    def load(self):
+        self.attributes.load()
+
+    def refresh(self):
+        with self:
+            self._dataset.refresh()
+        self.attributes.refresh()
+        self.get_shape.clear_cahce()
+        self.get_all_data.clear_cache()
 
     # Getters/Setters
     @dispatch(object)
@@ -1110,17 +1128,6 @@ class HDF5Dataset(HDF5BaseObject):
     def get_all_data(self):
         with self:
             return self._dataset[...]
-
-    # File
-    def load(self):
-        self.attributes.load()
-
-    def refresh(self):
-        with self:
-            self._dataset.refresh()
-        self.attributes.refresh()
-        self.get_shape.clear_cahce()
-        self.get_all_data.clear_cache()
 
     # Data Modification
     def create(self, name: str = None, **kwargs):

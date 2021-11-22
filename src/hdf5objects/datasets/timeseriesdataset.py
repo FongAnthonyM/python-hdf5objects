@@ -204,6 +204,55 @@ class TimeSeriesDataset(HDF5Dataset):
         self.construct_time_axis(timestamps=timestamps)
 
     # File
+    def create(self, data=None, sample_rate=None, start=None, channels=None, samples=None, timestamps=None, **kwargs):
+        super().create(data=data, **kwargs)
+
+        if sample_rate is not None:
+            self.sample_rate = sample_rate
+
+        if data is not None:
+            self.n_samples = data.shape[self.t_axis]
+
+        if timestamps is None and start is not None:
+            timestamps = {"start": start, "rate": self.sample_rate, "size": self.n_samples}
+
+        self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
+        return self
+
+    def require(self, data=None, sample_rate=None, start=None, channels=None, samples=None, timestamps=None, **kwargs):
+        existed = self.exists
+        super().require(data=data, **kwargs)
+
+        if sample_rate is not None:
+            self.sample_rate = sample_rate
+
+        if data is not None:
+            self.n_samples = data.shape[self.t_axis]
+
+        if existed:
+            self.load_axes()
+        else:
+            if timestamps is None and start is not None:
+                timestamps = {"start": start, "rate": self.sample_rate, "size": self.n_samples}
+
+            self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
+        return self
+
+    def set_data(self, data=None, sample_rate=None, channels=None, samples=None, timestamps=None, **kwargs):
+        if not self.exists:
+            self.require(data=data, sample_rate=sample_rate,
+                         channels=channels, samples=samples, timestamps=timestamps, **kwargs)
+        else:
+            self.replace_data(data=data)
+
+            if sample_rate is not None:
+                self.sample_rate = sample_rate
+
+            if data is not None:
+                self.n_samples = data.shape[self.t_axis]
+
+            self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
+
     def load(self):
         super().load()
         self.load_axes()
@@ -311,55 +360,46 @@ class TimeSeriesDataset(HDF5Dataset):
                 self._time_axis = self.map["time_axis"].type(dataset=dataset, s_name=self.time_scale_name,
                                                             file=self._file)
 
-    # Data
-    def create(self, data=None, sample_rate=None, start=None, channels=None, samples=None, timestamps=None, **kwargs):
-        super().create(data=data, **kwargs)
-            
-        if sample_rate is not None:
-            self.sample_rate = sample_rate
-        
-        if data is not None:
-            self.n_samples = data.shape[self.t_axis]
+    # Axis Getters
+    def get_datetime(self, index):
+        return self.time_axis.get_datetime(index)
 
-        if timestamps is None and start is not None:
-            timestamps = {"start": start, "rate": self.sample_rate, "size": self.n_samples}
-        
-        self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
-        return self
-        
-    def require(self, data=None, sample_rate=None, start=None, channels=None, samples=None, timestamps=None, **kwargs):
-        existed = self.exists
-        super().require(data=data, **kwargs)
-        
-        if sample_rate is not None:
-            self.sample_rate = sample_rate
-        
-        if data is not None:
-            self.n_samples = data.shape[self.t_axis]
-        
-        if existed:
-            self.load_axes()
-        else:
-            if timestamps is None and start is not None:
-                timestamps = {"start": start, "rate": self.sample_rate, "size": self.n_samples}
-            
-            self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
-        return self
-    
-    def set_data(self, data=None, sample_rate=None, channels=None, samples=None, timestamps=None, **kwargs):
-        if not self.exists:
-            self.require(data=data, sample_rate=sample_rate, 
-                         channels=channels, samples=samples, timestamps=timestamps, **kwargs)
-        else:
-            self.replace_data(data=data)
-        
-            if sample_rate is not None:
-                self.sample_rate = sample_rate
-    
-            if data is not None:
-                self.n_samples = data.shape[self.t_axis]
+    def get_datetime_range(self, start=None, stop=None, step=None):
+        return self.time_axis.get_datetime_range(start=start, stop=stop, step=step)
 
-            self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
+    def get_timestamp_range(self, start=None, stop=None, step=None):
+        return self.time_axis.get_timestamp_range(start=start, stop=stop, step=step)
+
+    def get_time_intervals(self, start=None, stop=None, step=None):
+        return self.time_axis.get_intervals(start=start, stop=stop, step=step)
+
+    # Get Range
+    def get_timestamp_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        return self.time_axis.get_timstamp_range_time(start=start, stop=stop, step=step, aprox=aprox, tails=tails)
+
+    def get_datetime_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        return self.time_axis.get_datetime_range_time(start=start, stop=stop, step=step, aprox=aprox, tails=tails)
+
+    def get_data_range_sample(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        start_sample, true_start = self.sample_axis.find_index(index=start, aprox=aprox, tails=tails)
+        stop_sample, true_stop = self.sample_axis.find_index(index=stop, aprox=aprox, tails=tails)
+
+        with self:
+            return self._dataset[slice(start=start_sample, stop=stop_sample, step=step)], true_start, true_stop
+
+    def get_data_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        start_sample, true_start = self.time_axis.find_time_index(timestamp=start, aprox=aprox, tails=tails)
+        stop_sample, true_stop = self.time_axis.find_time_index(timestamp=stop, aprox=aprox, tails=tails)
+
+        with self:
+            return self._dataset[slice(start=start_sample, stop=stop_sample, step=step)], true_start, true_stop
+
+    # Manipulation
+    def shift_samples(self, shift, start=None, stop=None, step=None):
+        self.sample_axis.shift(shift=shift, start=start, stop=stop, step=step)
+
+    def shift_timestamps(self, shift, start=None, stop=None, step=None):
+        self.time_axis.shift(shift=shift, start=start, stop=stop, step=step)
 
 
 # Assign Cyclic Definitions

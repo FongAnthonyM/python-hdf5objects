@@ -111,50 +111,6 @@ class TimeAxis(Axis):
             elif start is not None:
                 self.from_range(start, stop, step, rate, size)
 
-    # Getters/Setters
-    def get_time_zone(self, refresh: bool = True):
-        if refresh:
-            self.attributes.refresh()
-        tz_str = self.attributes.get("time_zone", self.sentinel)
-        if tz_str is self.sentinel or isinstance(tz_str, h5py.Empty) or tz_str == "":
-            return None
-        else:
-            return pytz.timezone(tz_str)
-
-    def set_time_zone(self, value: str = None):
-        if value is None:
-            value = ""
-        elif value.lower() == "local":
-            value = self.local_timezone
-        self.attributes["time_zone"] = value
-
-    def get_timestamps(self):
-        return self.get_all_data()
-
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def get_as_datetimes(self, tz=None):
-        origin_tz = self.time_zone
-        timestamps = self.get_all_data()
-        if tz is not None:
-            return tuple(datetime.datetime.fromtimestamp(t, origin_tz).astimezone(tz) for t in timestamps)
-        else:
-            return tuple(datetime.datetime.fromtimestamp(t, origin_tz) for t in timestamps)
-
-    # Modification
-    def create(self, name=None, **kwargs):
-        super().create(name=name, **kwargs)
-        if "time_zone" not in self.attributes:
-            tz = self.map.attributes.get("time_zone", None)
-            self.set_time_zone(tz)
-        return self
-
-    def require(self, name=None, **kwargs):
-        super().require(name=name, **kwargs)
-        if "time_zone" not in self.attributes:
-            tz = self.map.attributes.get("time_zone", None)
-            self.set_time_zone(tz)
-        return self
-
     def from_range(self, start: datetime.datetime = None, stop: datetime.datetime = None, step=None,
                    rate: float = None, size: int = None, **kwargs):
         d_kwargs = self.default_kwargs.copy()
@@ -186,6 +142,114 @@ class TimeAxis(Axis):
         for index, dt in enumerate(iter_):
             stamps[index] = dt.timestamp()
         self.set_data(data=stamps, **d_kwargs)
+
+    # File
+    def create(self, name=None, **kwargs):
+        super().create(name=name, **kwargs)
+        if "time_zone" not in self.attributes:
+            tz = self.map.attributes.get("time_zone", None)
+            self.set_time_zone(tz)
+        return self
+
+    def require(self, name=None, **kwargs):
+        super().require(name=name, **kwargs)
+        if "time_zone" not in self.attributes:
+            tz = self.map.attributes.get("time_zone", None)
+            self.set_time_zone(tz)
+        return self
+
+    def refresh(self):
+        super().refresh()
+        self.get_as_datetimes.clear_cache()
+
+    # Getters/Setter
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_all_data(self):
+        self.get_as_datetimes.clear_cache()
+        with self:
+            return self._dataset[...]
+
+    def get_time_zone(self, refresh: bool = True):
+        if refresh:
+            self.attributes.refresh()
+        tz_str = self.attributes.get("time_zone", self.sentinel)
+        if tz_str is self.sentinel or isinstance(tz_str, h5py.Empty) or tz_str == "":
+            return None
+        else:
+            return pytz.timezone(tz_str)
+
+    def set_time_zone(self, value: str = None):
+        if value is None:
+            value = ""
+        elif value.lower() == "local":
+            value = self.local_timezone
+        self.attributes["time_zone"] = value
+
+    def get_timestamps(self):
+        return self.get_all_data()
+
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_as_datetimes(self, tz=None):
+        origin_tz = self.time_zone
+        timestamps = self.get_all_data()
+        if tz is not None:
+            return tuple(datetime.datetime.fromtimestamp(t, origin_tz).astimezone(tz) for t in timestamps)
+        else:
+            return tuple(datetime.datetime.fromtimestamp(t, origin_tz) for t in timestamps)
+
+    def get_datetime(self, index):
+        return self.datetimes[index]
+
+    def get_datetime_range(self, start=None, stop=None, step=None):
+        if start is not None:
+            start = int(start)
+        if stop is not None:
+            stop = int(stop)
+        if step is not None:
+            step = int(step)
+
+        return self.datetimes[slice(start, stop, step)]
+
+    def get_timestamp_range(self, start=None, stop=None, step=None):
+        if start is not None:
+            start = int(start)
+        if stop is not None:
+            stop = int(stop)
+        if step is not None:
+            step = int(step)
+
+        return self.timestamps[slice(start, stop, step)]
+
+    # Find
+    def find_time_index(self, timestamp, aprox=False, tails=False):
+        if isinstance(timestamp, datetime.datetime):
+            timestamp = timestamp.timestamp()
+
+        samples = self.timestamps.shape[0]
+        if timestamp < self.timestamps[0]:
+            if tails:
+                return 0, self.start
+        elif timestamp > self.timestamps[-1]:
+            if tails:
+                return samples, self.end
+        else:
+            index = int(np.searchsorted(self.timestamps, timestamp, side="right") - 1)
+            if aprox or timestamp == self.timestamps[index]:
+                return index, datetime.datetime.fromtimestamp(self.timestamps[index])
+
+        return None, datetime.datetime.fromtimestamp(timestamp)
+
+    def get_timestamp_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        start_sample, true_start = self.find_time_index(timestamp=start, aprox=aprox, tails=tails)
+        stop_sample, true_stop = self.find_time_index(timestamp=stop, aprox=aprox, tails=tails)
+
+        return self.get_timestamp_range(start=start_sample, stop=stop_sample, step=step), true_start, true_stop
+
+    def get_datetime_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        start_sample, true_start = self.find_time_index(timestamp=start, aprox=aprox, tails=tails)
+        stop_sample, true_stop = self.find_time_index(timestamp=stop, aprox=aprox, tails=tails)
+
+        return self.get_datetime_range(start=start_sample, stop=stop_sample, step=step), true_start, true_stop
 
 
 # Assign Cyclic Definitions

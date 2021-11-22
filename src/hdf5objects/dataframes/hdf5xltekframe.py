@@ -55,28 +55,4 @@ class HDF5XLTEKFrame(HDF5BaseFrame):
 
         super().construct(file=None)
 
-    # File
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def load_data(self):
-        return self.file.eeg_data
 
-    # Getters
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def get_shape(self):
-        return self.file.eeg_data.shape
-
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def get_start(self):
-        return self.file.time_axis.start_datetime
-
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def get_end(self):
-        return self.file.time_axis.end_datetime
-
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def get_time_axis(self):
-        return self.file.time_axis[...]
-
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def get_sample_rate(self):
-        return self.file.eeg_data.sample_rate

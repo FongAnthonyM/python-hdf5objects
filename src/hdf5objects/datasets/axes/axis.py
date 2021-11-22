@@ -81,18 +81,6 @@ class Axis(HDF5Dataset):
         if (build or build is None) and start is not None:
             self.from_range(start, stop, step, rate, size)
 
-    # Getters/Setters
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def get_start(self):
-        with self:
-            return self._dataset[0]
-
-    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
-    def get_end(self):
-        with self:
-            return self._dataset[-1]
-
-    # Modification
     def from_range(self, start: int = None, stop: int = None, step: int = 1, rate: float = None, size: int = None,
                    **kwargs):
         d_kwargs = self.default_kwargs.copy()
@@ -111,6 +99,54 @@ class Axis(HDF5Dataset):
             self.set_data(data=np.linspace(start, stop, size), **d_kwargs)
         else:
             self.set_data(data=np.arange(start, stop, step), **d_kwargs)
+
+    # File
+    def refresh(self):
+        super().refresh()
+        self.get_start.clear_cache()
+        self.get_end.clear_cache()
+
+    # Getters/Setters
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_start(self):
+        with self:
+            return self._dataset[0]
+
+    @timed_keyless_cache_method(call_method="clearing_call", collective=False)
+    def get_end(self):
+        with self:
+            return self._dataset[-1]
+
+    def get_intervals(self, start=None, stop=None, step=None):
+        return np.ediff1d(self.all_data[slice(start, stop, step)])
+
+    # Find
+    def find_index(self, index, aprox=False, tails=False):
+        samples = self.shape[0]
+        if index < self.start:
+            if tails:
+                return 0, self.start
+        elif index > self.end:
+            if tails:
+                return samples, self.end
+        else:
+            index = int(np.searchsorted(self.all_data, index, side="right") - 1)
+            if aprox or index == self.all_data[index]:
+                return index, self.all_data[index]
+
+        return index
+
+    def get_range(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        start_sample, true_start = self.find_index(index=start, aprox=aprox, tails=tails)
+        stop_sample, true_stop = self.find_index(index=stop, aprox=aprox, tails=tails)
+
+        return self.all_data[slice(start=start_sample, stop=stop_sample, step=step)], true_start, true_stop
+
+    # Manipulation
+    def shift(self, shift, start=None, stop=None, step=None):
+        with self:
+            self._dataset[start:stop:step] += shift
+        self.refresh()
 
 
 # Assign Cyclic Definitions
