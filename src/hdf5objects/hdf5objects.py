@@ -17,17 +17,16 @@ __email__ = __email__
 # Standard Libraries #
 from abc import abstractmethod
 from contextlib import contextmanager
-import pathlib
-from typing import Any
-from warnings import warn
 from functools import singledispatchmethod
+import pathlib
+from typing import Any, Union
+from warnings import warn
 
 # Third-Party Packages #
 from baseobjects import BaseObject, StaticWrapper, search_sentinel
 from baseobjects.cachingtools import CachingInitMeta, CachingObject, timed_keyless_cache_method
 from bidict import bidict
 import h5py
-from multipledispatch import dispatch
 
 # Local Packages #
 
@@ -282,6 +281,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         init (bool): Determines if this object should initialize.
     """
     sentinel = search_sentinel
+    file_type = None
     default_map = None
 
     # Class Methods
@@ -465,7 +465,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
             self._file.close()
 
     # Getters/Setters
-    @dispatch(object)
+    @singledispatchmethod
     def set_file(self, file):
         """Sets the file for this object to an HDF5File.
 
@@ -477,14 +477,16 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         else:
             raise ValueError("file must be a path, File, or HDF5File")
 
-    @dispatch((str, pathlib.Path, h5py.File))
-    def set_file(self, file):
+    @set_file.register(str)
+    @set_file.register(pathlib.Path)
+    @set_file.register(h5py.File)
+    def _(self, file: Union[str, pathlib.Path, h5py.File]):
         """Sets the file for this object to an HDF5File.
 
         Args:
             file: An object to set the file to.
         """
-        self._file = HDF5File(file)
+        self._file = self.file_type(file)
 
     def set_parent(self, parent: str):
         parent = parent.lstrip('/')
@@ -615,27 +617,28 @@ class HDF5Attributes(HDF5BaseObject):
         return name
 
     # Getters/Setters
-    @dispatch(object)
+    @singledispatchmethod
     def set_attribute_manager(self, attributes):
         """Sets the wrapped attribute_manager.
 
         Args:
             attributes: The attribute_manager this object will wrap.
         """
-        if isinstance(attributes, HDF5BaseObject):
-            self._file = attributes._file
-            self._name = attributes._name
-            if isinstance(attributes, HDF5Attributes):
-                self._attribute_manager = attributes._attribute_manager
-        else:
-            raise ValueError("attribute_manager must be a Dataset or HDF5Dataset")
+        raise ValueError("attribute_manager must be an AttributeManager or an HDF5Object")
 
-    @dispatch(h5py.AttributeManager)
-    def set_attribute_manager(self, attributes):
+    @set_attribute_manager.register
+    def _(self, attributes: HDF5BaseObject):
+        self._file = attributes._file
+        self._name = attributes._name
+        if isinstance(attributes, HDF5Attributes):
+            self._attribute_manager = attributes._attribute_manager
+
+    @set_attribute_manager.register
+    def _(self, attributes: h5py.AttributeManager):
         if not attributes:
             raise ValueError("Attributes needs to be open")
         if self._file is None:
-            self._file = HDF5File(attributes.file)
+            self._file = self.file_type(attributes.file)
         self._name = attributes.name
         self._attribute_manager = attributes
     
@@ -874,7 +877,7 @@ class HDF5Group(HDF5BaseObject):
         self.attributes.refresh()
 
     # Getters/Setters
-    @dispatch(object)
+    @singledispatchmethod
     def set_group(self, group):
         """Sets the wrapped _group_.
 
@@ -889,8 +892,8 @@ class HDF5Group(HDF5BaseObject):
         else:
             raise ValueError("_group_ must be a Dataset or HDF5Dataset")
 
-    @dispatch(h5py.Group)
-    def set_group(self, group):
+    @set_group.register
+    def _(self, group: h5py.Group):
         """Sets the wrapped _group_.
 
         Args:
@@ -899,7 +902,7 @@ class HDF5Group(HDF5BaseObject):
         if not group:
             raise ValueError("Group needs to be open")
         if self._file is None:
-            self._file = HDF5File(group.file)
+            self._file = self.file_type(group.file)
         self._name = group.name
         self._group = group
 
@@ -1081,7 +1084,7 @@ class HDF5Dataset(HDF5BaseObject):
         self.get_all_data.clear_cache()
 
     # Getters/Setters
-    @dispatch(object)
+    @singledispatchmethod
     def set_dataset(self, dataset):
         """Sets the wrapped dataset.
 
@@ -1096,8 +1099,8 @@ class HDF5Dataset(HDF5BaseObject):
         else:
             raise ValueError("dataset must be a Dataset or HDF5Dataset")
 
-    @dispatch(h5py.Dataset)
-    def set_dataset(self, dataset):
+    @set_dataset.register
+    def _(self, dataset: h5py.Dataset):
         """Sets the wrapped dataset.
 
         Args:
@@ -1106,12 +1109,12 @@ class HDF5Dataset(HDF5BaseObject):
         if not dataset:
             raise ValueError("Dataset needs to be open")
         if self._file is None:
-            self._file = HDF5File(dataset.file)
+            self._file = self.file_type(dataset.file)
         self.set_name(dataset.name)
         self._dataset = dataset
 
-    @dispatch(str)
-    def set_dataset(self, dataset):
+    @set_dataset.register
+    def _(self, dataset: str):
         """Sets the wrapped dataset base on a str.
 
         Args:
@@ -1480,13 +1483,14 @@ class HDF5File(HDF5BaseObject):
         self._group_ = self.group_type(name=self._name_, map_=self.map, file=self, load=load, build=build)
 
     # Getters/Setters
-    @dispatch(object)
+    @singledispatchmethod
     def _set_path(self, file):
         if isinstance(file, HDF5File):
             self.path = file.path
 
-    @dispatch((str, pathlib.Path))
-    def _set_path(self, file):
+    @_set_path.register(str)
+    @_set_path.register(pathlib.Path)
+    def _(self, file: Union[str, pathlib.Path]):
         """Constructs the path attribute of this object.
 
         Args:
@@ -1494,8 +1498,8 @@ class HDF5File(HDF5BaseObject):
         """
         self.path = file
 
-    @dispatch(h5py.File)
-    def _set_path(self, file):
+    @_set_path.register
+    def _(self, file: h5py.File):
         """Constructs the path attribute of this object.
 
         Args:
@@ -1503,7 +1507,7 @@ class HDF5File(HDF5BaseObject):
         """
         if file:
             self._file = file
-            self.path = file.filename
+            self._path = pathlib.Path(file.filename)
         else:
             raise ValueError("The supplied HDF5 File must be open.")
 
@@ -1601,3 +1605,7 @@ class HDF5File(HDF5BaseObject):
             self._file.flush()
             self._file.close()
         return not self.is_open
+
+
+# Assign Cyclic Definitions
+HDF5BaseObject.file_type = HDF5File

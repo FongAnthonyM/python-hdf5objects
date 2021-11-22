@@ -15,12 +15,12 @@ __email__ = __email__
 # Imports #
 # Standard Libraries #
 from abc import abstractmethod
+from functools import singledispatchmethod
 import pathlib
+from typing import Union
 
 # Third-Party Packages #
-from baseobjects.cachingtools import timed_keyless_cache_method
 from framestructure import FileTimeFrame
-from multipledispatch import dispatch
 import numpy as np
 
 # Local Packages #
@@ -58,16 +58,13 @@ class HDF5BaseFrame(FileTimeFrame):
 
     # Instance Methods #
     # File
-    @dispatch(object)
     def set_file(self, file, **kwargs):
+        if isinstance(file, (str, pathlib.Path)):
+            self.file = self.file_type(file=file, **kwargs)
         if isinstance(file, self.file_type):
             self.file = file
         else:
             raise ValueError("file must be a path, File, or HDF5File")
-
-    @dispatch((str, pathlib.Path))
-    def set_file(self, file, **kwargs):
-        self.file = self.file_type(file=file, **kwargs)
 
     def load_data(self):
         self.file.data.get_all_data()
