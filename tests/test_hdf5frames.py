@@ -77,6 +77,7 @@ class TestXLTEKStudy(ClassTest):
         ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
         ps.print_stats()
         print(s.getvalue())
+        study_frame.close()
         assert 1
 
     def test_load_study_mount(self):
@@ -138,7 +139,7 @@ class TestXLTEKStudy(ClassTest):
         pr.enable()
 
         with XLTEKStudyFrame(s_id=s_id, studies_path=self.studies_path) as study_frame:
-            data, start, stop = study_frame.data_range_time(first, second, aprox=True)
+            data, start, stop = study_frame.get_data_range_time(first, second, aprox=True)
 
         pr.disable()
         s = io.StringIO()
@@ -160,7 +161,7 @@ class TestXLTEKStudy(ClassTest):
 
         study_frame = XLTEKStudyFrame(s_id=s_id, studies_path=self.mount_path)
         for timestamp in timestamps:
-            data, true_start, true_end = study_frame.data_range_time(timestamp["first"], timestamp["second"], aprox=True)
+            data, true_start, true_end = study_frame.get_data_range_time(timestamp["first"], timestamp["second"], aprox=True)
             print(data.shape)
         study_frame.close()
 

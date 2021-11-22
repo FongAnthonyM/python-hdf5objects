@@ -45,12 +45,12 @@ class HDF5BaseFrame(FileTimeFrame):
             return False
 
     @classmethod
-    def new_validated(cls, path, **kwargs):
+    def new_validated(cls, path, mode="r+", **kwargs):
         if not isinstance(path, pathlib.Path):
             path = pathlib.Path(path)
 
         if path.is_file():
-            file = cls.file_type.new_validated(path)
+            file = cls.file_type.new_validated(path, mode=mode)
             if file:
                 return cls(file=file, **kwargs)
 
