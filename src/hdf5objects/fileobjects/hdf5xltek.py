@@ -15,6 +15,8 @@ __email__ = __email__
 # Imports #
 # Standard Libraries #
 import pathlib
+from functools import singledispatchmethod
+from typing import Union
 
 # Third-Party Packages #
 from classversioning import VersionType, TriNumberVersion
@@ -82,28 +84,37 @@ class HDF5XLTEK(HDF5EEG):
             obj = obj._file
             return start_name in obj.attrs and end_name in obj.attrs
 
+    @singledispatchmethod
     @classmethod
     def new_validated(cls, obj, mode="r+", **kwargs):
+        raise TypeError("A path or file object must be given")
+
+    @new_validated.register(HDF5File)
+    @classmethod
+    def _new_validated(cls, obj: HDF5File, **kwargs):
         start_name = cls.default_map.attribute_names["start"]
-        end_name = cls.default_map.attribute_names["end"]
+        obj = obj._file
+        if start_name in obj.attrs:
+            return cls(file=obj, **kwargs)
 
-        if isinstance(obj, (str, pathlib.Path)):
-            if not isinstance(obj, pathlib.Path):
-                obj = pathlib.Path(obj)
+    @new_validated.register(str)
+    @new_validated.register(pathlib.Path)
+    @classmethod
+    def _new_validated(cls, obj: Union[str, pathlib.Path], mode="r+", **kwargs):
+        start_name = cls.default_map.attribute_names["start"]
 
-            if obj.is_file():
-                try:
-                    obj = h5py.File(obj, mode=mode)
-                    if start_name in obj.attrs and end_name in obj.attrs:
-                        return cls(file=obj, **kwargs)
-                except OSError:
-                    return None
-            else:
+        if isinstance(obj, str):
+            obj = pathlib.Path(obj)
+
+        if obj.is_file():
+            try:
+                obj = h5py.File(obj, mode=mode)
+                if start_name in obj.attrs:
+                    return cls(file=obj, **kwargs)
+            except OSError:
                 return None
-        elif isinstance(obj, HDF5File):
-            obj = obj._file
-            if start_name in obj.attrs and end_name in obj.attrs:
-                return cls(file=obj, **kwargs)
+        else:
+            return None
     
     # Magic Methods #
     def __init__(self, file=None, s_id=None, s_dir=None, start=None, init=True, **kwargs):

@@ -353,12 +353,12 @@ class TimeSeriesDataset(HDF5Dataset):
             if self.sample_scale_name in self._dataset.dims[self.t_axis]:
                 dataset = self._dataset.dims[self.t_axis][self.sample_scale_name]
                 self._sample_axis = self.map["sample_axis"].type(dataset=dataset, s_name=self.sample_scale_name,
-                                                                file=self._file)
+                                                                 file=self._file)
 
             if self.time_scale_name in self._dataset.dims[self.t_axis]:
                 dataset = self._dataset.dims[self.t_axis][self.time_scale_name]
                 self._time_axis = self.map["time_axis"].type(dataset=dataset, s_name=self.time_scale_name,
-                                                            file=self._file)
+                                                             file=self._file)
 
     # Axis Getters
     def get_datetime(self, index):

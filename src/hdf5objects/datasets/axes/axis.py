@@ -76,7 +76,7 @@ class Axis(HDF5Dataset):
         super().construct(**kwargs)
 
         if s_name is not None:
-            self.scale_name = s_name
+            self._scale_name = s_name
 
         if (build or build is None) and start is not None:
             self.from_range(start, stop, step, rate, size)

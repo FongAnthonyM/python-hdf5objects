@@ -74,10 +74,10 @@ class HDF5BaseFrame(FileTimeFrame):
         return self.file.data.shape
 
     def get_start(self):
-        return self.file.start
+        return self.file.start_datetime
 
     def get_end(self):
-        return self.file.end
+        return self.file.end_datetime
 
     def get_time_axis(self):
         return self.file.time_axis.all_data

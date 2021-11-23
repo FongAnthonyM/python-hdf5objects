@@ -111,7 +111,7 @@ class TestXLTEKStudy(ClassTest):
 
         assert data is not None
 
-    def test_get_time_range_profile(self):
+    def test_get_timestamp_range_time_profile(self):
         s_id = "EC228"
         first = datetime.datetime(2020, 9, 22, 0, 00, 00)
         second = datetime.datetime(2020, 9, 22, 0, 10, 00)
@@ -119,7 +119,7 @@ class TestXLTEKStudy(ClassTest):
         pr.enable()
 
         with XLTEKStudyFrame(s_id=s_id, studies_path=self.studies_path) as study_frame:
-            data, true_start, true_end = study_frame.get_time_range(first, second, aprox=True)
+            data, true_start, true_end = study_frame.get_timestamp_range_time(first, second, aprox=True)
 
         pr.disable()
         s = io.StringIO()
@@ -130,7 +130,7 @@ class TestXLTEKStudy(ClassTest):
 
         assert data is not None
 
-    def test_data_range_time(self):
+    def test_get_data_range_time(self):
         s_id = "EC228"
         first = datetime.datetime(2020, 9, 22, 0, 00, 00)
         second = datetime.datetime(2020, 9, 22, 1, 00, 00)

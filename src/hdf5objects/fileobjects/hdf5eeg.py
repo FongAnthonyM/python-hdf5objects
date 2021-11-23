@@ -73,12 +73,20 @@ class HDF5EEG(BaseHDF5):
         self.attributes.set_attribute("start", value)
 
     @property
+    def start_datetime(self):
+        return datetime.datetime.fromtimestamp(self.start)
+
+    @property
     def end(self):
         return self.attributes["end"]
 
     @end.setter
     def end(self, value):
         self.attributes.set_attribute("end", value)
+
+    @property
+    def end_datetime(self):
+        return datetime.datetime.fromtimestamp(self.start)
 
     @property
     def subject_dir(self):
@@ -205,7 +213,7 @@ class HDF5EEG(BaseHDF5):
         self.attributes["subject_id"] = self._subject_id
 
     def construct_dataset(self, load=False, build=False, **kwargs):
-        self._group_.get_member(name="data", load=load, build=build, **kwargs)
+        self._group.get_member(name="data", load=load, build=build, **kwargs)
 
     # File
     def generate_file_name(self, s_id=None, start=None):
