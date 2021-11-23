@@ -3,26 +3,27 @@
 """ referncedataset.py
 Description:
 """
-__author__ = "Anthony Fong"
-__copyright__ = "Copyright 2021, Anthony Fong"
-__credits__ = ["Anthony Fong"]
-__license__ = ""
-__version__ = "1.0.0"
-__maintainer__ = "Anthony Fong"
-__email__ = ""
-__status__ = "Prototype"
+# Package Header #
+from ..__header__ import *
 
-# Default Libraries #
+# Header #
+__author__ = __author__
+__credits__ = __credits__
+__maintainer__ = __maintainer__
+__email__ = __email__
+
+# Imports #
+# Standard Libraries #
 import datetime
 import uuid
 from warnings import warn
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from baseobjects import BaseObject, DynamicWrapper
 from bidict import bidict
 import numpy as np
 
-# Local Libraries #
+# Local Packages #
 
 
 # Definitions #

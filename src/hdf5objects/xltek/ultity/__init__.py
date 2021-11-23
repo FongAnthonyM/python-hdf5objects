@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ __init__.py
-Description: 
+Description:
 """
 __author__ = "Anthony Fong"
 __copyright__ = "Copyright 2021, Anthony Fong"
@@ -12,11 +12,11 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 
-# Downloaded Libraries #
+# Third-Party Packages #
 
-# Local Libraries #
+# Local Packages #
 
 
 # Definitions #

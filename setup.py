@@ -1,6 +1,20 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
+""" setup.py
+The setup for this package.
+"""
+# Package Header #
+from src.hdf5objects.__header__ import *
 
+# Header #
+__author__ = __author__
+__credits__ = __credits__
+__maintainer__ = __maintainer__
+__email__ = __email__
+
+
+# Imports #
+# Standard Libraries #
 import io
 import re
 from glob import glob
@@ -9,10 +23,13 @@ from os.path import dirname
 from os.path import join
 from os.path import splitext
 
+# Third-Party Packages #
 from setuptools import find_packages
 from setuptools import setup
 
 
+# Definitions #
+# Functions #
 def read(*names, **kwargs):
     with io.open(
         join(dirname(__file__), *names),
@@ -21,11 +38,12 @@ def read(*names, **kwargs):
         return fh.read()
 
 
+# Main #
 setup(
-    name='hdf5objects',
-    version='0.1.0',
-    license='MIT',
-    description='Extra objects for handling and typing HDF5 files.',
+    name=__package_name__,
+    version=__version__,
+    license=__license__,
+    description='Extra fileobjects for handling and typing HDF5 files.',
     long_description='%s\n%s' % (
         re.compile('^.. start-badges.*^.. end-badges', re.M | re.S).sub('', read('README.rst')),
         re.sub(':[a-z]+:`~?(.*?)`', r'``\1``', read('CHANGELOG.rst'))
@@ -71,7 +89,7 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        'baseobjects>=1.4.3', 'classversioning', 'framestructure', 'dspobjects', 'h5py>=3.2.1', 'numpy',
+        'baseobjects>=1.5.1', 'classversioning', 'framestructure', 'dspobjects', 'h5py>=3.2.1', 'numpy',
         'multipledispatch', 'pytz', 'tzlocal', 'bidict'
     ],
     extras_require={

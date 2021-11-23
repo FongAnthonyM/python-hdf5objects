@@ -3,22 +3,23 @@
 """ xltekdayframe.py
 Description:
 """
-__author__ = "Anthony Fong"
-__copyright__ = "Copyright 2021, Anthony Fong"
-__credits__ = ["Anthony Fong"]
-__license__ = ""
-__version__ = "1.0.0"
-__maintainer__ = "Anthony Fong"
-__email__ = ""
-__status__ = "Prototype"
+# Package Header #
+from ..__header__ import *
 
-# Default Libraries #
+# Header #
+__author__ = __author__
+__credits__ = __credits__
+__maintainer__ = __maintainer__
+__email__ = __email__
+
+# Imports #
+# Standard Libraries #
 import datetime
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from framestructure import DirectoryTimeFrame
 
-# Local Libraries #
+# Local Packages #
 from .hdf5xltekframe import HDF5XLTEKFrame
 
 
@@ -38,18 +39,18 @@ class XLTEKDayFrame(DirectoryTimeFrame):
 
     # Magic Methods #
     # Construction/Destruction
-    def __init__(self, path=None, frames=None, update=True, open_=False, init=True, **kwargs):
+    def __init__(self, path=None, frames=None, mode='r', update=True, open_=False, init=True, **kwargs):
         super().__init__(init=False)
 
         self.glob_condition = "*.h5"
 
         if init:
-            self.construct(path=path, frames=frames, update=update, open_=open_, **kwargs)
+            self.construct(path=path, frames=frames, mode=mode, update=update, open_=open_, **kwargs)
 
     # Instance Methods
     # Constructors/Destructors
-    def construct(self, path=None, frames=None, update=True, open_=False, **kwargs):
-        super().construct(path=path, frames=frames, update=update, open_=True, **kwargs)
+    def construct(self, path=None, frames=None, mode='r', update=True, open_=False, **kwargs):
+        super().construct(path=path, frames=frames, mode=mode, update=update, open_=True, **kwargs)
 
         if not self.frames:
             try:

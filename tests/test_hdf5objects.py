@@ -3,25 +3,27 @@
 """ test_hdf5objects.py
 Description:
 """
-__author__ = "Anthony Fong"
-__copyright__ = "Copyright 2021, Anthony Fong"
-__credits__ = ["Anthony Fong"]
-__license__ = ""
-__version__ = "1.0.0"
-__maintainer__ = "Anthony Fong"
-__email__ = ""
-__status__ = "Prototype"
+# Package Header #
+from src.hdf5objects.__header__ import *
 
-# Default Libraries #
+# Header #
+__author__ = __author__
+__credits__ = __credits__
+__maintainer__ = __maintainer__
+__email__ = __email__
+
+
+# Imports #
+# Standard Libraries #
 import datetime
 import pathlib
 import timeit
 
-# Downloaded Libraries #
+# Third-Party Packages #
 import pytest
 import numpy as np
 
-# Local Libraries #
+# Local Packages #
 from src.hdf5objects import *
 
 
@@ -47,22 +49,66 @@ class ClassTest:
         return lines
 
 
-class TestHDF5XLTEK(ClassTest):
-    class_ = HDF5XLTEK
-    studies_path = pathlib.Path("/Users/changlab/Documents/Projects/Epilepsy Spike Detection")
-    load_path = pathlib.Path("/Users/changlab/PycharmProjects/python-hdf5objects/tests/EC228_2020-09-21_14~53~19.h5")
-    save_path = pathlib.Path("/Users/changlab/PycharmProjects/python-hdf5objects/tests/")
+class TestHDF5File(ClassTest):
+    class_ = HDF5File
+    studies_path = pathlib.Path("/common/subjects")
+    load_path = pathlib.Path.cwd().joinpath("pytest_cache/EC228_2020-09-21_14~53~19.h5")
+    save_path = pathlib.Path.cwd().joinpath("pytest_cache/")
 
     @pytest.fixture
     def load_file(self):
-        return HDF5XLTEK(file=self.load_path)
+        return self.class_(file=self.load_path)
 
-    def test_load_file(self):
-        f_obj = HDF5XLTEK(file=self.load_path)
-        assert 1
+    @pytest.mark.parametrize("mode", ['r', 'r+', 'a'])
+    def test_new_object(self, mode):
+        with self.class_(file=self.load_path, mode=mode) as f_obj:
+            assert f_obj is not None
+        assert True
+
+    @pytest.mark.parametrize("mode", ['r', 'r+', 'a'])
+    def test_load_whole_file(self, mode):
+        with self.class_(file=self.load_path, mode=mode, load=True) as f_obj:
+            assert f_obj is not None
+        assert True
+
+    def test_load_fragment(self):
+        f_obj = self.class_(file=self.load_path)
+        data = f_obj["data"]
+        f_obj.close()
+        assert data is not None
+
+    def test_load_from_property(self):
+        f_obj = self.class_(file=self.load_path)
+        data = f_obj.eeg_data
+        f_obj.close()
+        assert data is not None
+
+    def test_get_attribute(self):
+        f_obj = self.class_(file=self.load_path)
+        attribute = f_obj.attributes["start"]
+        f_obj.close()
+        assert attribute is not None
+
+    def test_get_attribute_property(self):
+        f_obj = self.class_(file=self.load_path)
+        attribute = f_obj.start
+        f_obj.close()
+        assert attribute is not None
+
+    def test_get_data(self):
+        f_obj = self.class_(file=self.load_path)
+        data = f_obj.eeg_data[0:1]
+        f_obj.close()
+        assert data.shape is not None
+
+    def test_get_times(self):
+        f_obj = self.class_(file=self.load_path)
+        start = f_obj.time_axis.start_datetime
+        f_obj.close()
+        assert start is not None
 
     def test_validate_file(self):
-        assert HDF5XLTEK.validate_file_type(self.load_path)
+        assert self.class_.validate_file_type(self.load_path)
 
     @pytest.mark.xfail
     def test_data_speed(self, load_file):
@@ -81,7 +127,7 @@ class TestHDF5XLTEK(ClassTest):
 
     def test_create_file(self):
         start = datetime.datetime.now()
-        f_obj = HDF5XLTEK(s_id="EC_test", s_dir=self.save_path, start=start)
+        f_obj = self.class_(s_id="EC_test", s_dir=self.save_path, start=start)
         f_obj.create_eeg_dataset()
         assert 1
 

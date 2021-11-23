@@ -1,7 +1,6 @@
-=====
 Usage
 =====
 
-To use hdf5objects in a project::
-
-	import hdf5objects
+.. click:: hdf5objects.__main__:main
+   :prog: hdf5objects
+   :nested: full

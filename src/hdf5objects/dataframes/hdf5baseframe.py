@@ -3,26 +3,28 @@
 """ hdf5baseframe.py
 Description:
 """
-__author__ = "Anthony Fong"
-__copyright__ = "Copyright 2021, Anthony Fong"
-__credits__ = ["Anthony Fong"]
-__license__ = ""
-__version__ = "1.0.0"
-__maintainer__ = "Anthony Fong"
-__email__ = ""
-__status__ = "Prototype"
+# Package Header #
+from ..__header__ import *
 
-# Default Libraries #
+# Header #
+__author__ = __author__
+__credits__ = __credits__
+__maintainer__ = __maintainer__
+__email__ = __email__
+
+# Imports #
+# Standard Libraries #
 from abc import abstractmethod
+from functools import singledispatchmethod
 import pathlib
+from typing import Union
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from framestructure import FileTimeFrame
-from multipledispatch import dispatch
 import numpy as np
 
-# Local Libraries #
-from ..objects import BaseHDF5
+# Local Packages #
+from ..fileobjects import BaseHDF5
 
 
 # Definitions #
@@ -43,39 +45,49 @@ class HDF5BaseFrame(FileTimeFrame):
             return False
 
     @classmethod
-    def new_validated(cls, path, **kwargs):
+    def new_validated(cls, path, mode="r+", **kwargs):
         if not isinstance(path, pathlib.Path):
             path = pathlib.Path(path)
 
         if path.is_file():
-            file = cls.file_type.new_validated(path)
+            file = cls.file_type.new_validated(path, mode=mode)
             if file:
                 return cls(file=file, **kwargs)
 
         return None
 
-    # Instance Methods
+    # Instance Methods #
     # File
-    @dispatch(object)
     def set_file(self, file, **kwargs):
+        if isinstance(file, (str, pathlib.Path)):
+            self.file = self.file_type(file=file, **kwargs)
         if isinstance(file, self.file_type):
             self.file = file
         else:
-            raise ValueError("file must be a path, File, or HDF5Object")
+            raise ValueError("file must be a path, File, or HDF5File")
 
-    @dispatch((str, pathlib.Path))
-    def set_file(self, file, **kwargs):
-        self.file = self.file_type(file=file, **kwargs)
-
-    @abstractmethod
     def load_data(self):
-        pass
+        self.file.data.get_all_data()
 
-    @abstractmethod
-    def load_time_axis(self):
-        pass
+    # Setters/Getters
+    def get_shape(self):
+        return self.file.data.shape
 
-    # Setters
+    def get_start(self):
+        return self.file.start_datetime
+
+    def get_end(self):
+        return self.file.end_datetime
+
+    def get_time_axis(self):
+        return self.file.time_axis.all_data
+
+    def get_sample_rate(self):
+        return self.file.data.sample_rate
+
+    def get_data(self):
+        return self.file.data
+
     def set_data(self, value):
         if self.mode == 'r':
             raise IOError("not writable")
@@ -146,6 +158,26 @@ class HDF5BaseFrame(FileTimeFrame):
 
         for frame in frames:
             self.append_frame(frame, axis=axis, truncate=truncate)
+
+    def get_intervals(self, start=None, stop=None, step=None):
+        return self.file.time_axis.get_intervals(start=start, stop=stop, step=step)
+
+    # Find
+    def find_time_index(self, timestamp, aprox=False, tails=False):
+        return self.file.time_axis.find_time_index(timestamp=timestamp, aprox=aprox, tails=tails)
+
+    # Get data
+    def get_timestamp_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        return self.file.data.get_timstamp_range_time(start=start, stop=stop, step=step, aprox=aprox, tails=tails)
+
+    def get_datetime_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        return self.file.data.get_datetime_range_time(start=start, stop=stop, step=step, aprox=aprox, tails=tails)
+
+    def get_data_range_sample(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        return self.file.data.get_data_range_sample(start=start, stop=stop, step=step, aprox=aprox, tails=tails)
+
+    def get_data_range_time(self, start=None, stop=None, step=None, aprox=False, tails=False):
+        return self.file.data.get_data_range_time(start=start, stop=stop, step=step, aprox=aprox, tails=tails)
 
     # Sample Rate
     def resample(self, sample_rate, **kwargs):

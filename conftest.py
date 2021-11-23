@@ -3,22 +3,24 @@
 """ conftest.py
 Used for pytest directory-specific hook implementations and directory inclusion for imports.
 """
-__author__ = "Anthony Fong"
-__copyright__ = "Copyright 2021, Anthony Fong"
-__credits__ = ["Anthony Fong"]
-__license__ = ""
-__version__ = "0.1.0"
-__maintainer__ = "Anthony Fong"
-__email__ = ""
-__status__ = "Beta"
+# Package Header #
+from src.hdf5objects.__header__ import *
 
-# Default Libraries #
+# Header #
+__author__ = __author__
+__credits__ = __credits__
+__maintainer__ = __maintainer__
+__email__ = __email__
+
+
+# Imports #
+# Standard Libraries #
 from typing import Dict, Tuple
 
-# Downloaded Libraries #
+# Third-Party Packages #
 import pytest
 
-# Local Libraries #
+# Local Packages #
 
 
 # Definitions #

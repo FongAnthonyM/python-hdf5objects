@@ -3,20 +3,16 @@
 """ __init__.py
 Description:
 """
-__author__ = "Anthony Fong"
-__copyright__ = "Copyright 2021, Anthony Fong"
-__credits__ = ["Anthony Fong"]
-__license__ = ""
-__version__ = "1.0.0"
-__maintainer__ = "Anthony Fong"
-__email__ = ""
-__status__ = "Prototype"
+# Package Header #
+from .__header__ import *
 
-# Default Libraries #
+# Header #
+__author__ = __author__
+__credits__ = __credits__
+__maintainer__ = __maintainer__
+__email__ = __email__
 
-# Downloaded Libraries #
-
-# Local Libraries #
-from .hdf5object import HDF5BaseWrapper, HDF5Attributes, HDF5Map, HDF5Group, HDF5Dataset
-from .hdf5object import HDF5Structure, HDF5Object
-from .objects import *
+# Imports #
+# Local Packages #
+from .hdf5objects import HDF5Map, HDF5BaseObject, HDF5Attributes, HDF5Group, HDF5Dataset, HDF5File
+from .fileobjects import *

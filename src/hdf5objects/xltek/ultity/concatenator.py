@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ concatenator.py
-Description: 
+Description:
 """
 __author__ = "Anthony Fong"
 __copyright__ = "Copyright 2021, Anthony Fong"
@@ -12,12 +12,12 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from baseobjects import BaseObject
 
-# Local Libraries #
+# Local Packages #
 from ..eegframe import EEGFrame
 
 

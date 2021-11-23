@@ -1,0 +1,12 @@
+{
+  "_template": "gh:cjolowicz/cookiecutter-hypermodern-python",
+  "author": "Anthony Fong",
+  "development_status": "Development Status :: 3 - Alpha",
+  "email": "FongAnthonyM@gmail.com",
+  "friendly_name": "hdf5objects",
+  "github_user": "FongAnthonyM",
+  "license": "MIT",
+  "package_name": "hdf5objects",
+  "project_name": "hdf5objects",
+  "version": "0.2.0"
+}

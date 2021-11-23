@@ -12,12 +12,12 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 
-# Downloaded Libraries #
+# Third-Party Packages #
 import numpy as np
 
-# Local Libraries #
+# Local Packages #
 
 
 # Definitions #

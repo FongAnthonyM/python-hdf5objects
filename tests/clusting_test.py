@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ clusting_test.py
-Description: 
+Description:
 """
 __author__ = "Anthony Fong"
 __copyright__ = "Copyright 2021, Anthony Fong"
@@ -12,14 +12,14 @@ __maintainer__ = "Anthony Fong"
 __email__ = ""
 __status__ = "Prototype"
 
-# Default Libraries #
+# Standard Libraries #
 import datetime
 
-# Downloaded Libraries #
+# Third-Party Packages #
 import numpy as np
 from sklearn.cluster import MeanShift
 
-# Local Libraries #
+# Local Packages #
 from src.hdf5xltek import *
 
 

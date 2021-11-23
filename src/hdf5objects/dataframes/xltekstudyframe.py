@@ -3,22 +3,23 @@
 """ xltekstudyframe.py
 Description:
 """
-__author__ = "Anthony Fong"
-__copyright__ = "Copyright 2021, Anthony Fong"
-__credits__ = ["Anthony Fong"]
-__license__ = ""
-__version__ = "1.0.0"
-__maintainer__ = "Anthony Fong"
-__email__ = ""
-__status__ = "Prototype"
+# Package Header #
+from ..__header__ import *
 
-# Default Libraries #
+# Header #
+__author__ = __author__
+__credits__ = __credits__
+__maintainer__ = __maintainer__
+__email__ = __email__
+
+# Imports #
+# Standard Libraries #
 import pathlib
 
-# Downloaded Libraries #
+# Third-Party Packages #
 from framestructure import DirectoryTimeFrame
 
-# Local Libraries #
+# Local Packages #
 from .xltekdayframe import XLTEKDayFrame
 
 
@@ -38,7 +39,7 @@ class XLTEKStudyFrame(DirectoryTimeFrame):
 
     # Magic Methods #
     # Construction/Destruction
-    def __init__(self, s_id=None, studies_path=None, path=None, frames=None, update=True,
+    def __init__(self, s_id=None, studies_path=None, path=None, frames=None, mode='r', update=True,
                  open_=True, init=True, **kwargs):
         super().__init__(init=False)
 
@@ -46,7 +47,7 @@ class XLTEKStudyFrame(DirectoryTimeFrame):
         self.subject_id = ""
 
         if init:
-            self.construct(s_id=s_id, studies_path=studies_path, path=path, frames=frames, update=update,
+            self.construct(s_id=s_id, studies_path=studies_path, path=path, frames=frames, mode=mode, update=update,
                            open_=open_, **kwargs)
 
     @property
@@ -62,7 +63,8 @@ class XLTEKStudyFrame(DirectoryTimeFrame):
 
     # Instance Methods
     # Constructors/Destructors
-    def construct(self, s_id=None, studies_path=None, path=None, frames=None, update=True, open_=True, **kwargs):
+    def construct(self, s_id=None, studies_path=None, path=None, frames=None, mode='r',
+                  update=True, open_=True, **kwargs):
         if s_id is not None:
             self.subject_id = s_id
 
@@ -72,4 +74,4 @@ class XLTEKStudyFrame(DirectoryTimeFrame):
         if path is None:
             path = pathlib.Path(self.studies_path, self.subject_id)
 
-        super().construct(path=path, frames=frames, update=update, open_=open_, **kwargs)
+        super().construct(path=path, frames=frames, mode=mode, update=update, open_=open_, **kwargs)
