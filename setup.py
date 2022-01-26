@@ -87,7 +87,7 @@ setup(
     keywords=[
         # eg: 'keyword1', 'keyword2', 'keyword3',
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.10',
     install_requires=[
         'baseobjects>=1.5.1', 'classversioning', 'framestructure', 'dspobjects', 'h5py>=3.2.1', 'numpy',
         'multipledispatch', 'pytz', 'tzlocal', 'bidict'

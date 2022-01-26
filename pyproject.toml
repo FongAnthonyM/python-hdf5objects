@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hdf5objects"
-version = "0.2.1"
+version = "0.3.0"
 description = "hdf5objects"
 authors = ["Anthony Fong <FongAnthonyM@gmail.com>"]
 license = "MIT"
@@ -16,7 +16,7 @@ classifiers = [
 Changelog = "https://github.com/FongAnthonyM/hdf5objects/releases"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.10"
 baseobjects = "^1.5.2"
 classversioning = "^0.4.1"
 dspobjects = "^0.1.0"
