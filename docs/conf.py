@@ -1,8 +1,7 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+
 """Sphinx configuration."""
 # Package Header #
-from src.hdf5objects.__header__ import *
+from src.hdf5objects.header import *
 
 # Header #
 __author__ = __author__

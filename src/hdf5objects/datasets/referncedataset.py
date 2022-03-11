@@ -1,16 +1,15 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ referncedataset.py
-Description:
+
 """
 # Package Header #
-from ..__header__ import *
+from ..header import *
 
 # Header #
 __author__ = __author__
 __credits__ = __credits__
 __maintainer__ = __maintainer__
 __email__ = __email__
+
 
 # Imports #
 # Standard Libraries #
@@ -26,6 +25,7 @@ import numpy as np
 # Local Packages #
 
 
+# Todo: Redesign this.
 # Definitions #
 # Functions #
 def np_to_dict(array):

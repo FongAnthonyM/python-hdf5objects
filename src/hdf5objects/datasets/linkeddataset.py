@@ -1,16 +1,15 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ linkeddataset.py
-Description:
+
 """
 # Package Header #
-from ..__header__ import *
+from ..header import *
 
 # Header #
 __author__ = __author__
 __credits__ = __credits__
 __maintainer__ = __maintainer__
 __email__ = __email__
+
 
 # Imports #
 # Standard Libraries #
@@ -24,6 +23,7 @@ from baseobjects import BaseObject, DynamicWrapper
 from .referncedataset import HDF5ReferenceDataset
 
 
+# Todo: Redesign this.
 # Definitions #
 # Classes #
 class HDF5LinkedDatasets(object):

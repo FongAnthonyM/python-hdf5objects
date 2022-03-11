@@ -1,10 +1,9 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+
 """ test_hdf5objects.py
 Description:
 """
 # Package Header #
-from src.hdf5objects.__header__ import *
+from src.hdf5objects.header import *
 
 # Header #
 __author__ = __author__

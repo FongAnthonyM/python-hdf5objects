@@ -1,10 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ __init__.py
 Description:
 """
 # Package Header #
-from ..__header__ import *
+from ..header import *
 
 # Header #
 __author__ = __author__
@@ -20,4 +18,3 @@ __email__ = __email__
 # Local Packages #
 from .basehdf5 import BaseHDF5
 from .hdf5eeg import HDF5EEG
-from .hdf5xltek import HDF5XLTEK

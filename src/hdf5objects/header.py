@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-""" __header__.py
+""" header.py
 Information about this package.
 """
 # Header #

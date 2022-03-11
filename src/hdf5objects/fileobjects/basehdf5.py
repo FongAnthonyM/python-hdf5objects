@@ -1,10 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ basehdf5.py
-Description:
+A more specific HDF5File which implements versioning and validation.
 """
 # Package Header #
-from ..__header__ import *
+from ..header import *
 
 # Header #
 __author__ = __author__
@@ -12,97 +10,297 @@ __credits__ = __credits__
 __maintainer__ = __maintainer__
 __email__ = __email__
 
+
 # Imports #
 # Standard Libraries #
 import pathlib
-from warnings import warn
+from typing import Any
 
 # Third-Party Packages #
-from classversioning import CachingVersionedInitMeta, VersionedClass, VersionType, TriNumberVersion
+from baseobjects import singlekwargdispatchmethod
+from classversioning import CachingVersionedInitMeta, VersionedClass, VersionType, TriNumberVersion, Version
 import h5py
 
 # Local Packages #
-from ..hdf5objects import HDF5Map, HDF5Group, HDF5File
+from ..hdf5bases import HDF5Map, HDF5Group, HDF5File
 
 
 # Definitions #
 # Classes #
 class BaseHDF5Map(HDF5Map):
+    """A map for BaseHDF5 files."""
     default_type = HDF5Group
     default_attribute_names = {"file_type": "FileType", "file_version": "FileVersion"}
 
 
 class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
-    _registration = False
-    _VERSION_TYPE = VersionType(name="BaseHDF5", class_=TriNumberVersion)
-    FILE_TYPE = "Abstract"
-    VERSION = TriNumberVersion(0, 0, 0)
-    default_map = BaseHDF5Map()
+    """A more specific HDF5File which implements versioning and validation.
+
+    Class Attributes:
+        _registration: Determines if this class will be included in class registry.
+        _VERSION_TYPE: The type of versioning to use.
+        FILE_TYPE: The file type name of this class.
+        VERSION: The version of this class.
+        default_map: The HDF5 map of this object.
+
+    Attributes:
+        _file_type: The type of file this object is.
+        _file_version: The version of this file.
+
+    Args:
+        file: Either the file object or the path to the file.
+        open_: Determines if this object will remain open after construction.
+        map_: The map for this HDF5 object.
+        load: Determines if this object will load the file on construction.
+        create: Determines if this object will create an empty file on construction.
+        build: Determines if this object will create and fill the file on construction.
+        init: Determines if this object will construct.
+        **kwargs: The keyword arguments for the open method.
+    """
+    _registration: bool = False
+    _VERSION_TYPE: VersionType = VersionType(name="BaseHDF5", class_=TriNumberVersion)
+    FILE_TYPE: str = "Abstract"
+    VERSION: Version = TriNumberVersion(0, 0, 0)
+    default_map: HDF5Map = BaseHDF5Map()
 
     # Class Methods #
     # File Validation
+    @singlekwargdispatchmethod("file")
     @classmethod
-    def validate_file_type(cls, obj):
+    def validate_file_type(cls, file: pathlib.Path | str | HDF5File | h5py.File) -> bool:
+        """Checks if the given file or path is a valid type.
+
+        Args:
+            file: The path or file object.
+
+        Returns:
+            If this is a valid file type.
+        """
+        raise ValueError(f"{type(file)} is not a valid type for validate_file_type.")
+
+    @validate_file_type.register
+    @classmethod
+    def _(cls, file: pathlib.Path) -> bool:
+        """Checks if the given path is a valid type.
+
+        Args:
+            file: The path.
+
+        Returns:
+            If this is a valid file type.
+        """
         t_name = cls.default_map.attribute_names["file_type"]
 
-        if isinstance(obj, (str, pathlib.Path)):
-            if not isinstance(obj, pathlib.Path):
-                obj = pathlib.Path(obj)
-
-            if obj.is_file():
-                try:
-                    with h5py.File(obj) as obj:
-                        return t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]
-                except OSError:
-                    return False
-            else:
+        if file.is_file():
+            try:
+                with h5py.File(file) as obj:
+                    return t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]
+            except OSError:
                 return False
-        elif isinstance(obj, HDF5File):
-            obj = obj._file
-            return t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]
+        else:
+            return False
+
+    @validate_file_type.register
+    @classmethod
+    def _(cls, file: str) -> bool:
+        """Checks if the given path is a valid type.
+
+        Args:
+            file: The path.
+
+        Returns:
+            If this is a valid file type.
+        """
+        t_name = cls.default_map.attribute_names["file_type"]
+
+        file = pathlib.Path(file)
+
+        if file.is_file():
+            try:
+                with h5py.File(file) as obj:
+                    return t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]
+            except OSError:
+                return False
+        else:
+            return False
+
+    @validate_file_type.register
+    @classmethod
+    def _(cls, file: HDF5File) -> bool:
+        """Checks if the given file is a valid type.
+
+        Args:
+            file: The file object.
+
+        Returns:
+            If this is a valid file type.
+        """
+        t_name = cls.default_map.attribute_names["file_type"]
+        file = file._file
+        return t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]
+
+    @validate_file_type.register
+    @classmethod
+    def _(cls, file: h5py.File) -> bool:
+        """Checks if the given file is a valid type.
+
+        Args:
+            file: The file object.
+
+        Returns:
+            If this is a valid file type.
+        """
+        t_name = cls.default_map.attribute_names["file_type"]
+        return t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]
 
     @classmethod
-    def validate_file(cls, obj):
+    def validate_file(cls, file: pathlib.Path | str | HDF5File | h5py.File) -> bool:
+        """A method for checking if a file valid.
+
+        Args:
+            file: The path or file object.
+
+        Returns:
+            If this is a valid file.
+        """
         raise NotImplementedError
 
+    @singlekwargdispatchmethod("file")
     @classmethod
-    def new_validated(cls, obj, **kwargs):
+    def new_validated(cls, file: pathlib.Path | str | HDF5File | h5py.File, **kwargs: Any) -> "BaseHDF5" | None:
+        """Checks if the given file or path is a valid type and returns the file if valid.
+
+        Args:
+            file: The path or file object.
+
+        Returns:
+            The file or None.
+        """
         t_name = cls.default_map.attribute_names["file_type"]
 
-        if isinstance(obj, (str, pathlib.Path)):
-            if not isinstance(obj, pathlib.Path):
-                obj = pathlib.Path(obj)
+        if isinstance(file, (str, pathlib.Path)):
+            if not isinstance(file, pathlib.Path):
+                file = pathlib.Path(file)
 
-            if obj.is_file():
+            if file.is_file():
                 try:
-                    obj = h5py.File(obj)
-                    if t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]:
-                        return cls(obj=obj, **kwargs)
+                    file = h5py.File(file)
+                    if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
+                        return cls(obj=file, **kwargs)
                 except OSError:
                     return None
             else:
                 return None
-        elif isinstance(obj, HDF5File):
-            obj = obj._file
-            if t_name in obj.attrs and cls.FILE_TYPE == obj.attrs[t_name]:
-                return cls(obj=obj, **kwargs)
+        elif isinstance(file, HDF5File):
+            file = file._file
+            if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
+                return cls(obj=file, **kwargs)
+
+    @new_validated.register
+    @classmethod
+    def _(cls, file: pathlib.Path, **kwargs: Any) -> "BaseHDF5" | None:
+        """Checks if the given path is a valid type and returns the file if valid.
+
+        Args:
+            file: The path.
+
+        Returns:
+            The file or None.
+        """
+        t_name = cls.default_map.attribute_names["file_type"]
+
+        if file.is_file():
+            try:
+                file = h5py.File(file)
+                if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
+                    return cls(obj=file, **kwargs)
+            except OSError:
+                return None
+        else:
+            return None
+
+    @new_validated.register
+    @classmethod
+    def _(cls, file: str, **kwargs: Any) -> "BaseHDF5" | None:
+        """Checks if the given path is a valid type and returns the file if valid.
+
+        Args:
+            file: The path.
+
+        Returns:
+            The file or None.
+        """
+        t_name = cls.default_map.attribute_names["file_type"]
+        file = pathlib.Path(file)
+
+        if file.is_file():
+            try:
+                file = h5py.File(file)
+                if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
+                    return cls(obj=file, **kwargs)
+            except OSError:
+                return None
+        else:
+            return None
+
+    @new_validated.register
+    @classmethod
+    def _(cls, file: HDF5File, **kwargs: Any) -> "BaseHDF5" | None:
+        """Checks if the given file is a valid type and returns the file if valid.
+
+        Args:
+            file: The file.
+
+        Returns:
+            The file or None.
+        """
+        t_name = cls.default_map.attribute_names["file_type"]
+        file = file._file
+        if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
+            return cls(obj=file, **kwargs)
+        else:
+            return None
+
+    @new_validated.register
+    @classmethod
+    def _(cls, file: h5py.File, **kwargs: Any) -> "BaseHDF5" | None:
+        """Checks if the given file is a valid type and returns the file if valid.
+
+        Args:
+            file: The file.
+
+        Returns:
+            The file or None.
+        """
+        t_name = cls.default_map.attribute_names["file_type"]
+        if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
+            return cls(obj=file, **kwargs)
+        else:
+            return None
 
     @classmethod
-    def get_version_from_object(cls, obj):
-        """An optional abstract method that must return a version from an object."""
+    def get_version_from_file(cls, file: pathlib.Path | str) -> Version:
+        """An optional abstract method that must return a version from an object.
+
+        Args:
+            file: The path to file to get the version from.
+
+        Returns:
+            The version from the file.
+        """
         v_name = cls.default_map.attribute_names["file_version"]
 
-        if isinstance(obj, pathlib.Path):
-            obj = obj.as_posix()
+        if isinstance(file, pathlib.Path):
+            file = file.as_posix()
 
-        if isinstance(obj, str):
-            obj = h5py.File(obj)
+        if isinstance(file, str):
+            file = h5py.File(file)
 
-        return TriNumberVersion(obj.attrs[v_name])
+        return TriNumberVersion(file.attrs[v_name])
 
     # Magic Methods #
     # Construction/Destruction
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> "BaseHDF5":
         """With given input, will return the correct subclass."""
         if id(cls) == id(BaseHDF5) and (kwargs or args):
             if args:
@@ -114,17 +312,31 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         else:
             return super().__new__(cls)
 
-    def __init__(self, file=None, open_: bool = True, map_: HDF5Map = None, load: bool = False,
-                 create: bool = False, build: bool = False, init: bool = True, **kwargs):
+    def __init__(
+        self,
+        file: str | pathlib.Path | h5py.File | None = None,
+        open_: bool = False,
+        map_: HDF5Map | None = None,
+        load: bool = False,
+        create: bool = False,
+        build: bool = False,
+        init: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        # Parent Attributes #
         super().__init__(init=False)
-        self._file_type = ""
-        self._file_version = ""
 
+        # New Attributes #
+        self._file_type: str = ""
+        self._file_version: str = ""
+
+        # Object Construction #
         if init:
             self.construct(file=file, open_=open_, map_=map_, load=load, create=create, build=build, **kwargs)
     
     @property
     def file_type(self):
+        """Gets the file type from the attributes."""
         return self.attributes["file_type"]
 
     @file_type.setter
@@ -133,6 +345,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         
     @property
     def file_version(self):
+        """Gets the file version from the file."""
         return self.attributes["file_version"]
 
     @file_version.setter
@@ -141,27 +354,35 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     
     # Instance Methods #
     # Constructors/Destructors
-    def construct_file_attributes(self):
-        self.attributes["file_type"] = self.FILE_TYPE
-        self.attributes["file_version"] = self.VERSION.str()
+    def construct_file_attributes(self, map_: HDF5Map = None, load: bool = False, build: bool = False) -> None:
+        """Creates the attributes for this group.
 
-    # File
-    def open(self, mode="a", exc=False, validate=False, **kwargs):
-        if not self.is_open:
-            try:
-                self._file = h5py.File(self.path.as_posix(), mode=mode, **kwargs)
-                if validate:
-                    self.validate_file_structure(**kwargs)
-                return self
-            except Exception as e:
-                if exc:
-                    warn("Could not open" + self.path.as_posix() + "due to error: " + str(e), stacklevel=2)
-                    self._file = None
-                    return None
-                else:
-                    raise e
+        Args:
+            map_: The map to use to create the attributes.
+            load: Determines if this object will load the attribute values from the file on construction.
+            build: Determines if this object will create and fill the attributes in the file on construction.
+        """
+        super().construct_file_attributes(map_=map_, load=load, build=build)
+        self._group.attributes["file_type"] = self.FILE_TYPE
+        self._group.attributes["file_version"] = self.VERSION.str()
 
-    # General Methods # Todo: Maybe implement this.
+    # File  # Todo: Maybe implement this.
+    # def open(self, mode="a", exc=False, validate=False, **kwargs):
+    #     if not self.is_open:
+    #         try:
+    #             self._file = h5py.File(self.path.as_posix(), mode=mode, **kwargs)
+    #             if validate:
+    #                 self.validate_file_structure(**kwargs)
+    #             return self
+    #         except Exception as e:
+    #             if exc:
+    #                 warn("Could not open" + self.path.as_posix() + "due to error: " + str(e), stacklevel=2)
+    #                 self._file = None
+    #                 return None
+    #             else:
+    #                 raise e
+    #
+    # General Methods
     # def report_file_structure(self):
     #     op = self.is_open
     #     self.open()

@@ -1,16 +1,15 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ hierarchialdataset.py
-Description:
+
 """
 # Package Header #
-from ..__header__ import *
+from ..header import *
 
 # Header #
 __author__ = __author__
 __credits__ = __credits__
 __maintainer__ = __maintainer__
 __email__ = __email__
+
 
 # Imports #
 # Standard Libraries #
@@ -25,6 +24,7 @@ import numpy as np
 from .linkeddataset import HDF5LinkedDatasets
 
 
+# Todo: Redesign this.
 # Definitions #
 # Functions #
 def merge_dict(dict1, dict2, copy_=True):
