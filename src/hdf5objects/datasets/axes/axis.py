@@ -18,10 +18,10 @@ from typing import Any
 
 # Third-Party Packages #
 from baseobjects.cachingtools import timed_keyless_cache
+from dspobjects.dataclasses import IndexValue, FoundRange
 import numpy as np
 
 # Local Packages #
-from ...dataclasses import IndexValue, FoundRange
 from ...hdf5bases import HDF5Map, HDF5Dataset
 
 

@@ -19,11 +19,11 @@ from typing import Any
 
 # Third-Party Packages #
 from baseobjects import singlekwargdispatchmethod
+from dspobjects.dataclasses import FoundData, FoundTimeRange
 import h5py
 import numpy as np
 
 # Local Packages #
-from ..dataclasses import FoundData, FoundTimeRange
 from ..hdf5bases import HDF5Map, HDF5Dataset
 from .axes import ChannelAxisMap, ChannelAxis
 from .axes import SampleAxisMap, SampleAxis
@@ -924,7 +924,7 @@ class TimeSeriesDataset(HDF5Dataset):
         tails: bool = False,
     ) -> FoundData:
         """Finds the data range on the axis inbetween two times, can give approximate values.
-        
+
         Args:
             start: The first time to find for the range.
             stop: The last time to find for the range.

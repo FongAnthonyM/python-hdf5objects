@@ -21,11 +21,11 @@ import pathlib
 from typing import Any
 
 # Third-Party Packages #
+from dspobjects.dataclasses import IndexDateTime, FoundTimeRange, FoundData
 from framestructure import TimeFrame, FileTimeFrame
 import numpy as np
 
 # Local Packages #
-from ..dataclasses import IndexDateTime, FoundTimeRange, FoundData
 from ..fileobjects import BaseHDF5
 
 

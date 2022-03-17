@@ -21,12 +21,12 @@ import zoneinfo
 # Third-Party Packages #
 from baseobjects import singlekwargdispatchmethod
 from baseobjects.cachingtools import timed_keyless_cache
+from dspobjects.dataclasses import IndexDateTime, FoundTimeRange
 import h5py
 import numpy as np
 import tzlocal
 
 # Local Packages #
-from ...dataclasses import IndexDateTime, FoundTimeRange
 from .axis import AxisMap, Axis
 
 
