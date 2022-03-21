@@ -26,7 +26,7 @@ import numpy as np
 
 # Local Packages #
 from src.hdf5objects import *
-from src.hdf5objects.dataframes import *
+from src.hdf5objects.arrayframes import *
 
 
 # Definitions #

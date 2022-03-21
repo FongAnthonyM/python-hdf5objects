@@ -98,6 +98,32 @@ class TimeAxis(Axis):
             )
 
     @property
+    def start_timestamp(self) -> float:
+        """Get the first element of this axis."""
+        try:
+            return self.get_start.caching_call()
+        except AttributeError:
+            return self.get_start()
+
+    @property
+    def end_timestamp(self) -> float:
+        """Get the last element of this axis."""
+        try:
+            return self.get_start.caching_call()
+        except AttributeError:
+            return self.get_start()
+    
+    @property
+    def start_datetime(self) -> datetime.datetime:
+        """Returns the start as a datetime."""
+        return datetime.datetime.fromtimestamp(self.start_timestamp)
+
+    @property
+    def end_datetime(self) -> datetime.datetime:
+        """Returns the end as a datetime."""
+        return datetime.datetime.fromtimestamp(self.end_timestamp)
+    
+    @property
     def time_zone(self) -> zoneinfo.ZoneInfo | None:
         """The timezone of the timestamps for this axis. Setter validates before assigning."""
         return self.get_time_zone(refresh=False)
@@ -431,9 +457,9 @@ class TimeAxis(Axis):
                 return IndexDateTime(samples, self.end_datetime, self.end)
         else:
             index = int(np.searchsorted(self.timestamps, timestamp, side="right") - 1)
-            if approx or timestamp == self.timestamps[index]:
-                timestamp = self.timestamps[index]
-                return IndexDateTime(index, datetime.datetime.fromtimestamp(timestamp), timestamp)
+            true_timestamp = self.timestamps[index]
+            if approx or timestamp == true_timestamp:
+                return IndexDateTime(index, datetime.datetime.fromtimestamp(true_timestamp), true_timestamp)
 
         return IndexDateTime(None, None, None)
 

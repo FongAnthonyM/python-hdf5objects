@@ -1,5 +1,5 @@
 """ __init__.py
-Description:
+General HDF5 objects for different file types.
 """
 # Package Header #
 from ..header import *
@@ -17,4 +17,4 @@ __email__ = __email__
 
 # Local Packages #
 from .basehdf5 import BaseHDF5
-from .hdf5eeg import HDF5EEG
+from .hdf5eeg import HDF5EEG, HDF5EEGMap

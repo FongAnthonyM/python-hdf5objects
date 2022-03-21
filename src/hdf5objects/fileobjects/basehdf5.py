@@ -176,25 +176,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         Returns:
             The file or None.
         """
-        t_name = cls.default_map.attribute_names["file_type"]
-
-        if isinstance(file, (str, pathlib.Path)):
-            if not isinstance(file, pathlib.Path):
-                file = pathlib.Path(file)
-
-            if file.is_file():
-                try:
-                    file = h5py.File(file)
-                    if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
-                        return cls(obj=file, **kwargs)
-                except OSError:
-                    return None
-            else:
-                return None
-        elif isinstance(file, HDF5File):
-            file = file._file
-            if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
-                return cls(obj=file, **kwargs)
+        raise ValueError(f"{type(file)} is not a valid type for new_validate.")
 
     @new_validated.register
     @classmethod

@@ -312,7 +312,7 @@ class HDF5Dataset(HDF5BaseObject):
         """
         with self:
             # Assign Data
-            self._dataset.resize(data.shape)  # Reshape for new data
+            self._dataset.resize(data.shape)  # resize for new data
             self._dataset[...] = data
 
     def set_data(self, data: np.ndarray, **kwargs: Any) -> None:
@@ -345,7 +345,7 @@ class HDF5Dataset(HDF5BaseObject):
             slicing = tuple(slice(s_shape[ax]) for ax in range(0, axis)) + (-d_shape[axis], ...)
 
             # Assign Data
-            self._dataset.resize(new_shape)  # Reshape for new data
+            self._dataset.resize(new_shape)  # resize for new data
             self._dataset[slicing] = data    # Assign data to the new location
 
     # Axes and Scales

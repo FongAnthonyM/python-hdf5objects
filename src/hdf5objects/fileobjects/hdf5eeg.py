@@ -1,5 +1,5 @@
 """ hdf5eeg.py
-Description:
+
 """
 # Package Header #
 from ..header import *
@@ -102,32 +102,32 @@ class HDF5EEG(BaseHDF5):
         self._subject_id = value
 
     @property
-    def start(self) -> float:
+    def start_timestamp(self) -> float:
         """The start time of the data as a unix timestamp from the file attributes."""
         return self.attributes["start"]
 
     @start.setter
-    def start(self, value: float) -> None:
+    def start_timestamp(self, value: float) -> None:
         self.attributes.set_attribute("start", value)
 
     @property
     def start_datetime(self) -> datetime.datetime:
         """The start time of the data as a datetime from the file attributes."""
-        return datetime.datetime.fromtimestamp(self.start)
+        return datetime.datetime.fromtimestamp(self.start_timestamp)
 
     @property
-    def end(self):
+    def end_timestamp(self) -> float:
         """The end time of the data as a unix timestamp from the file attributes."""
         return self.attributes["end"]
 
     @end.setter
-    def end(self, value):
+    def end_timestamp(self, value: float) -> None:
         self.attributes.set_attribute("end", value)
 
     @property
-    def end_datetime(self):
+    def end_datetime(self) -> datetime:
         """The end time of the data as a datetime from the file attributes."""
-        return datetime.datetime.fromtimestamp(self.start)
+        return datetime.datetime.fromtimestamp(self.end_timestamp)
 
     @property
     def subject_dir(self) -> pathlib.Path | None:
