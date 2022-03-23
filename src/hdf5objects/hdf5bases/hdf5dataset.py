@@ -64,7 +64,7 @@ class HDF5Dataset(HDF5BaseObject):
         dataset: h5py.Dataset | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
-        file: str | pathlib.Path | h5py.File | "HDF5File" | None = None,
+        file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         build: bool = False,
         parent: str | None = None,
@@ -129,7 +129,7 @@ class HDF5Dataset(HDF5BaseObject):
         dataset: h5py.Dataset | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
-        file: str | pathlib.Path | h5py.File | "HDF5File" | None = None,
+        file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         build: bool = False,
         parent: str | None = None,
@@ -201,7 +201,7 @@ class HDF5Dataset(HDF5BaseObject):
 
     # Getters/Setters
     @singlekwargdispatchmethod("dataset")
-    def set_dataset(self, dataset: h5py.Dataset | "HDF5Dataset") -> None:
+    def set_dataset(self, dataset: h5py.Dataset) -> None:
         """Sets the wrapped dataset.
 
         Args:
@@ -213,7 +213,7 @@ class HDF5Dataset(HDF5BaseObject):
             self.set_name(dataset._name)
             self._dataset = dataset._dataset
         else:
-            raise ValueError(f"{type(dataset)} is not a valid type for set_dataset.")
+            raise TypeError(f"{type(dataset)} is not a valid type for set_dataset.")
 
     @set_dataset.register
     def _(self, dataset: h5py.Dataset) -> None:
@@ -361,7 +361,7 @@ class HDF5Dataset(HDF5BaseObject):
             with self:
                 self._dataset.make_scale(self._scale_name)
 
-    def attach_axis(self, dataset: h5py.Dataset | "HDF5Dataset", axis: int = 0) -> None:
+    def attach_axis(self, dataset: h5py.Dataset, axis: int = 0) -> None:
         """Attaches an axis (scale) to this dataset.
 
         Args:
@@ -374,7 +374,7 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             self._dataset.dims[axis].attach_scale(dataset)
 
-    def detach_axis(self, dataset: h5py.Dataset | "HDF5Dataset", axis: int = 0) -> None:
+    def detach_axis(self, dataset: h5py.Dataset, axis: int = 0) -> None:
         """Detaches an axis (scale) from this dataset.
 
         Args:

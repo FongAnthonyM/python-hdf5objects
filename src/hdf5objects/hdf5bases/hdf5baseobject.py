@@ -102,7 +102,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         self,
         name: str | None = None,
         map_: HDF5Map | None = None,
-        file: str | pathlib.Path | h5py.File | "HDF5File" | None = None,
+        file: str | pathlib.Path | h5py.File | None = None,
         parent: str | None = None,
         init: bool = True,
     ) -> None:
@@ -111,7 +111,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
 
         # New Attributes #
         self._file_was_open: bool | None = None
-        self._file: h5py.File | "HDF5File" | None = None
+        self._file: h5py.File | HDF5File | None = None
 
         self._name_: str | None = None
         self._parents: list[str] | None = None
@@ -199,7 +199,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         self,
         name: str | None = None,
         map_: HDF5Map | None = None,
-        file: str | pathlib.Path | h5py.File | "HDF5File" | None = None,
+        file: str | pathlib.Path | h5py.File | None = None,
         parent: str | None = None,
     ) -> None:
         """Constructs this object.
@@ -260,7 +260,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
 
     # Getters/Setters
     @singlekwargdispatchmethod("file")
-    def set_file(self, file: str | pathlib.Path | h5py.File | "HDF5File") -> None:
+    def set_file(self, file: str | pathlib.Path | h5py.File) -> None:
         """Sets the file for this object to an HDF5File.
 
         Args:
@@ -269,7 +269,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         if isinstance(file, self.file_type):
             self._file = file
         else:
-            raise ValueError("file must be a path, File, or HDF5File")
+            raise TypeError("file must be a path, File, or HDF5File")
 
     @set_file.register(str)
     @set_file.register(pathlib.Path)

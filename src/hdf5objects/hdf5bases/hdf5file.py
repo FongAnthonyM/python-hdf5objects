@@ -45,6 +45,7 @@ class HDF5File(HDF5BaseObject):
         dataset_type: The class to cast the HDF5 dataset as.
 
     Attributes:
+        _is_open:
         _path: The path to the file.
         _name_: The name of the first layer in the file.
         _group: The first layer group this object will wrap.
@@ -80,7 +81,7 @@ class HDF5File(HDF5BaseObject):
         Returns:
             The wrapped object.
         """
-        with obj.temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
+        with obj._temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
             return super()._get_attribute(obj, wrap_name, attr_name)
 
     @classmethod
@@ -93,7 +94,7 @@ class HDF5File(HDF5BaseObject):
             attr_name: The attribute name of the attribute to set from the wrapped object.
             value: The object to set the wrapped file objects attribute to.
         """
-        with obj.temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
+        with obj._temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
             super()._set_attribute(obj, wrap_name, attr_name, value)
 
     @classmethod
@@ -105,7 +106,7 @@ class HDF5File(HDF5BaseObject):
             wrap_name: The attribute name of the wrapped object.
             attr_name: The attribute name of the attribute to delete from the wrapped object.
         """
-        with obj.temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
+        with obj._temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
             super()._del_attribute(obj, wrap_name, attr_name)
 
     # Validation #
@@ -128,6 +129,26 @@ class HDF5File(HDF5BaseObject):
         else:
             return False
 
+    @contextmanager
+    @classmethod
+    def _temp_open(cls, obj: Any, **kwargs: Any) -> "HDF5File":
+        """Temporarily opens the file if it is not already open.
+
+        Args:
+            **kwargs: The keyword arguments for opening the HDF5 file.
+
+        Returns:
+            This object.
+        """
+        was_open = obj.is_open
+        if not was_open:
+            obj.open(**kwargs)
+        try:
+            yield obj
+        finally:
+            if not was_open:
+                obj.close()
+
     # Magic Methods
     # Construction/Destruction
     def __init__(
@@ -145,6 +166,8 @@ class HDF5File(HDF5BaseObject):
         super().__init__(init=False)
 
         # New Attributes #
+        self._is_open: bool = False
+
         self._path: pathlib.Path | None = None
         self._name_: str = "/"
 
@@ -160,7 +183,7 @@ class HDF5File(HDF5BaseObject):
         return self._path
 
     @path.setter
-    def path(self, value: str | pathlib) -> None:
+    def path(self, value: str | pathlib.Path) -> None:
         if isinstance(value, pathlib.Path) or value is None:
             self._path = value
         else:
@@ -281,7 +304,7 @@ class HDF5File(HDF5BaseObject):
         if file is not None:
             self._set_path(file)
 
-        if not self.path.is_file():
+        if self.path is not None and not self.path.is_file():
             if create:
                 self.require_file(open_=open_, **kwargs)
             elif load:
@@ -322,7 +345,7 @@ class HDF5File(HDF5BaseObject):
 
     # Getters/Setters
     @singlekwargdispatchmethod("file")
-    def _set_path(self, file: str | pathlib.Path | h5py.File | "HDF5File") -> None:
+    def _set_path(self, file: str | pathlib.Path | h5py.File) -> None:
         """Sets the path for the file.
 
         Args:
@@ -331,7 +354,7 @@ class HDF5File(HDF5BaseObject):
         if isinstance(file, HDF5File):
             self.path = file.path
         else:
-            raise ValueError(f"{type(file)} is not a valid type for _set_path.")
+            raise TypeError(f"{type(file)} is not a valid type for _set_path.")
 
     @_set_path.register(str)
     @_set_path.register(pathlib.Path)
@@ -351,8 +374,8 @@ class HDF5File(HDF5BaseObject):
             file: A HDF5 file to build this object around.
         """
         if file:
-            self._file = file
             self._path = pathlib.Path(file.filename)
+            self._file = file
         else:
             raise ValueError("The supplied HDF5 File must be open.")
 
@@ -464,8 +487,9 @@ class HDF5File(HDF5BaseObject):
         Returns:
             This object.
         """
-        was_open = self.is_open
-        self.open(**kwargs)
+        was_open = self.is_open or self._is_open
+        if not was_open:
+            self.open(**kwargs)
         try:
             yield self
         finally:

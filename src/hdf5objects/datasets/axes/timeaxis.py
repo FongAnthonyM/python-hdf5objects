@@ -13,7 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
-from collections.abc import Sized
+from collections.abc import Iterable
 import datetime
 from typing import Any, NamedTuple
 import zoneinfo
@@ -70,7 +70,7 @@ class TimeAxis(Axis):
         step: int | float | datetime.timedelta | None = None,
         rate: int | float | None = None,
         size: int | None = None,
-        datetimes: Sized[datetime.datetime | float] | np.ndarray | None = None,
+        datetimes: Iterable[datetime.datetime | float] | np.ndarray | None = None,
         s_name: str | None = None,
         build: bool = False,
         init: bool = True,
@@ -167,7 +167,7 @@ class TimeAxis(Axis):
         step: int | float | datetime.timedelta | None = None,
         rate: float | None = None,
         size: int | None = None,
-        datetimes: Sized[datetime.datetime | float] | np.ndarray | None = None,
+        datetimes: Iterable[datetime.datetime | float] | np.ndarray | None = None,
         s_name: str | None = None,
         build: bool = False,
         **kwargs: Any,
@@ -240,17 +240,17 @@ class TimeAxis(Axis):
             self.set_data(data=np.arange(start, stop, step), **d_kwargs)
 
     @singlekwargdispatchmethod("datetimes")
-    def from_datetimes(self, datetimes: Sized[datetime.datetime | float] | np.ndarray, **kwargs: Any) -> None:
+    def from_datetimes(self, datetimes: Iterable[datetime.datetime | float] | np.ndarray, **kwargs: Any) -> None:
         """Sets the axis values to a series of datetimes.
 
         Args:
             datetimes: The datetimes of the axis.
             **kwargs: The keyword arguments for the HDF5Dataset.
         """
-        raise ValueError(f"A {type(datetimes)} cannot be used to construct the time axis.")
+        raise TypeError(f"A {type(datetimes)} cannot be used to construct the time axis.")
 
-    @from_datetimes.register(Sized)
-    def _(self, datetimes: Sized[datetime.datetime | float], **kwargs: Any) -> None:
+    @from_datetimes.register(Iterable)
+    def _(self, datetimes: Iterable[datetime.datetime | float], **kwargs: Any) -> None:
         """Sets the axis values to a series of datetimes.
 
         Args:
@@ -259,6 +259,7 @@ class TimeAxis(Axis):
         """
         d_kwargs = self.default_kwargs.copy()
         d_kwargs.update(kwargs)
+        datetimes = list(datetimes)
 
         stamps = np.zeros(shape=(len(datetimes),))
         for index, dt in enumerate(datetimes):

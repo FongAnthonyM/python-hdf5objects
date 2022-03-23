@@ -1,5 +1,5 @@
 """ hdf5eeg.py
-
+A HDF5 file which contains data for EEG data.
 """
 # Package Header #
 from ..header import *
@@ -10,9 +10,9 @@ __credits__ = __credits__
 __maintainer__ = __maintainer__
 __email__ = __email__
 
+
 # Imports #
 # Standard Libraries #
-from collections import Hashable
 import pathlib
 import datetime
 from typing import Any
@@ -106,7 +106,7 @@ class HDF5EEG(BaseHDF5):
         """The start time of the data as a unix timestamp from the file attributes."""
         return self.attributes["start"]
 
-    @start.setter
+    @start_timestamp.setter
     def start_timestamp(self, value: float) -> None:
         self.attributes.set_attribute("start", value)
 
@@ -120,7 +120,7 @@ class HDF5EEG(BaseHDF5):
         """The end time of the data as a unix timestamp from the file attributes."""
         return self.attributes["end"]
 
-    @end.setter
+    @end_timestamp.setter
     def end_timestamp(self, value: float) -> None:
         self.attributes.set_attribute("end", value)
 
@@ -175,7 +175,7 @@ class HDF5EEG(BaseHDF5):
         return self["data"]
 
     # Representation
-    def __hash__(self) -> Hashable:
+    def __hash__(self) -> int:
         """Overrides hash to make the class hashable.
 
         Returns:
@@ -258,6 +258,9 @@ class HDF5EEG(BaseHDF5):
             self.path = self.subject_dir.joinpath(self.generate_file_name(s_id=s_id, start=start))
 
         super().construct(file=file, **kwargs)
+
+        if self.path is not None and self.subject_dir is None:
+            self.subject_dir = self.path.parent
 
         return self
 

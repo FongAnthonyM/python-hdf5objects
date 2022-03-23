@@ -63,7 +63,7 @@ class HDF5Attributes(HDF5BaseObject):
         attributes: h5py.AttributeManager | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
-        file: str | pathlib.Path | h5py.File | "HDF5File" | None = None,
+        file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         build: bool = False,
         parent: str | None = None,
@@ -118,7 +118,7 @@ class HDF5Attributes(HDF5BaseObject):
         attributes: h5py.AttributeManager | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
-        file: str | pathlib.Path | h5py.File | "HDF5File" | None = None,
+        file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         build: bool = False,
         parent: str | None = None,
@@ -186,7 +186,7 @@ class HDF5Attributes(HDF5BaseObject):
         Args:
             attributes: The attribute_manager this object will wrap.
         """
-        raise ValueError(f"{type(attributes)} is not a valid type for set_attribute_manager.")
+        raise TypeError(f"{type(attributes)} is not a valid type for set_attribute_manager.")
 
     @set_attribute_manager.register
     def _(self, attributes: h5py.AttributeManager) -> None:

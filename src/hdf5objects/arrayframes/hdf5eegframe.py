@@ -17,14 +17,16 @@ from abc import abstractmethod
 from collections.abc import Iterable
 import datetime
 import pathlib
-from typing import Any
+from typing import Any, Union
 
 # Third-Party Packages #
 from dspobjects.dataclasses import IndexDateTime, FoundTimeRange, FoundData
 from framestructure import TimeSeriesFrame, TimeSeriesFrameInterface, FileTimeFrame
+import h5py
 import numpy as np
 
 # Local Packages #
+from ..hdf5bases import HDF5Map
 from ..fileobjects import HDF5EEG
 
 
@@ -36,6 +38,9 @@ class HDF5EEGFrame(FileTimeFrame):
     Class Attributes:
         file_type: The type of file this object will be wrapping.
         default_data_container: The default data container to use when making new data container frames.
+
+    Attributes:
+        subject_id: The subject id.
 
     Args:
         file: Either the file object or the path to the file.
@@ -69,7 +74,7 @@ class HDF5EEGFrame(FileTimeFrame):
             return False
 
     @classmethod
-    def new_validated(cls, path: pathlib | str, mode: str = "r+", **kwargs: Any) -> "HDF5EEGFrame" | None:
+    def new_validated(cls, path: pathlib.Path | str, mode: str = "r+", **kwargs: Any) -> Union["HDF5EEGFrame", None]:
         """Checks if the given path is a valid file and returns an instance of this object if valid.
 
         Args:
@@ -84,7 +89,7 @@ class HDF5EEGFrame(FileTimeFrame):
             path = pathlib.Path(path)
 
         if path.is_file():
-            file = cls.file_type.new_validated(path, mode=mode)
+            file = cls.file_type.new_validated(path, mode=mode, open_=True)
             if file:
                 return cls(file=file, **kwargs)
 
@@ -108,6 +113,15 @@ class HDF5EEGFrame(FileTimeFrame):
         # Object Construction #
         if init:
             self.construct(file=file, s_id=s_id, s_dir=s_dir, start=start, mode=mode, **kwargs)
+
+    @property
+    def subject_id(self) -> str:
+        """The subject id of the file."""
+        return self.file.subject_id
+
+    @subject_id.setter
+    def subject_id(self, value: str) -> None:
+        self.file.subject_id = value
 
     # Instance Methods #
     # File
@@ -424,6 +438,25 @@ class HDF5EEGFrame(FileTimeFrame):
             The intervals between each time in the axis.
         """
         return self.time_axis.get_intervals(start=start, stop=stop, step=step)
+
+    def fill_timestamps_array(
+        self,
+        data_array: np.ndarray,
+        array_slice: slice | None = None,
+        slice_: slice | None = None,
+    ) -> np.ndarray:
+        """Fills a given array with timestamps from the contained frames/objects.
+
+        Args:
+            data_array: The numpy array to fill.
+            array_slice: The slices to fill within the data_array.
+            slice_: The slices to get the data from.
+
+        Returns:
+            The original array but filled.
+        """
+        data_array[array_slice] = self.time_axis.timestamps[slice_]
+        return data_array
 
     # Find Index
     def find_time_index(

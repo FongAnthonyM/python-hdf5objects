@@ -65,7 +65,7 @@ class HDF5Group(HDF5BaseObject):
         group: h5py.Group | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
-        file: str | pathlib.Path | h5py.File | "HDF5File" | None = None,
+        file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         build: bool = False,
         parent: str | None = None,
@@ -96,7 +96,7 @@ class HDF5Group(HDF5BaseObject):
         group: h5py.Group | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
-        file: str | pathlib.Path | h5py.File | "HDF5File" | None = None,
+        file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         build: bool = False,
         parent: str | None = None,
@@ -193,7 +193,7 @@ class HDF5Group(HDF5BaseObject):
 
     # Getters/Setters
     @singlekwargdispatchmethod("group")
-    def set_group(self, group: h5py.Group | "HDF5Group") -> None:
+    def set_group(self, group: h5py.Group) -> None:
         """Sets the wrapped group.
 
         Args:
@@ -205,7 +205,7 @@ class HDF5Group(HDF5BaseObject):
             self.set_name(group._name)
             self._group = group._group
         else:
-            raise ValueError(f"{type(group)} is not a valid type for set_group.")
+            raise TypeError(f"{type(group)} is not a valid type for set_group.")
 
     @set_group.register
     def _(self, group: h5py.Group) -> None:

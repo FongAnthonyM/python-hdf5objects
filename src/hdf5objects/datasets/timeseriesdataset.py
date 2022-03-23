@@ -13,7 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
-from collections.abc import Mapping, Sized
+from collections.abc import Mapping, Iterable
 import datetime
 from typing import Any
 
@@ -82,9 +82,9 @@ class TimeSeriesDataset(HDF5Dataset):
         self, 
         data: np.ndarray | None = None, 
         sample_rate: int | float | None = None,
-        channels: ChannelAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        samples: SampleAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        timestamps: TimeAxis | np.ndarray | Sized[datetime.datetime] | Mapping[str, Any] | None = None,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
         load: bool = False, 
         build: bool = False, 
         init: bool = True, 
@@ -178,9 +178,9 @@ class TimeSeriesDataset(HDF5Dataset):
         self,
         data: np.ndarray | None = None,
         sample_rate: int | float | None = None,
-        channels: ChannelAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        samples: SampleAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        timestamps: TimeAxis | np.ndarray | Sized[datetime.datetime] | Mapping[str, Any] | None = None,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
         load: bool = False,
         build: bool = False,
         **kwargs: Any,
@@ -217,9 +217,9 @@ class TimeSeriesDataset(HDF5Dataset):
 
     def construct_axes(
         self,
-        channels: ChannelAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        samples: SampleAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        timestamps: TimeAxis | np.ndarray | Sized[datetime.datetime] | Mapping[str, Any] | None = None,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
     ) -> None:
         """Constructs the axes of this timeseries.
 
@@ -235,7 +235,7 @@ class TimeSeriesDataset(HDF5Dataset):
     @singlekwargdispatchmethod("channels")
     def construct_channel_axis(
         self,
-        channels: ChannelAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -246,7 +246,7 @@ class TimeSeriesDataset(HDF5Dataset):
             *args: Extra arguments to build the channel axis with.
             **kwargs: Extra keyword arguments to build the channel axis with.
         """
-        raise ValueError(f"A {type(channels)} cannot be used to construct the channel axis.")
+        raise TypeError(f"A {type(channels)} cannot be used to construct the channel axis.")
 
     @construct_channel_axis.register
     def _(self, channels: ChannelAxis) -> None:
@@ -258,8 +258,8 @@ class TimeSeriesDataset(HDF5Dataset):
         self.attach_channel_axis(channels)
 
     @construct_channel_axis.register(np.ndarray)
-    @construct_channel_axis.register(Sized)
-    def _(self, channels: np.ndarray | Sized[int], **kwargs) -> None:
+    @construct_channel_axis.register(Iterable)
+    def _(self, channels: np.ndarray | Iterable[int], **kwargs) -> None:
         """Constructs the channel axis by creating a ChannelAxis object from a numpy array.
 
         Args:
@@ -299,7 +299,7 @@ class TimeSeriesDataset(HDF5Dataset):
     @singlekwargdispatchmethod("samples")
     def construct_sample_axis(
         self,
-        samples: SampleAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -310,7 +310,7 @@ class TimeSeriesDataset(HDF5Dataset):
             *args: Extra arguments to build the sample axis with.
             **kwargs: Extra keyword arguments to build the sample axis with.
         """
-        raise ValueError(f"A {type(samples)} cannot be used to construct the sample axis.")
+        raise TypeError(f"A {type(samples)} cannot be used to construct the sample axis.")
 
     @construct_sample_axis.register
     def _(self, samples: SampleAxis) -> None:
@@ -322,8 +322,8 @@ class TimeSeriesDataset(HDF5Dataset):
         self.attach_sample_axis(samples)
 
     @construct_sample_axis.register(np.ndarray)
-    @construct_sample_axis.register(Sized)
-    def _(self, samples: np.ndarray | Sized[int], **kwargs) -> None:
+    @construct_sample_axis.register(Iterable)
+    def _(self, samples: np.ndarray | Iterable[int], **kwargs) -> None:
         """Constructs the sample axis by creating a SampleAxis object from a numpy array.
 
         Args:
@@ -363,7 +363,7 @@ class TimeSeriesDataset(HDF5Dataset):
     @singlekwargdispatchmethod("timestamps")
     def construct_time_axis(
         self, 
-        timestamps: TimeAxis | np.ndarray | Sized[datetime.datetime] | Mapping[str, Any] | None, 
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None,
         *args: Any, 
         **kwargs: Any,
     ) -> None:
@@ -374,7 +374,7 @@ class TimeSeriesDataset(HDF5Dataset):
             *args: Extra arguments to build the time axis with.
             **kwargs: Extra keyword arguments to build the time axis with.
         """
-        raise ValueError(f"A {type(timestamps)} cannot be used to construct the time axis.")
+        raise TypeError(f"A {type(timestamps)} cannot be used to construct the time axis.")
 
     @construct_time_axis.register
     def _(self, timestamps: TimeAxis) -> None:
@@ -386,8 +386,8 @@ class TimeSeriesDataset(HDF5Dataset):
         self.attach_time_axis(timestamps)
 
     @construct_time_axis.register(np.ndarray)
-    @construct_time_axis.register(Sized)
-    def _(self, timestamps: np.ndarray | Sized[datetime.datetime], **kwargs) -> None:
+    @construct_time_axis.register(Iterable)
+    def _(self, timestamps: np.ndarray | Iterable[datetime.datetime], **kwargs) -> None:
         """Constructs the time axis by creating a TimeAxis object from a numpy array.
 
         Args:
@@ -430,9 +430,9 @@ class TimeSeriesDataset(HDF5Dataset):
         data: np.ndarray | None = None,
         start: datetime.datetime | float | None = None,
         sample_rate: int | float | None = None,
-        channels: ChannelAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        samples: SampleAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        timestamps: TimeAxis | np.ndarray | Sized[datetime.datetime] | Mapping[str, Any] | None = None,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> "TimeSeriesDataset":
         """Creates the TimeSeriesDataset by creating the dataset and axes.
@@ -465,9 +465,9 @@ class TimeSeriesDataset(HDF5Dataset):
         data: np.ndarray | None = None,
         start: datetime.datetime | float | None = None,
         sample_rate: int | float | None = None,
-        channels: ChannelAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        samples: SampleAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        timestamps: TimeAxis | np.ndarray | Sized[datetime.datetime] | Mapping[str, Any] | None = None,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> "TimeSeriesDataset":
         """Creates the TimeSeriesDataset by creating the dataset and axes if it does not exist.
@@ -503,9 +503,9 @@ class TimeSeriesDataset(HDF5Dataset):
         self,
         data: np.ndarray | None = None,
         sample_rate: int | float | None = None,
-        channels: ChannelAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        samples: SampleAxis | np.ndarray | Sized[int] | Mapping[str, Any] | None = None,
-        timestamps: TimeAxis | np.ndarray | Sized[datetime.datetime] | Mapping[str, Any] | None = None,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """Sets the data of the timeseries and creates it if it does not exist.
@@ -680,7 +680,7 @@ class TimeSeriesDataset(HDF5Dataset):
         rate: int | float | None = None,
         size: int | None = None,
         axis: int | None = None,
-        datetimes: Sized[datetime.datetime | float] | np.ndarray | None = None,
+        datetimes: Iterable[datetime.datetime | float] | np.ndarray | None = None,
         **kwargs: Any,
     ) -> None:
         """Creates a time axis for this time series.
