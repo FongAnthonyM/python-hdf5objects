@@ -321,7 +321,7 @@ class HDF5Attributes(HDF5BaseObject):
         """
         return self.get_attribute(key, *args)
 
-    @timed_keyless_cache(call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
     def _keys(self) -> set[str]:
         """Get the names of all the attributes as a set.
 

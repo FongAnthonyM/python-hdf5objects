@@ -1,5 +1,5 @@
 """ __init__.py
-Description:
+Objects that expand on HDF5 and h5py.
 """
 # Package Header #
 from .header import *

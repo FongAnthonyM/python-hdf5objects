@@ -22,14 +22,14 @@ from dspobjects.dataclasses import IndexValue, FoundRange
 import numpy as np
 
 # Local Packages #
-from ...hdf5bases import HDF5Map, HDF5Dataset
+from ...hdf5bases import HDF5Map, DatasetMap, HDF5Dataset
 
 
 # Definitions #
 # Classes #
-class AxisMap(HDF5Map):
+class AxisMap(DatasetMap):
     """A map for the Axis object."""
-    ...
+    default_kwargs: dict[str, Any] = {}
 
 
 class Axis(HDF5Dataset):
@@ -49,6 +49,8 @@ class Axis(HDF5Dataset):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the HDF5Dataset.
     """
+    default_map: HDF5Map = AxisMap()
+
     # Magic Methods #
     # Construction/Destruction
     def __init__(
@@ -67,7 +69,7 @@ class Axis(HDF5Dataset):
         super().__init__(init=False)
 
         # New Attributes #
-        self.default_kwargs: Mapping[str, Any] | None = None  # {"dtype": 'i', "maxshape": (None,)}
+        self.default_kwargs: Mapping[str, Any] = self.map.kwargs
         
         # self._scale_name = None  # Set this to the name of the axis
 
@@ -129,13 +131,16 @@ class Axis(HDF5Dataset):
             kwargs["build"] = build
             build = False
 
-        super().construct(**kwargs)
-
         if s_name is not None:
             self._scale_name = s_name
 
-        if build and start is not None:
-            self.from_range(start, stop, step, rate, size)
+        super().construct(**kwargs)
+
+        if build:
+            if start is not None and size != 0:
+                self.from_range(start, stop, step, rate, size)
+            else:
+                self.require(**self.default_kwargs)
 
     def from_range(
         self,
@@ -181,7 +186,7 @@ class Axis(HDF5Dataset):
         self.get_end.clear_cache()
 
     # Getters/Setters
-    @timed_keyless_cache(call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
     def get_start(self) -> Any:
         """Get the first element of this axis, using caching.
         
@@ -191,7 +196,7 @@ class Axis(HDF5Dataset):
         with self:
             return self._dataset[0]
 
-    @timed_keyless_cache(call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
     def get_end(self) -> Any:
         """Get the last element of this axis, using caching.
 

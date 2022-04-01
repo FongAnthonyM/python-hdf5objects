@@ -26,7 +26,7 @@ from .axis import AxisMap, Axis
 # Classes #
 class ChannelAxisMap(AxisMap):
     """A map for the ChannelAxis object."""
-    ...
+    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "i"}
 
 
 class ChannelAxis(Axis):
@@ -65,7 +65,6 @@ class ChannelAxis(Axis):
         super().__init__(init=False)
 
         # Overriden Attributes #
-        self.default_kwargs = {"dtype": 'i', "maxshape": (None,)}
         self._scale_name = "channel axis"
 
         # Object Construction #

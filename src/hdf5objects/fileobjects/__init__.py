@@ -16,5 +16,5 @@ __email__ = __email__
 # Third-Party Packages #
 
 # Local Packages #
-from .basehdf5 import BaseHDF5
+from .basehdf5 import BaseHDF5, BaseHDF5Map
 from .hdf5eeg import HDF5EEG, HDF5EEGMap

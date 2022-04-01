@@ -17,7 +17,7 @@ from .hdf5map import HDF5Map
 from .hdf5baseobject import HDF5BaseObject
 from .hdf5attributes import HDF5Attributes
 from .hdf5group import HDF5Group
-from .hdf5dataset import HDF5Dataset
+from .hdf5dataset import HDF5Dataset, DatasetMap
 from .hdf5file import HDF5File
 
 

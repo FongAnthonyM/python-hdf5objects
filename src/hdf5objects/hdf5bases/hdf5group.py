@@ -158,8 +158,12 @@ class HDF5Group(HDF5BaseObject):
         for name, value in self.map.items():
             name = self._parse_name(name)
             if name not in self.members:
-                self.members[name] = value.type(map_=value, load=load, build=build, file=self._file)
-
+                obj = value.construct_object(map_=value, load=load, build=build, file=self._file)
+                if obj is None:
+                    self.members[name] = value.construct_object(map_=value, load=load, file=self._file)
+                else:
+                    self.members[name] = obj
+    
     # Parsers
     def _parse_name(self, name: str) -> str:
         """Returns the hdf5 name of a member of this group.
@@ -174,7 +178,7 @@ class HDF5Group(HDF5BaseObject):
         if new_name is not self.sentinel:
             name = new_name
         return name
-
+    
     # File
     def load(self, load: bool = False, build: bool = False) -> None:
         """Loads this group from file with the option to create and fill it.
@@ -190,7 +194,64 @@ class HDF5Group(HDF5BaseObject):
         """Reloads the attributes and members from the file."""
         self.attributes.refresh()
         self.get_members()
+    
+    # Caching
+    def enable_all_caching(self, **kwargs: Any) -> None:
+        """Enables caching on this object and all contained objects.
+        
+        Args:
+            **kwargs: The keyword arguments for the enable caching method.
+        """
+        self.attributes.enable_caching(**kwargs)
+        self.enable_caching(**kwargs)
+        for member in self.members.values():
+            member.enable_all_caching(**kwargs)
 
+    def disable_all_caching(self, **kwargs: Any) -> None:
+        """Disables caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the disable caching method.
+        """
+        self.attributes.disable_caching(**kwargs)
+        self.disable_caching(**kwargs)
+        for member in self.members.values():
+            member.disable_all_caching(**kwargs)
+
+    def timeless_all_caching(self, **kwargs: Any) -> None:
+        """Allows timeless caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the timeless caching method.
+        """
+        self.attributes.timeless_caching(**kwargs)
+        self.timeless_caching(**kwargs)
+        for member in self.members.values():
+            member.timeless_all_caching(**kwargs)
+
+    def timed_all_caching(self, **kwargs: Any) -> None:
+        """Allows timed caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the timed caching method.
+        """
+        self.attributes.timed_caching(**kwargs)
+        self.timed_caching(**kwargs)
+        for member in self.members.values():
+            member.timed_all_caching(**kwargs)
+
+    def set_all_lifetimes(self, lifetime: int | float | None, **kwargs: Any) -> None:
+        """Sets the lifetimes on this object and all contained objects.
+
+        Args:
+            lifetime: The lifetime to set all the caches to.
+            **kwargs: The keyword arguments for the lifetime caching method.
+        """
+        self.attributes.set_lifetimes(lifetime=lifetime, **kwargs)
+        self.set_lifetimes(lifetime=lifetime, **kwargs)
+        for member in self.members.values():
+            member.set_lifetimes(lifetime=lifetime, **kwargs)
+    
     # Getters/Setters
     @singlekwargdispatchmethod("group")
     def set_group(self, group: h5py.Group) -> None:

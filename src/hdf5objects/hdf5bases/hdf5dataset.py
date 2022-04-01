@@ -15,6 +15,7 @@ __email__ = __email__
 # Standard Libraries #
 import pathlib
 from typing import Any
+import warnings
 
 # Third-Party Packages #
 from baseobjects import singlekwargdispatchmethod
@@ -30,6 +31,33 @@ from .hdf5attributes import HDF5Attributes
 
 # Definitions #
 # Classes #
+class DatasetMap(HDF5Map):
+    """A general map for HDF5 Datasets."""
+    # Instance Methods
+    # Constructors/Destructors
+    def construct_object(self, **kwargs: Any) -> Any:
+        """Constructs the object that this map is for.
+
+        Args:
+            **kwargs: The keyword arguments for the object.
+
+        Returns:
+            The HDF5Object that this map is for.
+        """
+        temp_kwargs = self.kwargs.copy()
+        temp_kwargs.update(kwargs)
+
+        if "build" in temp_kwargs and "data" not in temp_kwargs and (
+                "shape" not in temp_kwargs or "dtype" not in temp_kwargs or "maxshape" not in temp_kwargs):
+            # Need to warn and skip if these components are missing.
+            warnings.warn("Cannot build dataset without data or shape, dtype, and maxshape - skipping.")
+            return None
+
+        self.object = self.type(**temp_kwargs)
+
+        return self.object
+
+
 class HDF5Dataset(HDF5BaseObject):
     """A wrapper object which wraps a HDF5 dataset and gives more functionality.
 
@@ -37,6 +65,7 @@ class HDF5Dataset(HDF5BaseObject):
         _wrapped_types: A list of either types or objects to set up wrapping for.
         _wrap_attributes: Attribute names that will contain the objects to wrap where the resolution order is descending
             inheritance.
+        default_map: The map of this dataset.
 
     Attributes:
         _dataset: The HDF5 dataset to wrap.
@@ -56,6 +85,7 @@ class HDF5Dataset(HDF5BaseObject):
     """
     _wrapped_types: list[type | object] = [h5py.Dataset]
     _wrap_attributes: list[str] = ["dataset"]
+    default_map: HDF5Map = DatasetMap()
 
     # Magic Methods
     # Constructors/Destructors
@@ -158,7 +188,7 @@ class HDF5Dataset(HDF5BaseObject):
         if dataset is not None:
             self.set_dataset(dataset)
 
-        self.construct_attributes(build=build)
+        self.construct_attributes()
 
         if load and self.exists:
             self.load()
@@ -199,6 +229,53 @@ class HDF5Dataset(HDF5BaseObject):
         self.get_shape.clear_cahce()
         self.get_all_data.clear_cache()
 
+    # Caching
+    def enable_all_caching(self, **kwargs: Any) -> None:
+        """Enables caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the enable caching method.
+        """
+        self.attributes.enable_caching(**kwargs)
+        self.enable_caching(**kwargs)
+
+    def disable_all_caching(self, **kwargs: Any) -> None:
+        """Disables caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the disable caching method.
+        """
+        self.attributes.disable_caching(**kwargs)
+        self.disable_caching(**kwargs)
+
+    def timeless_all_caching(self, **kwargs: Any) -> None:
+        """Allows timeless caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the timeless caching method.
+        """
+        self.attributes.timeless_caching(**kwargs)
+        self.timeless_caching(**kwargs)
+        
+    def timed_all_caching(self, **kwargs: Any) -> None:
+        """Allows timed caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the timed caching method.
+        """
+        self.attributes.timed_caching(**kwargs)
+        self.timed_caching(**kwargs)
+
+    def set_all_lifetimes(self, lifetime: int | float | None, **kwargs: Any) -> None:
+        """Sets the lifetimes on this object and all contained objects.
+
+        Args:
+            lifetime: The lifetime to set all the caches to.
+            **kwargs: The keyword arguments for the lifetime caching method.
+        """
+        self.attributes.set_lifetimes(lifetime=lifetime, **kwargs)
+        self.set_lifetimes(lifetime=lifetime, **kwargs)
+
     # Getters/Setters
     @singlekwargdispatchmethod("dataset")
     def set_dataset(self, dataset: h5py.Dataset) -> None:
@@ -229,7 +306,7 @@ class HDF5Dataset(HDF5BaseObject):
         self.set_name(dataset.name)
         self._dataset = dataset
 
-    @timed_keyless_cache(call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
     def get_shape(self) -> tuple[int]:
         """Gets the shape of the dataset.
 
@@ -239,7 +316,7 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             return self._dataset.shape
 
-    @timed_keyless_cache(call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
     def get_all_data(self) -> np.ndarray:
         """Gets all the data in the dataset.
 
@@ -250,7 +327,7 @@ class HDF5Dataset(HDF5BaseObject):
             return self._dataset[...]
 
     # Data Modification
-    def create(self, name: str = None, **kwargs: Any) -> "HDF5Dataset":
+    def create(self, name: str | None = None, **kwargs: Any) -> "HDF5Dataset":
         """Creates and fills the data, gives an error if it already exists.
 
         Args:
@@ -271,12 +348,20 @@ class HDF5Dataset(HDF5BaseObject):
 
         with self._file.temp_open():
             self._dataset = self._file._file.create_dataset(name=self._full_name, **kwargs)
+            if self._file._file.swmr_mode:
+                if self._file.allow_swmr_create:
+                    self._file.close()
+                    self._file.open()
+                    self._file._file.swmr_mode = True
+                else:
+                    raise RuntimeError("Creating a new dataset with SWMR mode on causes issues")
             self.attributes.construct_attributes()
-            self.make_scale()
+            if self.scale_name is not None:
+                self.make_scale()
 
         return self
 
-    def require(self, name: str = None, **kwargs: Any) -> "HDF5Dataset":
+    def require(self, name: str | None = None, **kwargs: Any) -> "HDF5Dataset":
         """Creates and fills the data if it does not exist.
 
         Args:
@@ -292,15 +377,27 @@ class HDF5Dataset(HDF5BaseObject):
         if "data" in kwargs:
             if "shape" not in kwargs:
                 kwargs["shape"] = kwargs["data"].shape
-            if "dtype" not in kwargs:
-                kwargs["dtype"] = kwargs["data"].dtype
+            if "maxshape" not in kwargs:
+                kwargs["maxshape"] = kwargs["data"].shape
 
         with self._file.temp_open():
-            existed = self.exists
-            self._dataset = self._file._file.require_dataset(name=self._full_name, **kwargs)
-            if not existed:
+            if not self.exists:
+                self._dataset = self._file._file.create_dataset(name=self._full_name, **kwargs)
+                if self._file._file.swmr_mode:
+                    if self._file.allow_swmr_create:
+                        self._file.close()
+                        self._file.open(mode='a')
+                        self._file._file.swmr_mode = True
+                    else:
+                        raise RuntimeError("Creating a new dataset with SWMR mode on causes issues")
                 self.attributes.construct_attributes()
-                self.make_scale()
+                if self.scale_name is not None:
+                    self.make_scale()
+            else:
+                self._dataset = self._file._file[self._full_name]
+                data = kwargs.get("data", None)
+                if data is not None:
+                    self.replace_data(data=data)
 
         return self
 
@@ -349,15 +446,19 @@ class HDF5Dataset(HDF5BaseObject):
             self._dataset[slicing] = data    # Assign data to the new location
 
     # Axes and Scales
-    def make_scale(self, name: str = None) -> None:
+    def make_scale(self, name: str | None = None) -> None:
         """Assigns this dataset as a scale with a scale name.
 
         Args:
             name: The name to make this scale.
         """
+        if not self.exists:
+            raise ValueError("The dataset must exist before setting it as a scale.")
+
         if name is not None:
             self._scale_name = name
-        if self._scale_name is not None and self.exists:
+
+        if self._scale_name is not None:
             with self:
                 self._dataset.make_scale(self._scale_name)
 
@@ -386,3 +487,7 @@ class HDF5Dataset(HDF5BaseObject):
 
         with self:
             self._dataset.dims[axis].detach_scale(dataset)
+
+
+# Assign Cyclic Definitions
+DatasetMap.default_type = HDF5Dataset

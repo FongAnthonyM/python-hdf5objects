@@ -13,7 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 import datetime
 from typing import Any, NamedTuple
 import zoneinfo
@@ -34,7 +34,9 @@ from .axis import AxisMap, Axis
 # Classes #
 class TimeAxisMap(AxisMap):
     """A map for the TimeAxis object."""
-    default_attribute_names = {"time_zone": "time_zone"}
+    default_attribute_names: Mapping[str, str] = {"time_zone": "time_zone"}
+    default_attributes: Mapping[str, Any] = {"time_zone": ""}
+    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "f8"}
 
 
 class TimeAxis(Axis):
@@ -80,7 +82,6 @@ class TimeAxis(Axis):
         super().__init__(init=False)
 
         # Overriden Attributes #
-        self.default_kwargs = {"dtype": 'f8', "maxshape": (None,)}
         self._scale_name = "time axis"
 
         # Object Construction #
@@ -196,6 +197,8 @@ class TimeAxis(Axis):
                 self.from_datetimes(datetimes=datetimes)
             elif start is not None:
                 self.from_range(start=start, stop=stop, step=step, rate=rate, size=size)
+            else:
+                self.require(shape=(0,), maxshape=(None,), dtype="f8")
 
     def from_range(
         self,
@@ -314,7 +317,7 @@ class TimeAxis(Axis):
         self.get_datetimes.clear_cache()
 
     # Getters/Setter
-    @timed_keyless_cache(call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
     def get_all_data(self) -> np.ndarray:
         """Gets all the data in the dataset.
 
@@ -339,21 +342,20 @@ class TimeAxis(Axis):
         else:
             return zoneinfo.ZoneInfo(tz_str)
 
-    def set_time_zone(self, value: str | zoneinfo.ZoneInfo = None) -> None:
+    def set_time_zone(self, value: str | zoneinfo.ZoneInfo | None = None) -> None:
         """Sets the timezone of this axis.
 
         Args:
             value: The timezone to set this axis to.
         """
-        if isinstance(value, zoneinfo.ZoneInfo):
-            value = str(value)
-        else:
-            zoneinfo.ZoneInfo(value)
-
         if value is None:
             value = ""
+        elif isinstance(value, zoneinfo.ZoneInfo):
+            value = str(value)
         elif value.lower() == "local" or value.lower() == "localtime":
             value = self.local_timezone
+        else:
+             zoneinfo.ZoneInfo(value)  # Raises an error if the given string is not a time zone.
         self.attributes["time_zone"] = value
 
     # Get Data
@@ -365,7 +367,7 @@ class TimeAxis(Axis):
         """
         return self.get_all_data()
 
-    @timed_keyless_cache(call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
     def get_datetimes(self, tz=None) -> tuple[datetime.datetime]:
         """Returns all the data for this object as datetimes.
 

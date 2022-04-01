@@ -48,10 +48,12 @@ class HDF5File(HDF5BaseObject):
         _is_open:
         _path: The path to the file.
         _name_: The name of the first layer in the file.
+        allow_swmr_create: Determines if creating a dataset during swmr is allowed, forces close open if allowed.
         _group: The first layer group this object will wrap.
 
     Args:
         file: Either the file object or the path to the file.
+        mode: The edit mode of this object.
         open_: Determines if this object will remain open after construction.
         map_: The map for this HDF5 object.
         load: Determines if this object will load the file on construction.
@@ -81,8 +83,8 @@ class HDF5File(HDF5BaseObject):
         Returns:
             The wrapped object.
         """
-        with obj._temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
-            return super()._get_attribute(obj, wrap_name, attr_name)
+        with obj.temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
+            return getattr(getattr(obj, wrap_name), attr_name)
 
     @classmethod
     def _set_attribute(cls, obj: Any, wrap_name: str, attr_name: str, value: Any) -> None:
@@ -94,8 +96,8 @@ class HDF5File(HDF5BaseObject):
             attr_name: The attribute name of the attribute to set from the wrapped object.
             value: The object to set the wrapped file objects attribute to.
         """
-        with obj._temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
-            super()._set_attribute(obj, wrap_name, attr_name, value)
+        with obj.temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
+            setattr(getattr(obj, wrap_name), attr_name, value)
 
     @classmethod
     def _del_attribute(cls, obj: Any, wrap_name: str, attr_name: str) -> None:
@@ -106,8 +108,8 @@ class HDF5File(HDF5BaseObject):
             wrap_name: The attribute name of the wrapped object.
             attr_name: The attribute name of the attribute to delete from the wrapped object.
         """
-        with obj._temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
-            super()._del_attribute(obj, wrap_name, attr_name)
+        with obj.temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
+            delattr(getattr(obj, wrap_name), attr_name)
 
     # Validation #
     @classmethod
@@ -129,31 +131,12 @@ class HDF5File(HDF5BaseObject):
         else:
             return False
 
-    @contextmanager
-    @classmethod
-    def _temp_open(cls, obj: Any, **kwargs: Any) -> "HDF5File":
-        """Temporarily opens the file if it is not already open.
-
-        Args:
-            **kwargs: The keyword arguments for opening the HDF5 file.
-
-        Returns:
-            This object.
-        """
-        was_open = obj.is_open
-        if not was_open:
-            obj.open(**kwargs)
-        try:
-            yield obj
-        finally:
-            if not was_open:
-                obj.close()
-
     # Magic Methods
     # Construction/Destruction
     def __init__(
         self,
         file: str | pathlib.Path | h5py.File | None = None,
+        mode: str = 'r',
         open_: bool = False,
         map_: HDF5Map | None = None,
         load: bool = False,
@@ -165,17 +148,30 @@ class HDF5File(HDF5BaseObject):
         # Parent Attributes #
         super().__init__(init=False)
 
+        # Override Attributes #
+        self._mode_: str = 'r'
+
         # New Attributes #
         self._is_open: bool = False
 
         self._path: pathlib.Path | None = None
         self._name_: str = "/"
+        self.allow_swmr_create: bool = False
 
         self._group: HDF5Group | None = None
 
         # Object Construction #
         if init:
-            self.construct(file=file, open_=open_, map_=map_, load=load, create=create, build=build, **kwargs)
+            self.construct(
+                file=file,
+                mode=mode,
+                open_=open_,
+                map_=map_,
+                load=load,
+                create=create,
+                build=build,
+                **kwargs,
+            )
 
     @property
     def path(self) -> pathlib.Path:
@@ -201,6 +197,17 @@ class HDF5File(HDF5BaseObject):
     def attributes(self) -> HDF5Attributes:
         """Gets the attributes of the file."""
         return self._group.attributes
+
+    @property
+    def swmr_mode(self) -> bool:
+        """The Single Write Multiple Read of this file. If set to True it also disables caching."""
+        return self._file.swmr_mode
+
+    @swmr_mode.setter
+    def swmr_mode(self, value: bool) -> None:
+        self._file.swmr_mode = value
+        if value:
+            self._group.disable_all_caching()
 
     def __del__(self) -> None:
         """Closes the file when this object is deleted."""
@@ -272,7 +279,8 @@ class HDF5File(HDF5BaseObject):
     def construct(
         self,
         file: str | pathlib.Path | h5py.File | None = None,
-        open_: bool = False,
+        mode: str | None = None,
+        open_: bool = True,
         map_: HDF5Map | None = None,
         load: bool = False,
         create: bool = False,
@@ -284,6 +292,7 @@ class HDF5File(HDF5BaseObject):
 
         Args:
             file: Either the file object or the path to the file.
+            mode: The edit mode of this object.
             open_: Determines if this object will remain open after construction.
             map_: The map for this HDF5 object.
             load: Determines if this object will load the file on construction.
@@ -301,12 +310,15 @@ class HDF5File(HDF5BaseObject):
         if self.map.name is None:
             self.map.name = "/"
 
+        if mode is not None:
+            self.set_mode(mode, timed=False)
+
         if file is not None:
             self._set_path(file)
 
         if self.path is not None and not self.path.is_file():
             if create:
-                self.require_file(open_=open_, **kwargs)
+                self.require_file(open_=True, **kwargs)
             elif load:
                 raise ValueError("A file is required to load this file.")
             elif build:
@@ -318,6 +330,8 @@ class HDF5File(HDF5BaseObject):
 
         if not open_:
             self.close()
+        elif self._file.swmr_mode:
+            self._group.enable_caching()
 
         return self
 
@@ -406,6 +420,9 @@ class HDF5File(HDF5BaseObject):
         if map_ is not None:
             self.map = map_
 
+        if "libver" not in kwargs:
+            kwargs["libver"] = "latest"
+
         self.open(**kwargs)
         if build:
             self._group.construct_members(build=True)
@@ -454,7 +471,7 @@ class HDF5File(HDF5BaseObject):
     #     pass
 
     # File
-    def open(self, mode: str = 'a', exc: bool = False, **kwargs: Any) -> "HDF5File":
+    def open(self, mode: str | None = None, exc: bool = False, **kwargs: Any) -> "HDF5File":
         """Opens the HDF5 file.
 
         Args:
@@ -467,7 +484,9 @@ class HDF5File(HDF5BaseObject):
         """
         if not self.is_open:
             try:
-                self._file = h5py.File(self.path.as_posix(), mode=mode, **kwargs)
+                if mode is not None:
+                    self._mode = mode
+                self._file = h5py.File(self.path.as_posix(), mode=self._mode_, **kwargs)
                 return self
             except Exception as error:
                 if exc:

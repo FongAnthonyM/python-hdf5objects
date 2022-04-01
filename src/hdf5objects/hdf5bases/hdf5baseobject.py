@@ -41,11 +41,13 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         _file: The file object that this HDF5 object originates from.
         _name_: The HDF5 name of this object.
         _parents: The parents of this object as a list.
+        _mode_: The edit mode of this object.
         map: The map of this HDF5 object.
 
     Args:
         name: The HDF5 name of this object.
         map_: The map for this HDF5 object.
+        mode: The edit mode of this object.
         file: The file object that this HDF5 object originates from.
         parent: The HDF5 name of the parent of this HDF5 object.
         init: Determines if this object will construct.
@@ -53,6 +55,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
     sentinel: Any = search_sentinel
     file_type: type | None = None
     default_map: HDF5Map | None = None
+    write_modes: set[str] = {"a", "r+"}
 
     # Class Methods
     # Wrapped Attribute Callback Functions
@@ -102,6 +105,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         self,
         name: str | None = None,
         map_: HDF5Map | None = None,
+        mode: str | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         parent: str | None = None,
         init: bool = True,
@@ -111,16 +115,18 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
 
         # New Attributes #
         self._file_was_open: bool | None = None
-        self._file: h5py.File | HDF5File | None = None
+        self._file: h5py.File | "HDF5File" | None = None
 
         self._name_: str | None = None
         self._parents: list[str] | None = None
+
+        self._mode_: str | None = None
 
         self.map: HDF5Map = self.default_map.copy()
 
         # Object Construction #
         if init:
-            self.construct(name=name, map_=map_, file=file, parent=parent)
+            self.construct(name=name, map_=map_, mode=mode, file=file, parent=parent)
 
     @property
     def _name(self) -> str:
@@ -153,6 +159,15 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
             return f"/{self._name_}"
         else:
             return f"{''.join(f'/{p}' for p in self._parents)}{self._name_}"
+
+    @property
+    def _mode(self) -> str:
+        """The edit mode of this object"""
+        return self._mode_
+
+    @_mode.setter
+    def _mode(self, value: str) -> None:
+        self.set_mode(mode=value)
 
     @property
     def exists(self) -> bool:
@@ -199,6 +214,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         self,
         name: str | None = None,
         map_: HDF5Map | None = None,
+        mode: str | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         parent: str | None = None,
     ) -> None:
@@ -207,6 +223,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         Args:
             name: The HDF5 name of this object.
             map_: The map for this HDF5 object.
+            mode: The edit mode of this object.
             file: The file object that this HDF5 object originates from.
             parent: The HDF5 name of the parent of this HDF5 object.
         """
@@ -223,8 +240,13 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         elif map_ is not None:
             self._name_ = self.map.name
 
+        if mode is not None:
+            self.set_mode(mode, timed=False)
+
         if file is not None:
             self.set_file(file)
+            if mode is None and self._mode_ is None:
+                self.set_mode(self._file._mode, timed=False)
 
     def is_exist(self) -> bool:
         """Determine if this object exists in the HDF5 file."""
@@ -293,7 +315,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         self._parents = parts
 
     def set_name(self, name: str | None) -> None:
-        """Sets the name of this map, can be a full hdf5 name.
+        """Sets the name of this object, can be a full hdf5 name.
 
         Args:
             name: The name of this map, can be a full hdf5 name.
@@ -312,3 +334,22 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
 
             if parts:
                 self._parents = parts
+
+    def set_mode(self, mode: str, timed: bool = False, **kwargs: Any) -> None:
+        """Sets the edit mode of this object.
+
+        Args:
+            mode: The string edit mode to set this object to.
+            timed: Determines if the caches will have an expiration or not.
+            **kwargs: The keyword arguments for the enable/disable caching methods.
+        """
+        self._mode_ = mode
+        if mode in self.write_modes:
+            self.disable_caching(**kwargs)
+        else:
+            self.enable_caching(**kwargs)
+
+        if timed:
+            self.timed_caching()
+        else:
+            self.timeless_caching()
