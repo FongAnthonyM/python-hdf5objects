@@ -31,6 +31,7 @@ class BaseHDF5Map(HDF5Map):
     """A map for BaseHDF5 files."""
     default_type = HDF5Group
     default_attribute_names = {"file_type": "FileType", "file_version": "FileVersion"}
+    default_attributes = {"file_type": "", "file_version": ""}
 
 
 class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
@@ -297,7 +298,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     def __init__(
         self,
         file: str | pathlib.Path | h5py.File | None = None,
-        open_: bool = False,
+        open_: bool = True,
         map_: HDF5Map | None = None,
         load: bool = False,
         create: bool = False,

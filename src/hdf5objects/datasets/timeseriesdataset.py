@@ -34,8 +34,7 @@ from .axes import TimeAxisMap, TimeAxis
 # Classes #
 class TimeSeriesMap(DatasetMap):
     """A map for a timeseries dataset."""
-    default_attribute_names: Mapping[str, str] = {"sample_rate": "samplerate",
-                                                  "n_samples": "n_samples",
+    default_attribute_names: Mapping[str, str] = {"n_samples": "n_samples",
                                                   "c_axis": "c_axis",
                                                   "t_axis": "t_axis"}
     default_attributes: Mapping[str, Any] = {"n_samples": 0,
@@ -94,6 +93,7 @@ class TimeSeriesDataset(HDF5Dataset):
         super().__init__(init=False)
 
         # New Attributes #
+        self._sample_rate: float | None = None
         self._channel_axis: ChannelAxis | None = None
         self._sample_axis: SampleAxis | None = None
         self._time_axis: TimeAxis | None = None
@@ -116,13 +116,15 @@ class TimeSeriesDataset(HDF5Dataset):
             )
 
     @property
-    def sample_rate(self) -> float:
+    def sample_rate(self) -> float | h5py.Empty:
         """The sample rate of this timeseries."""
-        return self.attributes["sample_rate"]
+        return self._time_axis.sample_rate if self.time_axis is not None else self._sample_rate
 
     @sample_rate.setter
     def sample_rate(self, value: int | float) -> None:
-        self.attributes.set_attribute("sample_rate", value)
+        self._sample_rate = value
+        if self.time_axis is not None:
+            self._time_axis.sample_rate = value
 
     @property
     def n_samples(self) -> int:
@@ -204,7 +206,7 @@ class TimeSeriesDataset(HDF5Dataset):
         super().construct(build=build, make_axes=False, **kwargs)
 
         if sample_rate is not None:
-            self.sample_rate = sample_rate
+            self._sample_rate = sample_rate
 
         if data is not None:
             self.n_samples = data.shape[self.t_axis]
@@ -449,15 +451,17 @@ class TimeSeriesDataset(HDF5Dataset):
         super().create(data=data, **kwargs)
 
         if sample_rate is not None:
-            self.sample_rate = sample_rate
+            self._sample_rate = sample_rate
 
         if data is not None:
             self.n_samples = data.shape[self.t_axis]
 
         if timestamps is None and start is not None:
-            timestamps = {"start": start, "rate": self.sample_rate, "size": self.n_samples}
+            timestamps = {"start": start, "rate": self._sample_rate, "size": self.n_samples}
 
         self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
+        self._time_axis.sample_rate = self._sample_rate
+
         return self
 
     def require(
@@ -487,7 +491,7 @@ class TimeSeriesDataset(HDF5Dataset):
         super().require(data=data, **kwargs)
 
         if sample_rate is not None:
-            self.sample_rate = sample_rate
+            self._sample_rate = sample_rate
 
         if data is not None:
             self.n_samples = data.shape[self.t_axis]
@@ -500,9 +504,10 @@ class TimeSeriesDataset(HDF5Dataset):
                 self.construct_sample_axis(samples)
             if timestamps is not None:
                 self.construct_time_axis(timestamps)
+            self._time_axis.sample_rate = self._sample_rate
         elif make_axes:
             if timestamps is None and start is not None:
-                timestamps = {"start": start, "rate": self.sample_rate, "size": self.n_samples}
+                timestamps = {"start": start, "rate": self._sample_rate, "size": self.n_samples}
 
             self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
         return self
@@ -533,12 +538,13 @@ class TimeSeriesDataset(HDF5Dataset):
             self.replace_data(data=data)
 
             if sample_rate is not None:
-                self.sample_rate = sample_rate
+                self._sample_rate = sample_rate
 
             if data is not None:
                 self.n_samples = data.shape[self.t_axis]
 
             self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
+            self._time_axis.sample_rate = self._sample_rate
 
     def load(self) -> None:
         """Loads this time series dataset and its axes."""
@@ -548,7 +554,22 @@ class TimeSeriesDataset(HDF5Dataset):
     def standardize_attributes(self) -> None:
         """Ensures that the attributes have the correct values based on the contained data."""
         self.attributes["n_samples"] = self.get_shape()[self.t_axis]
+    
+    def clear_all_caches(self, **kwargs: Any) -> None:
+        """Clears all caches in this object and all contained objects.
 
+        Args:
+            **kwargs: The keyword arguments for the clear caches method.
+        """
+        self.attributes.clear_caches(**kwargs)
+        self.clear_caches(**kwargs)
+        if self._channel_axis is not None:
+            self._channel_axis.clear_caches(**kwargs)
+        if self._sample_axis is not None:
+            self._sample_axis.clear_caches(**kwargs)
+        if self._time_axis is not None:
+            self._time_axis.clear_caches(**kwargs)
+    
     def enable_all_caching(self, **kwargs: Any) -> None:
         """Enables caching on this object and all contained objects.
 
@@ -557,9 +578,12 @@ class TimeSeriesDataset(HDF5Dataset):
         """
         self.attributes.enable_caching(**kwargs)
         self.enable_caching(**kwargs)
-        self.channel_axis.enable_caching(**kwargs)
-        self.sample_axis.enable_caching(**kwargs)
-        self.time_axis.enable_caching(**kwargs)
+        if self._channel_axis is not None:
+            self._channel_axis.enable_caching(**kwargs)
+        if self._sample_axis is not None:
+            self._sample_axis.enable_caching(**kwargs)
+        if self._time_axis is not None:
+            self._time_axis.enable_caching(**kwargs)
 
     def disable_all_caching(self, **kwargs: Any) -> None:
         """Disables caching on this object and all contained objects.
@@ -569,9 +593,12 @@ class TimeSeriesDataset(HDF5Dataset):
         """
         self.attributes.disable_caching(**kwargs)
         self.disable_caching(**kwargs)
-        self.channel_axis.disable_caching(**kwargs)
-        self.sample_axis.disable_caching(**kwargs)
-        self.time_axis.disable_caching(**kwargs)
+        if self._channel_axis is not None:
+            self._channel_axis.disable_caching(**kwargs)
+        if self._sample_axis is not None:
+            self._sample_axis.disable_caching(**kwargs)
+        if self._time_axis is not None:
+            self._time_axis.disable_caching(**kwargs)
         
     def timeless_all_caching(self, **kwargs: Any) -> None:
         """Allows timeless caching on this object and all contained objects.
@@ -581,9 +608,12 @@ class TimeSeriesDataset(HDF5Dataset):
         """
         self.attributes.timeless_caching(**kwargs)
         self.timeless_caching(**kwargs)
-        self.channel_axis.timeless_caching(**kwargs)
-        self.sample_axis.timeless_caching(**kwargs)
-        self.time_axis.timeless_caching(**kwargs)
+        if self._channel_axis is not None:
+            self._channel_axis.timeless_caching(**kwargs)
+        if self._sample_axis is not None:
+            self._sample_axis.timeless_caching(**kwargs)
+        if self._time_axis is not None:
+            self._time_axis.timeless_caching(**kwargs)
         
     def timed_all_caching(self, **kwargs: Any) -> None:
         """Allows timed caching on this object and all contained objects.
@@ -593,9 +623,12 @@ class TimeSeriesDataset(HDF5Dataset):
         """
         self.attributes.timed_caching(**kwargs)
         self.timed_caching(**kwargs)
-        self.channel_axis.timed_caching(**kwargs)
-        self.sample_axis.timed_caching(**kwargs)
-        self.time_axis.timed_caching(**kwargs)
+        if self._channel_axis is not None:
+            self._channel_axis.timed_caching(**kwargs)
+        if self._sample_axis is not None:
+            self._sample_axis.timed_caching(**kwargs)
+        if self._time_axis is not None:
+            self._time_axis.timed_caching(**kwargs)
 
     def set_all_lifetimes(self, lifetime: int | float | None, **kwargs: Any) -> None:
         """Sets the lifetimes on this object and all contained objects.
@@ -606,9 +639,12 @@ class TimeSeriesDataset(HDF5Dataset):
         """
         self.attributes.set_lifetimes(lifetime=lifetime, **kwargs)
         self.set_lifetimes(lifetime=lifetime, **kwargs)
-        self.channel_axis.set_lifetimes(lifetime=lifetime, **kwargs)
-        self.sample_axis.set_lifetimes(lifetime=lifetime, **kwargs)
-        self.time_axis.set_lifetimes(lifetime=lifetime, **kwargs)
+        if self._channel_axis is not None:
+            self.channel_axis.set_lifetimes(lifetime=lifetime, **kwargs)
+        if self._sample_axis is not None:
+            self.sample_axis.set_lifetimes(lifetime=lifetime, **kwargs)
+        if self._time_axis is not None:
+            self.time_axis.set_lifetimes(lifetime=lifetime, **kwargs)
 
     # Axes
     def create_channel_axis(
@@ -762,7 +798,7 @@ class TimeSeriesDataset(HDF5Dataset):
         """
         axis = self.attributes.get_attribute("t_axis", None) if axis is None else axis
         size = self.shape[axis] if size is None else size
-        rate = self.attributes.get_attribute("sample_rate", None) if rate is None else rate
+        rate = self._sample_rate if rate is None else rate
         if "name" not in kwargs:
             kwargs["name"] = self._full_name + "_" + self.map.map_names["time_axis"]
 
@@ -1050,7 +1086,7 @@ class TimeSeriesDataset(HDF5Dataset):
     # Todo: Add Fill Methods
 
     # Manipulation
-    def append(self, data: np.ndarray, axis: int = 0, **kwargs: np.ndarray) -> None:
+    def append(self, data: np.ndarray, axis: int | None = 0, **kwargs: np.ndarray) -> None:
         """Append data to the dataset along a specified axis and the given axis object.
 
         Args:
@@ -1058,6 +1094,7 @@ class TimeSeriesDataset(HDF5Dataset):
             axis: The axis to append the data along.
             **kwargs: The data to append to an axis. The kwarg name should be the name of the axis.
         """
+        axis = self.t_axis if axis is None else axis
         super().append(data=data, axis=axis)
         for name, axis_data in kwargs.items():
             axis = getattr(self, name)

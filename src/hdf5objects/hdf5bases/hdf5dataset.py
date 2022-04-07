@@ -33,6 +33,8 @@ from .hdf5attributes import HDF5Attributes
 # Classes #
 class DatasetMap(HDF5Map):
     """A general map for HDF5 Datasets."""
+    default_attributes_type = HDF5Attributes
+
     # Instance Methods
     # Constructors/Destructors
     def construct_object(self, **kwargs: Any) -> Any:
@@ -230,6 +232,15 @@ class HDF5Dataset(HDF5BaseObject):
         self.get_all_data.clear_cache()
 
     # Caching
+    def clear_all_caches(self, **kwargs: Any) -> None:
+        """Clears all caches in this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the clear caches method.
+        """
+        self.attributes.clear_caches(**kwargs)
+        self.clear_caches(**kwargs)
+
     def enable_all_caching(self, **kwargs: Any) -> None:
         """Enables caching on this object and all contained objects.
 
@@ -433,13 +444,21 @@ class HDF5Dataset(HDF5BaseObject):
         """
         with self:
             # Get the shapes of the dataset and the new data to be added
-            s_shape = self._dataset.shape
-            d_shape = data.shape
+            s_shape = np.asarray(self._dataset.shape)
+            d_shape = list(data.shape)
+            if len(d_shape) == len(s_shape):
+                d_extension = d_shape[axis]
+            elif len(d_shape) == len(s_shape) - 1:
+                d_extension = 1
+                d_shape.insert(axis, 1)
+            else:
+                raise ValueError("Cannot append with two different rank shapes.")
+
             # Determine the new shape of the dataset
-            new_shape = list(s_shape)
-            new_shape[axis] = s_shape[axis] + d_shape[axis]
+            new_shape = list(s_shape) if s_shape.any() else d_shape.copy()
+            new_shape[axis] = s_extension = s_shape[axis] + d_extension
             # Determine the location where the new data should be assigned
-            slicing = tuple(slice(s_shape[ax]) for ax in range(0, axis)) + (-d_shape[axis], ...)
+            slicing = (slice(None),) * axis + (slice(s_shape[axis], s_extension),)
 
             # Assign Data
             self._dataset.resize(new_shape)  # resize for new data

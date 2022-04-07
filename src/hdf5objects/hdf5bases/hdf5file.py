@@ -137,7 +137,7 @@ class HDF5File(HDF5BaseObject):
         self,
         file: str | pathlib.Path | h5py.File | None = None,
         mode: str = 'r',
-        open_: bool = False,
+        open_: bool = True,
         map_: HDF5Map | None = None,
         load: bool = False,
         create: bool = False,
@@ -328,6 +328,9 @@ class HDF5File(HDF5BaseObject):
 
         self.construct_group(load=load, build=build)
 
+        if build:
+            self.construct_file_attributes()
+
         if not open_:
             self.close()
         elif self._file.swmr_mode:
@@ -420,9 +423,6 @@ class HDF5File(HDF5BaseObject):
         if map_ is not None:
             self.map = map_
 
-        if "libver" not in kwargs:
-            kwargs["libver"] = "latest"
-
         self.open(**kwargs)
         if build:
             self._group.construct_members(build=True)
@@ -486,6 +486,8 @@ class HDF5File(HDF5BaseObject):
             try:
                 if mode is not None:
                     self._mode = mode
+                if "libver" not in kwargs:
+                    kwargs["libver"] = "latest"
                 self._file = h5py.File(self.path.as_posix(), mode=self._mode_, **kwargs)
                 return self
             except Exception as error:
@@ -525,3 +527,59 @@ class HDF5File(HDF5BaseObject):
             self._file.flush()
             self._file.close()
         return not self.is_open
+
+    # Caching
+    def clear_all_caches(self, **kwargs: Any) -> None:
+        """Clears all caches in this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the clear caches method.
+        """
+        self.clear_caches(**kwargs)
+        self._group.clear_all_caches(**kwargs)
+
+    def enable_all_caching(self, **kwargs: Any) -> None:
+        """Enables caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the enable caching method.
+        """
+        self.enable_caching(**kwargs)
+        self._group.enable_caching(**kwargs)
+
+    def disable_all_caching(self, **kwargs: Any) -> None:
+        """Disables caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the disable caching method.
+        """
+        self.disable_caching(**kwargs)
+        self._group.disable_caching(**kwargs)
+
+    def timeless_all_caching(self, **kwargs: Any) -> None:
+        """Allows timeless caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the timeless caching method.
+        """
+        self.timeless_caching(**kwargs)
+        self._group.timeless_caching(**kwargs)
+
+    def timed_all_caching(self, **kwargs: Any) -> None:
+        """Allows timed caching on this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the timed caching method.
+        """
+        self.timed_caching(**kwargs)
+        self._group.timed_caching(**kwargs)
+
+    def set_all_lifetimes(self, lifetime: int | float | None, **kwargs: Any) -> None:
+        """Sets the lifetimes on this object and all contained objects.
+
+        Args:
+            lifetime: The lifetime to set all the caches to.
+            **kwargs: The keyword arguments for the lifetime caching method.
+        """
+        self.set_lifetimes(lifetime=lifetime, **kwargs)
+        self._group.set_lifetimes(lifetime=lifetime, **kwargs)

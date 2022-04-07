@@ -15,7 +15,7 @@ __email__ = __email__
 # Standard Libraries #
 from collections.abc import Iterable, Mapping
 import datetime
-from typing import Any, NamedTuple
+from typing import Any
 import zoneinfo
 
 # Third-Party Packages #
@@ -34,8 +34,8 @@ from .axis import AxisMap, Axis
 # Classes #
 class TimeAxisMap(AxisMap):
     """A map for the TimeAxis object."""
-    default_attribute_names: Mapping[str, str] = {"time_zone": "time_zone"}
-    default_attributes: Mapping[str, Any] = {"time_zone": ""}
+    default_attribute_names: Mapping[str, str] = {"sample_rate": "sample_rate", "time_zone": "time_zone"}
+    default_attributes: Mapping[str, Any] = {"sample_rate": h5py.Empty('f8'), "time_zone": ""}
     default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "f8"}
 
 
@@ -117,13 +117,22 @@ class TimeAxis(Axis):
     @property
     def start_datetime(self) -> datetime.datetime:
         """Returns the start as a datetime."""
-        return datetime.datetime.fromtimestamp(self.start_timestamp)
+        return datetime.datetime.fromtimestamp(self.start_timestamp, self.time_zone)
 
     @property
     def end_datetime(self) -> datetime.datetime:
         """Returns the end as a datetime."""
-        return datetime.datetime.fromtimestamp(self.end_timestamp)
-    
+        return datetime.datetime.fromtimestamp(self.end_timestamp, self.time_zone)
+
+    @property
+    def sample_rate(self) -> float | h5py.Empty:
+        """The sample rate of this timeseries."""
+        return self.attributes["sample_rate"]
+
+    @sample_rate.setter
+    def sample_rate(self, value: int | float) -> None:
+        self.attributes.set_attribute("sample_rate", value)
+
     @property
     def time_zone(self) -> zoneinfo.ZoneInfo | None:
         """The timezone of the timestamps for this axis. Setter validates before assigning."""
@@ -148,16 +157,6 @@ class TimeAxis(Axis):
             return self.get_datetimes.caching_call()
         except AttributeError:
             return self.get_datetimes()
-
-    @property
-    def start_datetime(self) -> datetime.datetime:
-        """Gets the start of the axis as a datetime object."""
-        return datetime.datetime.fromtimestamp(self.start, self.time_zone)
-
-    @property
-    def end_datetime(self) -> datetime.datetime:
-        """Gets the end of the axis as a datetime object."""
-        return datetime.datetime.fromtimestamp(self.end, self.time_zone)
 
     # Instance Methods
     # Constructors/Destructors

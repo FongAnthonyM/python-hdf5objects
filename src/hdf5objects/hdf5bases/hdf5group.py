@@ -196,6 +196,17 @@ class HDF5Group(HDF5BaseObject):
         self.get_members()
     
     # Caching
+    def clear_all_caches(self, **kwargs: Any) -> None:
+        """Clears all caches in this object and all contained objects.
+
+        Args:
+            **kwargs: The keyword arguments for the clear caches method.
+        """
+        self.attributes.clear_caches(**kwargs)
+        self.clear_caches(**kwargs)
+        for member in self.members.values():
+            member.clear_all_caches(**kwargs)
+
     def enable_all_caching(self, **kwargs: Any) -> None:
         """Enables caching on this object and all contained objects.
         
@@ -313,12 +324,13 @@ class HDF5Group(HDF5BaseObject):
                                                             load=load, build=build, **kwargs)
         return self.members[name]
 
-    def get_members(self, load: bool = False, build: bool = False) -> dict[str, HDF5BaseObject]:
+    def get_members(self, load: bool = False, build: bool = False, mapped: bool = False) -> dict[str, HDF5BaseObject]:
         """Get all the members in this group.
 
         Args:
             load: Determines if this object will recursively load the members from the file on construction.
             build: Determines if this object will recursively create and fill the members in the file on construction.
+            mapped: Determines if this object will only add object that are mapped.
 
         Returns:
             The names and members in this group.
@@ -332,10 +344,14 @@ class HDF5Group(HDF5BaseObject):
                     else:
                         kwargs = {"dataset": value}
                     self.members[name] = map_.type(map_=map_, file=self._file, load=load, build=build, **kwargs)
-                else:
+                elif not mapped:
                     if isinstance(value, h5py.Dataset):
-                        self.members[name] = self.default_dataset(dataset=value, file=self._file,
-                                                                  load=load, build=build)
+                        self.members[name] = self.default_dataset(
+                            dataset=value,
+                            file=self._file,
+                            load=load,
+                            build=build,
+                        )
                     elif isinstance(value, h5py.Group):
                         self.members[name] = self.default_group(group=value, file=self._file, load=load, build=build)
         return self.members.copy()

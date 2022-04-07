@@ -68,7 +68,18 @@ class HDF5Map(BaseObject):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the object this map represents.
     """
-    __slots__ = ["_name", "parents", "attributes_type", "attribute_names", "attributes", "type", "map_names", "maps"]
+    __slots__ = {
+        "_name",
+        "parents",
+        "attributes_type",
+        "attribute_names",
+        "attributes",
+        "type",
+        "kwargs",
+        "object",
+        "map_names",
+        "maps",
+    }
     sentinel: Any = search_sentinel
     default_name: str | None = None
     default_parent: str | None = None
