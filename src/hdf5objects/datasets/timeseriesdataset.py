@@ -19,7 +19,7 @@ from typing import Any
 
 # Third-Party Packages #
 from baseobjects import singlekwargdispatchmethod
-from dspobjects.dataclasses import FoundData, FoundTimeRange
+from dspobjects.dataclasses import FoundData, FoundTimeRange, FoundDataRange
 import h5py
 import numpy as np
 
@@ -933,6 +933,25 @@ class TimeSeriesDataset(HDF5Dataset):
         """
         return self.time_axis.get_intervals(start=start, stop=stop, step=step)
 
+    # Find Data
+    def find_data(self, timestamp: datetime.datetime | float, approx: bool = False, tails: bool = False,) -> FoundData:
+        """Find the data at a specific time.
+
+        Args:
+            timestamp: The time to find the data at.
+            approx: Determines if an approximate indices will be given if the time is not present.
+            tails: Determines if the first or last times will be give the requested item is outside the axis.
+
+        Returns:
+            The found data at the timestamp.
+        """
+        index, dt, timestamp = self.time_axis.find_time_index(timestamp=timestamp, approx=approx, tails=tails)
+        slices = (slice(None),) * self.t_axis + (index,)
+        data = self._dataset[slices]
+
+        return FoundData(data, index, dt, timestamp)
+
+
     # Find Range
     def find_timestamp_range(
         self,
@@ -985,7 +1004,7 @@ class TimeSeriesDataset(HDF5Dataset):
         step: int | float | datetime.timedelta | None = None,
         approx: bool = False,
         tails: bool = False,
-    ) -> FoundData:
+    ) -> FoundDataRange:
         """Finds the range of data inbetween two samples, can give approximate values.
 
         Args:
@@ -1010,7 +1029,8 @@ class TimeSeriesDataset(HDF5Dataset):
             return FoundData(None, None, None, None, None, None)
         else:
             with self:
-                data = self._dataset[slice(start=start_index, stop=stop_index, step=step)]
+                slices = (slice(None),) * self.t_axis + (slice(start=start_index, stop=stop_index, step=step),)
+                data = self._dataset[slices]
                 return FoundData(data, axis, axis[0], axis[-1], start_index, stop_index)
 
     def find_data_range_timestamp(
@@ -1020,7 +1040,7 @@ class TimeSeriesDataset(HDF5Dataset):
         step: int | float | datetime.timedelta | None = None,
         approx: bool = False,
         tails: bool = False,
-    ) -> FoundData:
+    ) -> FoundDataRange:
         """Finds the data range on the axis inbetween two times, can give approximate values.
 
         Args:
@@ -1045,7 +1065,8 @@ class TimeSeriesDataset(HDF5Dataset):
             return FoundData(None, None, None, None, None, None)
         else:
             with self:
-                data = self._dataset[slice(start=start_index, stop=stop_index, step=step)]
+                slices = (slice(None),) * self.t_axis + (slice(start=start_index, stop=stop_index, step=step),)
+                data = self._dataset[slices]
                 return FoundData(data, axis, axis[0], axis[-1], start_index, stop_index)
 
     def find_data_range_datetime(
@@ -1055,7 +1076,7 @@ class TimeSeriesDataset(HDF5Dataset):
         step: int | float | datetime.timedelta | None = None,
         approx: bool = False,
         tails: bool = False,
-    ) -> FoundData:
+    ) -> FoundDataRange:
         """Finds the data range on the axis inbetween two times, can give approximate values.
 
         Args:
@@ -1080,7 +1101,8 @@ class TimeSeriesDataset(HDF5Dataset):
             return FoundData(None, None, None, None, None, None)
         else:
             with self:
-                data = self._dataset[slice(start=start_index, stop=stop_index, step=step)]
+                slices = (slice(None),) * self.t_axis + (slice(start=start_index, stop=stop_index, step=step),)
+                data = self._dataset[slices]
                 return FoundData(data, axis, axis[0], axis[-1], start_index, stop_index)
 
     # Todo: Add Fill Methods
