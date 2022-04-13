@@ -3,14 +3,14 @@
 """ hdf5model_example.py
 A detailed example of how to create a file type and use hdf5objects.
 """
-# Package Header #
-from src.hdf5objects.header import *
-
-# Header #
-__author__ = __author__
-__credits__ = __credits__
-__maintainer__ = __maintainer__
-__email__ = __email__
+# # Package Header #
+# from src.hdf5objects.header import *
+#
+# # Header #
+# __author__ = __author__
+# __credits__ = __credits__
+# __maintainer__ = __maintainer__
+# __email__ = __email__
 
 
 # Imports #
@@ -22,9 +22,9 @@ from typing import Any
 
 # Third-Party Packages #
 from classversioning import Version, TriNumberVersion
-from src.hdf5objects import HDF5Map
-from src.hdf5objects.datasets import TimeSeriesMap, TimeSeriesDataset  # Remove src when this package is pip installed
-from src.hdf5objects.fileobjects import BaseHDF5, BaseHDF5Map  # Remove src when this package is pip installed
+from hdf5objects import HDF5Map
+from hdf5objects.datasets import TimeSeriesMap, TimeSeriesDataset
+from hdf5objects.fileobjects import BaseHDF5, BaseHDF5Map
 import numpy as np
 
 # Local Packages #
