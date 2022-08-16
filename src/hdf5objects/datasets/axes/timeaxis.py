@@ -110,9 +110,9 @@ class TimeAxis(Axis):
     def end_timestamp(self) -> float:
         """Get the last element of this axis."""
         try:
-            return self.get_start.caching_call()
+            return self.get_end.caching_call()
         except AttributeError:
-            return self.get_start()
+            return self.get_end()
     
     @property
     def start_datetime(self) -> datetime.datetime:
