@@ -462,8 +462,8 @@ class TimeAxis(Axis):
             true_timestamp = self.timestamps[index]
             if approx or timestamp == true_timestamp:
                 return IndexDateTime(index, datetime.datetime.fromtimestamp(true_timestamp), true_timestamp)
-
-        return IndexDateTime(None, None, None)
+        
+        raise IndexError("Timestamp out of range.")
 
     def find_timestamp_range(
         self,
