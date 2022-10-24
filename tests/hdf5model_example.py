@@ -31,7 +31,7 @@ import numpy as np
 
 
 # Definitions #
-# There should be one definition for each type ever across all scripts live in a single static location.
+# There should be one definition for each type across all scripts and live in a single static location.
 # Any changes should be done in a subclass or on the instance level.
 # Classes #
 # Define Model Dataset
@@ -43,7 +43,7 @@ class TimeTensorMap(TimeSeriesMap):
                                                   "t_axis": "t_axis",
                                                   "r_axis": "r_axis",
                                                   "w_axis": "w_axis"}
-    # Create set the initial values for the attributes
+    # Create and set the initial values for the attributes
     default_attributes: Mapping[str, Any] = {"n_samples": 0,
                                              "c_axis": 1,
                                              "t_axis": 0,
@@ -81,7 +81,7 @@ class TensorModelsMap(BaseHDF5Map):
     default_map_names: Mapping[str, str] = {"model_1": "model_1", "model_2": "model_2", "model_3": "model_3"}
     # Create the contained maps.
     # Note: For datasets the shape, maxshape, and dtype must be initialized to build the datasets on file creation.
-    # If you want set the maxshape, do it at the instance level and do not redefine this map just to set it.
+    # If you want set the maxshape, do it at the instance level, do not redefine this map just to set it.
     default_maps: Mapping[str, HDF5Map] = {
         "model_1": TimeTensorMap(shape=(0, 0, 0, 0), maxshape=(None, None, None, None), dtype='f8'),
         "model_2": TimeTensorMap(shape=(0, 0, 0, 0), maxshape=(None, None, None, None), dtype='f8'),
@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
     # Start of the actual code.
 
-    # Create New Map with known maxshape (this is optional but can save space)
+    # Create New Map with known maxshape (this is optional, but it can save space)
     new_map = TensorModelsMap()
     new_map.maps["model_1"].kwargs.update(maxshape=(None, n_channels, n_rank, n_windows))
     new_map.maps["model_2"].kwargs.update(maxshape=(None, n_channels, n_rank, n_windows))
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     # Create the file
     # The map_ kwarg overrides the default map, in this case the same map with the maxsahpe changed.
     # The create kwarg determines if the file will be created.
-    # The build kwwarg determines if the file's structure will built, which is highly suggested for SWMR.
+    # The build kwarg determines if the file's structure will be built, which is highly suggested for SWMR.
     with TensorModelsHDF5(file=out_path, mode='a', map_=new_map, create=True, build=True) as model_file:
         # Note: Caching is off while in write mode. Caching can be turned on using methods covered in the load/read file
         # section. Caching is particularly useful when writing to a file.
@@ -166,11 +166,11 @@ if __name__ == '__main__':
         print(f"The shape of model 1: {model_1_dataset.shape}")
 
         model_2_dataset = model_file["model_2"]
-        # Since build was call in the file creation we do not need to require the dataset.
+        # Since build was called in the file creation we do not need to require the dataset.
         # However, if build was not called, then the require method would need to be called.
         # model_2_dataset.require(
         #     start=start,
-        #     # sample_rate=sample_rate,  # There does not need to be a sample rate
+        #     # sample_rate=sample_rate,  # Sample rate does not need to be set
         # )
         model_2_dataset.sample_rate = sample_rate
 
@@ -222,7 +222,7 @@ if __name__ == '__main__':
     with TensorModelsHDF5(file=out_path, load=True, swmr=True) as model_file:
         # Caching is on when in read mode.
         # In normal read mode, once data is loaded into cache it has to manually be told refresh the cache.
-        # In SWMR mode the cache will clear and get the values from the file again at predefined interval.
+        # In SWMR mode the cache will clear and get the values from the file again at a predefined interval.
         # There are methods which can turn caching on and off and can set the caching interval.
 
         # Caching
@@ -269,4 +269,4 @@ if __name__ == '__main__':
     print(f"A data point from model 1: {model_1_dataset[3,3,3,3]}")
     print(f"The file is open: {model_file.is_open}")
     # Be warned, while a cool feature, unfortunately closing the file has a large time overhead. Therefore, if file data
-    # is going to be access many times, it is best to leave the open rather than closing it.
+    # is going to be accessed multiple times, it is best to leave the open rather than closing it.

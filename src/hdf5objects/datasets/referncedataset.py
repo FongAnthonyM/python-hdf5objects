@@ -1,6 +1,8 @@
 """ referncedataset.py
 
 """
+import h5py
+
 # Package Header #
 from ..header import *
 
@@ -23,9 +25,9 @@ from bidict import bidict
 import numpy as np
 
 # Local Packages #
+from ..hdf5bases import HDF5Map, DatasetMap, HDF5Dataset
 
 
-# Todo: Redesign this.
 # Definitions #
 # Functions #
 def np_to_dict(array):
@@ -80,25 +82,37 @@ def recursive_looping(loops, func, previous=None, size=None, **kwargs):
 
 
 # Classes #
-class HDF5ReferenceDataset(object):
+class HDF5ReferenceDataset(HDF5Dataset):
     # Instantiation, Copy, Destruction
-    def __init__(self, dataset, reference_field="", dtype=None, init=True):
-        self.dataset = None
+    def __init__(
+        self,
+        data: np.ndarray | None = None,
+        reference_field: str = "",
+        load: bool = False,
+        build: bool = False,
+        init: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        # Parent Attributes #
 
+        # New Attributes #
         self.reference_field = ""
         self.dtype = None
         self.fields = bidict()
         self.references = bidict()
 
+        # ToDo: use h5py.ref_dtype
+
         self._reference_array = None
 
+        # Object Construction #
         if init:
-            self.construct(dataset, reference_field, dtype)
-
-    def __copy__(self):
-        new = type(self)()
-        new.__dict__.update(self.__dict__)
-        return new
+            self.construct(
+                data=data,
+                load=load,
+                build=build,
+                **kwargs,
+            )
 
     @property
     def reference_array(self):
@@ -150,10 +164,6 @@ class HDF5ReferenceDataset(object):
             raise NameError
 
         self._reference_array = self.dataset[self.reference_field]
-
-    # Copy Methods
-    def copy(self):
-        return self.__copy__()
 
     # Reference Getters and Setters
     def new_reference(self, index=None, axis=0, id_=None):

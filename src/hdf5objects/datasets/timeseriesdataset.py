@@ -951,7 +951,6 @@ class TimeSeriesDataset(HDF5Dataset):
 
         return FoundData(data, index, dt, timestamp)
 
-
     # Find Range
     def find_timestamp_range(
         self,
@@ -1118,6 +1117,8 @@ class TimeSeriesDataset(HDF5Dataset):
         """
         axis = self.t_axis if axis is None else axis
         super().append(data=data, axis=axis)
+
+        # Todo: Infer timestamps when none is given.
         for name, axis_data in kwargs.items():
             axis = getattr(self, name)
             axis.append(data=axis_data)
