@@ -20,7 +20,7 @@ from typing import Any
 # Third-Party Packages #
 from baseobjects import singlekwargdispatchmethod
 from baseobjects.cachingtools import timed_keyless_cache
-from baseobjects.objects import TimedDict
+from baseobjects.collections import TimedDict
 import h5py
 import numpy as np
 
