@@ -35,8 +35,12 @@ class AxisMap(DatasetMap):
 class Axis(HDF5Dataset):
     """A HDF5Dataset whose primary role is to be an axis (scale).
 
+    Class_Attributes:
+        default_scale_name: The default name of this axis.
+
     Attributes:
         default_kwargs: The default keyword arguments to use when creating the dataset.
+        _scale_name: The scale name of this axis.
 
     Args:
         start: The start of the axis.
@@ -45,11 +49,12 @@ class Axis(HDF5Dataset):
         rate: The frequency of the data of the axis.
         size: The number of datum in the axis.
         s_name: The name of the axis (scale).
-        build: Determines if the axis should be created and filled.
+        require: Determines if the axis should be created and filled.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the HDF5Dataset.
     """
     default_map: HDF5Map = AxisMap()
+    default_scale_name: str | None = None  # Set this to the name of the axis
 
     # Magic Methods #
     # Construction/Destruction
@@ -61,7 +66,7 @@ class Axis(HDF5Dataset):
         rate: float | None = None, 
         size: int | None = None,
         s_name: str | None = None, 
-        build: bool | None = None, 
+        require: bool | None = None,
         init: bool = True, 
         **kwargs: Any,
     ) -> None:
@@ -71,7 +76,7 @@ class Axis(HDF5Dataset):
         # New Attributes #
         self.default_kwargs: Mapping[str, Any] = self.map.kwargs
         
-        # self._scale_name = None  # Set this to the name of the axis
+        self._scale_name = self.default_scale_name
 
         # Object Construction #
         if init:
@@ -82,7 +87,7 @@ class Axis(HDF5Dataset):
                 rate=rate, 
                 size=size,
                 s_name=s_name, 
-                build=build, 
+                require=require,
                 **kwargs,
             )
 
@@ -112,7 +117,7 @@ class Axis(HDF5Dataset):
         rate: float | None = None,
         size: int | None = None,
         s_name: str | None = None,
-        build: bool | None = None,
+        require: bool | None = None,
         **kwargs: Any,
     ) -> None:
         """Constructs this object.
@@ -124,19 +129,16 @@ class Axis(HDF5Dataset):
             rate: The frequency of the data of the axis.
             size: The number of datum in the axis.
             s_name: The name of the axis (scale).
-            build: Determines if the axis should be created and filled.
+            require: Determines if the axis should be created and filled.
             **kwargs: The keyword arguments for the HDF5Dataset.
         """
-        if "data" in kwargs:
-            kwargs["build"] = build
-            build = False
-
         if s_name is not None:
             self._scale_name = s_name
 
-        super().construct(**kwargs)
+        # Construct the dataset and handle creation here unless data is present.
+        super().construct(require=False, **kwargs)
 
-        if build:
+        if require and "data" not in kwargs:
             if start is not None and size != 0:
                 self.from_range(start, stop, step, rate, size)
             else:

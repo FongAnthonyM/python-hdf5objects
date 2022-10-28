@@ -49,7 +49,7 @@ class DatasetMap(HDF5Map):
         temp_kwargs = self.kwargs.copy()
         temp_kwargs.update(kwargs)
 
-        if "build" in temp_kwargs and "data" not in temp_kwargs and (
+        if "require" in temp_kwargs and "data" not in temp_kwargs and (
                 "shape" not in temp_kwargs or "dtype" not in temp_kwargs or "maxshape" not in temp_kwargs):
             # Need to warn and skip if these components are missing.
             warnings.warn("Cannot build dataset without data or shape, dtype, and maxshape - skipping.")
@@ -75,12 +75,13 @@ class HDF5Dataset(HDF5BaseObject):
         attributes: The attributes of this dataset.
 
     Args:
+        data: The data to fill in this dataset.
         dataset: The HDF5 dataset to build this dataset around.
         name: The HDF5 name of this object.
         map_: The map for this HDF5 object.
         file: The file object that this dataset object originates from.
         load: Determines if this object will load the dataset from the file on construction.
-        build: Determines if this object will create and fill the dataset in the file on construction.
+        require: Determines if this object will create and fill the dataset in the file on construction.
         parent: The HDF5 name of the parent of this HDF5 object.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments to construct the base HDF5 dataset.
@@ -93,12 +94,13 @@ class HDF5Dataset(HDF5BaseObject):
     # Constructors/Destructors
     def __init__(
         self,
+        data: np.ndarray | None = None,
         dataset: h5py.Dataset | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
-        build: bool = False,
+        require: bool = False,
         parent: str | None = None,
         init: bool = True,
         **kwargs: Any,
@@ -114,13 +116,14 @@ class HDF5Dataset(HDF5BaseObject):
         # Object Construction #
         if init:
             self.construct(
+                data=data,
                 dataset=dataset,
                 name=name,
                 map_=map_,
                 file=file,
                 load=load,
-                build=build,
                 parent=parent,
+                require=require,
                 **kwargs,
             )
 
@@ -154,28 +157,41 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             return self._dataset.__array__(dtype=dtype)
 
+    # Container Methods
+    def __getitem__(self, key: Any) -> Any:
+        """Ensures HDF5 object is open for getitem"""
+        with self:
+            return self.get_item(key=key)
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        """Ensures HDF5 object is open for setitem"""
+        with self:
+            getattr(self, self._wrap_attributes[0])[key] = value
+
     # Instance Methods
     # Constructors/Destructors
     def construct(
         self,
+        data: np.ndarray | None = None,
         dataset: h5py.Dataset | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
-        build: bool = False,
+        require: bool = False,
         parent: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Constructs this object.
 
         Args:
+            data: The data to fill in this dataset.
             dataset: The HDF5 dataset to build this dataset around.
             name: The HDF5 name of this object.
             map_: The map for this HDF5 object.
             file: The file object that this dataset object originates from.
             load: Determines if this object will load the dataset from the file on construction.
-            build: Determines if this object will create and fill the dataset in the file on construction.
+            require: Determines if this object will create and fill the dataset in the file on construction.
             parent: The HDF5 name of the parent of this HDF5 object.
             **kwargs: The keyword arguments to construct the base HDF5 dataset.
         """
@@ -195,22 +211,28 @@ class HDF5Dataset(HDF5BaseObject):
         if load and self.exists:
             self.load()
 
-        if build:
-            self.construct_dataset(**kwargs)
+        if require or data is not None:
+            self._require_dataset(data=data, **kwargs)
 
-    def construct_attributes(self, map_: HDF5Map = None, load: bool = False, build: bool = False) -> None:
+    def construct_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
         """Creates the attributes for this dataset.
 
         Args:
             map_: The map to use to create the attributes.
             load: Determines if this object will load the attribute values from the file on construction.
-            build: Determines if this object will create and fill the attributes in the file on construction.
+            require: Determines if this object will create and fill the attributes in the file on construction.
         """
         if map_ is None:
             map_ = self.map
-        self.attributes = map_.attributes_type(name=self._full_name, map_=map_, file=self._file, load=load, build=build)
+        self.attributes = map_.attributes_type(
+            name=self._full_name,
+            map_=map_,
+            file=self._file,
+            load=load,
+            require=require,
+        )
 
-    def construct_dataset(self, **kwargs: Any) -> None:
+    def _require_dataset(self, **kwargs: Any) -> None:
         """Creates and fills the data if it does not exist.
 
         Args:
@@ -288,6 +310,26 @@ class HDF5Dataset(HDF5BaseObject):
         self.set_lifetimes(lifetime=lifetime, **kwargs)
 
     # Getters/Setters
+    def get_item(self, key: Any) -> Any:
+        """Gets an item or items from the dataset.
+
+        Args:
+            key: The key to get an item or items from the dataset.
+
+        Returns:
+            The item or items requested.
+        """
+        return getattr(self, self._wrap_attributes[0])[key]
+
+    def set_item(self, key: Any, value: Any) -> None:
+        """Sets an item or items from the dataset.
+
+        Args:
+            key: The key to set an item or items from the dataset.
+            value: The value or values to set in the dataset.
+        """
+        getattr(self, self._wrap_attributes[0])[key] = value
+
     @singlekwargdispatchmethod("dataset")
     def set_dataset(self, dataset: h5py.Dataset) -> None:
         """Sets the wrapped dataset.

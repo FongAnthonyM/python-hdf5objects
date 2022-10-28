@@ -49,7 +49,7 @@ class HDF5Attributes(HDF5BaseObject):
         map_: The map for this HDF5 object.
         file: The file object that this attribute object originates from.
         load: Determines if this object will load the attribute values from the file on construction.
-        build: Determines if this object will create and fill the attributes in the file on construction.
+        require: Determines if this object will create and fill the attributes in the file on construction.
         parent: The HDF5 name of the parent of this HDF5 object.
         init: Determines if this object will construct.
     """
@@ -65,7 +65,7 @@ class HDF5Attributes(HDF5BaseObject):
         map_: HDF5Map | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
-        build: bool = False,
+        require: bool = False,
         parent: str | None = None,
         init: bool = True,
     ) -> None:
@@ -84,7 +84,7 @@ class HDF5Attributes(HDF5BaseObject):
                 map_=map_,
                 file=file,
                 load=load,
-                build=build,
+                require=require,
                 parent=parent,
             )
 
@@ -120,7 +120,7 @@ class HDF5Attributes(HDF5BaseObject):
         map_: HDF5Map | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
-        build: bool = False,
+        require: bool = False,
         parent: str | None = None,
     ) -> None:
         """Constructs this object.
@@ -131,7 +131,7 @@ class HDF5Attributes(HDF5BaseObject):
             map_: The map for this HDF5 object.
             file: The file object that this attribute object originates from.
             load: Determines if this object will load the attribute values from the file on construction.
-            build: Determines if this object will create and fill the attributes in the file on construction.
+            require: Determines if this object will create and fill the attributes in the file on construction.
             parent: The HDF5 name of the parent of this HDF5 object.
         """
         super().construct(name=name, map_=map_, file=file, parent=parent)
@@ -142,7 +142,7 @@ class HDF5Attributes(HDF5BaseObject):
         if load and self.exists:
             self.load()
 
-        if build:
+        if require:
             self.construct_attributes()
 
     def construct_attributes(self, map_: HDF5Map | None = None, override: bool = False) -> None:

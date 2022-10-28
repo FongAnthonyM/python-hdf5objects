@@ -32,6 +32,9 @@ class ChannelAxisMap(AxisMap):
 class ChannelAxis(Axis):
     """An Axis that represents channel number.
 
+    Class_Attributes:
+        default_scale_name: The default name of this axis.
+
     Attributes:
         default_kwargs: The default keyword arguments to use when creating the dataset.
         _scale_name: The scale name of this axis.
@@ -43,42 +46,11 @@ class ChannelAxis(Axis):
         rate: The frequency of the data of the axis.
         size: The number of datum in the axis.
         s_name: The name of the axis (scale).
-        build: Determines if the axis should be created and filled.
+        require: Determines if the axis should be created and filled.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the HDF5Dataset.
     """
-    # Magic Methods #
-    # Construction/Destruction
-    def __init__(
-        self,
-        start: int | None = None,
-        stop: int | None = None,
-        step: int | None = None,
-        rate: float | None = None,
-        size: int | None = None,
-        s_name: str | None = None,
-        build: bool | None = None,
-        init: bool = True,
-        **kwargs: Any,
-    ) -> None:
-        # Parent Attributes #
-        super().__init__(init=False)
-
-        # Overriden Attributes #
-        self._scale_name = "channel axis"
-
-        # Object Construction #
-        if init:
-            self.construct(
-                start=start,
-                stop=stop,
-                step=step,
-                rate=rate,
-                size=size,
-                s_name=s_name,
-                build=build,
-                **kwargs,
-            )
+    default_scale_name: str | None = "channel axis"
 
     @property
     def channels(self) -> np.ndarray:

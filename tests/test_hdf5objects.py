@@ -51,7 +51,7 @@ class ClassTest:
 class TestHDF5File(ClassTest):
     class_ = HDF5File
     studies_path = pathlib.Path("/common/subjects")
-    load_path = pathlib.Path.cwd().joinpath("pytest_cache/EC228_2020-09-21_14~53~19.h5")
+    load_path = pathlib.Path.cwd().joinpath("pytest_cache/EC212_2020-01-28_00~07~37.h5")
     save_path = pathlib.Path.cwd().joinpath("pytest_cache/")
 
     @pytest.fixture

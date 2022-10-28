@@ -29,7 +29,7 @@ from .hdf5attributes import HDF5Attributes
 # Definitions #
 # Classes #
 class HDF5Group(HDF5BaseObject):
-    """A wrapper object which wraps a HDF5 _group_ and gives more functionality.
+    """A wrapper object which wraps a HDF5 group and gives more functionality.
 
     Class Attributes:
         _wrapped_types: A list of either types or objects to set up wrapping for.
@@ -49,7 +49,7 @@ class HDF5Group(HDF5BaseObject):
         map_: The map for this HDF5 object.
         file: The file object that this group object originates from.
         load: Determines if this object will load the group from the file on construction.
-        build: Determines if this object will create and fill the group in the file on construction.
+        require: Determines if this object will create and fill the group in the file on construction.
         parent: The HDF5 name of the parent of this HDF5 object.
         init: Determines if this object will construct.
     """
@@ -67,7 +67,7 @@ class HDF5Group(HDF5BaseObject):
         map_: HDF5Map | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
-        build: bool = False,
+        require: bool = False,
         parent: str | None = None,
         init: bool = True,
     ) -> None:
@@ -82,7 +82,7 @@ class HDF5Group(HDF5BaseObject):
 
         # Object Construction #
         if init:
-            self.construct(group=group, name=name, map_=map_, file=file, load=load, build=build, parent=parent)
+            self.construct(group=group, name=name, map_=map_, file=file, load=load, require=require, parent=parent)
 
     # Container Methods
     def __getitem__(self, key: str) -> HDF5BaseObject:
@@ -98,7 +98,7 @@ class HDF5Group(HDF5BaseObject):
         map_: HDF5Map | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
-        build: bool = False,
+        require: bool = False,
         parent: str | None = None,
     ) -> None:
         """Constructs this object from the provided arguments.
@@ -109,7 +109,7 @@ class HDF5Group(HDF5BaseObject):
             map_: The map for this HDF5 object.
             file: The file object that this group object originates from.
             load: Determines if this object will load the group from the file on construction.
-            build: Determines if this object will create and fill the group in the file on construction.
+            require: Determines if this object will create and fill the group in the file on construction.
             parent: The HDF5 name of the parent of this HDF5 object.
         """
         super().construct(name=name, map_=map_, file=file, parent=parent)
@@ -123,34 +123,34 @@ class HDF5Group(HDF5BaseObject):
         if group is not None:
             self.set_group(group)
 
-        self.construct_attributes(build=build)
+        self.construct_attributes(require=require)
 
         if load and self.exists:
             self.load(load=load)
 
-        if build:
+        if require:
             self.require()
-            self.construct_members(load=load, build=build)
+            self.construct_members(load=load, require=require)
 
-    def construct_attributes(self, map_: HDF5Map = None, load: bool = False, build: bool = False) -> None:
+    def construct_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
         """Creates the attributes for this group.
 
         Args:
             map_: The map to use to create the attributes.
             load: Determines if this object will load the attribute values from the file on construction.
-            build: Determines if this object will create and fill the attributes in the file on construction.
+            require: Determines if this object will create and fill the attributes in the file on construction.
         """
         if map_ is None:
             map_ = self.map
-        self.attributes = map_.attributes_type(name=self._full_name, map_=map_, file=self._file, load=load, build=build)
+        self.attributes = map_.attributes_type(name=self._full_name, map_=map_, file=self._file, load=load, require=require)
 
-    def construct_members(self, map_: HDF5Map = None, load: bool = False, build: bool = False) -> None:
+    def construct_members(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
         """Creates the members of this group.
 
         Args:
             map_: The map to use to create the attributes.
             load: Determines if this object will recursively load the members from the file on construction.
-            build: Determines if this object will recursively create and fill the members in the file on construction.
+            require: Determines if this object will recursively create and fill the members in the file on construction.
         """
         if map_ is not None:
             self.map = map_
@@ -158,7 +158,7 @@ class HDF5Group(HDF5BaseObject):
         for name, value in self.map.items():
             name = self._parse_name(name)
             if name not in self.members:
-                obj = value.construct_object(map_=value, load=load, build=build, file=self._file)
+                obj = value.construct_object(map_=value, load=load, require=require, file=self._file)
                 if obj is None:
                     self.members[name] = value.construct_object(map_=value, load=load, file=self._file)
                 else:
@@ -180,15 +180,15 @@ class HDF5Group(HDF5BaseObject):
         return name
     
     # File
-    def load(self, load: bool = False, build: bool = False) -> None:
+    def load(self, load: bool = False, require: bool = False) -> None:
         """Loads this group from file with the option to create and fill it.
 
         Args:
             load: Determines if this object will recursively load the members from the file on construction.
-            build: Determines if this object will recursively create and fill the members in the file on construction.
+            require: Determines if this object will recursively create and fill the members in the file on construction.
         """
         self.attributes.load()
-        self.get_members(load=load, build=build)
+        self.get_members(load=load, require=require)
 
     def refresh(self) -> None:
         """Reloads the attributes and members from the file."""
@@ -293,13 +293,13 @@ class HDF5Group(HDF5BaseObject):
         self.set_name(group.name)
         self._group = group
 
-    def get_member(self, name: str, load: bool = False, build: bool = False, **kwargs: Any) -> HDF5BaseObject:
+    def get_member(self, name: str, load: bool = False, require: bool = False, **kwargs: Any) -> HDF5BaseObject:
         """Get a member of the group.
 
         Args:
             name: The name of the member to get.
             load: Determines if this object will recursively load the members from the file on construction.
-            build: Determines if this object will recursively create and fill the members in the file on construction.
+            require: Determines if this object will recursively create and fill the members in the file on construction.
             **kwargs: Extra kwargs to use to create the member.
 
         Returns:
@@ -314,22 +314,22 @@ class HDF5Group(HDF5BaseObject):
                     kwargs["group"] = item
                 else:
                     kwargs["dataset"] = item
-                self.members[name] = map_.type(map_=map_, file=self._file, load=load, build=build, **kwargs)
+                self.members[name] = map_.type(map_=map_, file=self._file, load=load, require=require, **kwargs)
             else:
                 if isinstance(item, h5py.Dataset):
                     self.members[name] = self.default_dataset(dataset=item, file=self._file,
-                                                              load=load, build=build, **kwargs)
+                                                              load=load, require=require, **kwargs)
                 elif isinstance(item, h5py.Group):
                     self.members[name] = self.default_group(group=item, file=self._file,
-                                                            load=load, build=build, **kwargs)
+                                                            load=load, require=require, **kwargs)
         return self.members[name]
 
-    def get_members(self, load: bool = False, build: bool = False, mapped: bool = False) -> dict[str, HDF5BaseObject]:
+    def get_members(self, load: bool = False, require: bool = False, mapped: bool = False) -> dict[str, HDF5BaseObject]:
         """Get all the members in this group.
 
         Args:
             load: Determines if this object will recursively load the members from the file on construction.
-            build: Determines if this object will recursively create and fill the members in the file on construction.
+            require: Determines if this object will recursively create and fill the members in the file on construction.
             mapped: Determines if this object will only add object that are mapped.
 
         Returns:
@@ -343,17 +343,21 @@ class HDF5Group(HDF5BaseObject):
                         kwargs = {"group": value}
                     else:
                         kwargs = {"dataset": value}
-                    self.members[name] = map_.type(map_=map_, file=self._file, load=load, build=build, **kwargs)
+                    self.members[name] = map_.type(map_=map_, file=self._file, load=load, require=require, **kwargs)
                 elif not mapped:
                     if isinstance(value, h5py.Dataset):
                         self.members[name] = self.default_dataset(
                             dataset=value,
                             file=self._file,
                             load=load,
-                            build=build,
+                            require=require,
                         )
                     elif isinstance(value, h5py.Group):
-                        self.members[name] = self.default_group(group=value, file=self._file, load=load, build=build)
+                        self.members[name] = self.default_group(
+                            group=value,
+                            file=self._file,
+                            load=load, require=require,
+                        )
         return self.members.copy()
 
     def get_item(self, key: str) -> HDF5BaseObject:

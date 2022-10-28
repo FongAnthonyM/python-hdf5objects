@@ -25,7 +25,6 @@ from bidict import bidict
 import numpy as np
 
 # Local Packages #
-from ..hdf5bases import HDF5Map, DatasetMap, HDF5Dataset
 
 
 # Definitions #

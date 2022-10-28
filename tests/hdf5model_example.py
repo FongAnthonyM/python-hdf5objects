@@ -142,8 +142,8 @@ if __name__ == '__main__':
     # Create the file
     # The map_ kwarg overrides the default map, in this case the same map with the maxsahpe changed.
     # The create kwarg determines if the file will be created.
-    # The build kwarg determines if the file's structure will be built, which is highly suggested for SWMR.
-    with TensorModelsHDF5(file=out_path, mode='a', map_=new_map, create=True, build=True) as model_file:
+    # The require kwarg determines if the file's structure will be built, which is highly suggested for SWMR.
+    with TensorModelsHDF5(file=out_path, mode='a', map_=new_map, create=True, require=True) as model_file:
         # Note: Caching is off while in write mode. Caching can be turned on using methods covered in the load/read file
         # section. Caching is particularly useful when writing to a file.
 
@@ -166,8 +166,8 @@ if __name__ == '__main__':
         print(f"The shape of model 1: {model_1_dataset.shape}")
 
         model_2_dataset = model_file["model_2"]
-        # Since build was called in the file creation we do not need to require the dataset.
-        # However, if build was not called, then the require method would need to be called.
+        # Since require was called in the file creation we do not need to require the dataset.
+        # However, if require was not called, then the require method would need to be called.
         # model_2_dataset.require(
         #     start=start,
         #     # sample_rate=sample_rate,  # Sample rate does not need to be set
@@ -218,7 +218,7 @@ if __name__ == '__main__':
     # The load kwarg determines if the whole file structure will be loaded in. This is useful if you plan on looking at
     # everything in the file, but if load is False or not set it will load parts of the structure on demand which is
     # more efficient if you are looking at specific parts and not checking others.
-    # [map_=new_map] does not need to be set here because we are loading a file and not building it.
+    # [map_=new_map] does not need to be set here because we are loading a file and not requiring it.
     with TensorModelsHDF5(file=out_path, load=True, swmr=True) as model_file:
         # Caching is on when in read mode.
         # In normal read mode, once data is loaded into cache it has to manually be told refresh the cache.
@@ -252,6 +252,9 @@ if __name__ == '__main__':
         model_2_dataset = model_file["model_2"]
         print(f"The shape of model 2: {model_2_dataset.shape}")
         print("")
+
+        a = model_1_dataset.ref
+        thing = model_file[a]
 
     # Alternate File instantiation methods
     # The open_ kwarg determines if the file will remain open after instantiation, True by default.

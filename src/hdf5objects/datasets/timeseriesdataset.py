@@ -69,7 +69,7 @@ class TimeSeriesDataset(HDF5Dataset):
         samples: An object to build the sample axis from.
         timestamps: An object to build the time axis from.
         load: Determines if this object will load the timeseries from the file on construction.
-        build: Determines if this object will create and fill the timeseries in the file on construction.
+        require: Determines if this object will create and fill the timeseries in the file on construction.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments to construct the base HDF5 dataset.
     """
@@ -85,7 +85,7 @@ class TimeSeriesDataset(HDF5Dataset):
         samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
         load: bool = False, 
-        build: bool = False, 
+        require: bool = False,
         init: bool = True, 
         **kwargs: Any,
     ) -> None:
@@ -111,7 +111,7 @@ class TimeSeriesDataset(HDF5Dataset):
                 samples=samples, 
                 timestamps=timestamps, 
                 load=load, 
-                build=build, 
+                require=require,
                 **kwargs,
             )
 
@@ -184,7 +184,7 @@ class TimeSeriesDataset(HDF5Dataset):
         samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
         load: bool = False,
-        build: bool = False,
+        require: bool = False,
         **kwargs: Any,
     ) -> None:
         """Constructs this object.
@@ -196,14 +196,10 @@ class TimeSeriesDataset(HDF5Dataset):
             samples: An object to build the sample axis from.
             timestamps: An object to build the time axis from.
             load: Determines if this object will load the timeseries from the file on construction.
-            build: Determines if this object will create and fill the timeseries in the file on construction.
+            require: Determines if this object will create and fill the timeseries in the file on construction.
             **kwargs: The keyword arguments to construct the base HDF5 dataset.
         """
-        if data is not None:
-            kwargs["data"] = data
-            kwargs["build"] = build
-
-        super().construct(build=build, make_axes=False, **kwargs)
+        super().construct(data=data, require=require, make_axes=False, **kwargs)
 
         if sample_rate is not None:
             self._sample_rate = sample_rate
@@ -214,7 +210,7 @@ class TimeSeriesDataset(HDF5Dataset):
         if load and self.exists:
             self.load()
 
-        if build and self.exists:
+        if (require or data is not None) and self.exists:
             self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
 
     def construct_axes(
@@ -332,7 +328,7 @@ class TimeSeriesDataset(HDF5Dataset):
             samples: The numpy array to make into the sample axis.
         """
         if self._sample_axis is None:
-            self.create_sample_axis(build=True, data=samples, **kwargs)
+            self.create_sample_axis(require=True, data=samples, **kwargs)
         else:
             self._sample_axis.set_data(samples, **kwargs)
 
@@ -680,7 +676,7 @@ class TimeSeriesDataset(HDF5Dataset):
             rate=rate,
             size=size,
             s_name=self.channel_scale_name,
-            build=True,
+            require=True,
             file=self._file,
             **kwargs,
         )
@@ -743,7 +739,7 @@ class TimeSeriesDataset(HDF5Dataset):
             rate=rate,
             size=size,
             s_name=self.sample_scale_name,
-            build=True,
+            require=True,
             file=self._file,
             **kwargs,
         )
@@ -810,7 +806,7 @@ class TimeSeriesDataset(HDF5Dataset):
             size=size,
             datetimes=datetimes,
             s_name=self.time_scale_name,
-            build=True,
+            require=True,
             file=self._file,
             **kwargs,
         )

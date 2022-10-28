@@ -19,7 +19,7 @@ from typing import Any
 # Third-Party Packages #
 from baseobjects import singlekwargdispatchmethod, search_sentinel
 from baseobjects.cachingtools import CachingInitMeta, CachingObject
-from baseobjects.objects import StaticWrapper
+from baseobjects.wrappers import StaticWrapper
 import h5py
 
 # Local Packages #
@@ -175,17 +175,17 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         return self.is_exist()
 
     # Container Methods
-    def __getitem__(self, key: str) -> Any:
+    def __getitem__(self, key: Any) -> Any:
         """Ensures HDF5 object is open for getitem"""
         with self:
             return getattr(self, self._wrap_attributes[0])[key]
 
-    def __setitem__(self, key: str, value: Any) -> None:
+    def __setitem__(self, key: Any, value: Any) -> None:
         """Ensures HDF5 object is open for setitem"""
         with self:
             getattr(self, self._wrap_attributes[0])[key] = value
 
-    def __delitem__(self, key: str) -> None:
+    def __delitem__(self, key: Any) -> None:
         """Ensures HDF5 object is open for delitem"""
         with self:
             del getattr(self, self._wrap_attributes[0])[key]

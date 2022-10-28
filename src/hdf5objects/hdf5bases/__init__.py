@@ -19,6 +19,7 @@ from .hdf5attributes import HDF5Attributes
 from .hdf5group import HDF5Group
 from .hdf5dataset import HDF5Dataset, DatasetMap
 from .hdf5file import HDF5File
+from .hdf5caster import HDF5Caster
 
 
 # Assign Cyclic Definitions

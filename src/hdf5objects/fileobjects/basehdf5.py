@@ -54,7 +54,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         map_: The map for this HDF5 object.
         load: Determines if this object will load the file on construction.
         create: Determines if this object will create an empty file on construction.
-        build: Determines if this object will create and fill the file on construction.
+        require: Determines if this object will create and fill the file on construction.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the open method.
     """
@@ -302,7 +302,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         map_: HDF5Map | None = None,
         load: bool = False,
         create: bool = False,
-        build: bool = False,
+        require: bool = False,
         init: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -315,7 +315,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
         # Object Construction #
         if init:
-            self.construct(file=file, open_=open_, map_=map_, load=load, create=create, build=build, **kwargs)
+            self.construct(file=file, open_=open_, map_=map_, load=load, create=create, require=require, **kwargs)
     
     @property
     def file_type(self):
@@ -337,15 +337,15 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     
     # Instance Methods #
     # Constructors/Destructors
-    def construct_file_attributes(self, map_: HDF5Map = None, load: bool = False, build: bool = False) -> None:
+    def construct_file_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
         """Creates the attributes for this group.
 
         Args:
             map_: The map to use to create the attributes.
             load: Determines if this object will load the attribute values from the file on construction.
-            build: Determines if this object will create and fill the attributes in the file on construction.
+            require: Determines if this object will create and fill the attributes in the file on construction.
         """
-        super().construct_file_attributes(map_=map_, load=load, build=build)
+        super().construct_file_attributes(map_=map_, load=load, require=require)
         self._group.attributes["file_type"] = self.FILE_TYPE
         self._group.attributes["file_version"] = self.VERSION.str()
 

@@ -21,6 +21,7 @@ import zoneinfo
 # Third-Party Packages #
 from baseobjects import singlekwargdispatchmethod
 from baseobjects.cachingtools import timed_keyless_cache
+from baseobjects.operations import timezone_offset
 from dspobjects.dataclasses import IndexDateTime, FoundTimeRange
 import h5py
 import numpy as np
@@ -34,8 +35,16 @@ from .axis import AxisMap, Axis
 # Classes #
 class TimeAxisMap(AxisMap):
     """A map for the TimeAxis object."""
-    default_attribute_names: Mapping[str, str] = {"sample_rate": "sample_rate", "time_zone": "time_zone"}
-    default_attributes: Mapping[str, Any] = {"sample_rate": h5py.Empty('f8'), "time_zone": ""}
+    default_attribute_names: Mapping[str, str] = {
+        "sample_rate": "sample_rate",
+        "time_zone": "time_zone",
+        "time_zone_offset": "time_zone_offset",
+    }
+    default_attributes: Mapping[str, Any] = {
+        "sample_rate": h5py.Empty('f8'),
+        "time_zone": "",
+        "time_zone_offset": h5py.Empty('f8'),
+    }
     default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "f8"}
 
 
@@ -44,6 +53,7 @@ class TimeAxis(Axis):
 
     Class Attributes:
         local_timezone: The name of the timezone this program is running in.
+        default_scale_name: The default name of this axis.
 
     Attributes:
         default_kwargs: The default keyword arguments to use when creating the dataset.
@@ -61,6 +71,7 @@ class TimeAxis(Axis):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the HDF5Dataset.
     """
+    default_scale_name: str | None = "time axis"
     local_timezone: str = tzlocal.get_localzone_name()
 
     # Magic Methods
@@ -74,15 +85,15 @@ class TimeAxis(Axis):
         size: int | None = None,
         datetimes: Iterable[datetime.datetime | float] | np.ndarray | None = None,
         s_name: str | None = None,
-        build: bool = False,
+        require: bool = False,
         init: bool = True,
         **kwargs: Any,
     ) -> None:
         # Parent Attributes #
         super().__init__(init=False)
 
-        # Overriden Attributes #
-        self._scale_name = "time axis"
+        # New Attributes #
+        self._time_zone_mask: datetime.tzinfo | None = None
 
         # Object Construction #
         if init:
@@ -94,7 +105,7 @@ class TimeAxis(Axis):
                 size=size,
                 datetimes=datetimes,
                 s_name=s_name,
-                build=build,
+                require=require,
                 **kwargs,
             )
 
@@ -136,7 +147,10 @@ class TimeAxis(Axis):
     @property
     def time_zone(self) -> zoneinfo.ZoneInfo | None:
         """The timezone of the timestamps for this axis. Setter validates before assigning."""
-        return self.get_time_zone(refresh=False)
+        if self._time_zone_mask is None:
+            return self._time_zone_mask
+        else:
+            return self.get_time_zone(refresh=False)
 
     @time_zone.setter
     def time_zone(self, value: str | zoneinfo.ZoneInfo) -> None:
@@ -169,7 +183,7 @@ class TimeAxis(Axis):
         size: int | None = None,
         datetimes: Iterable[datetime.datetime | float] | np.ndarray | None = None,
         s_name: str | None = None,
-        build: bool = False,
+        require: bool = False,
         **kwargs: Any,
     ) -> None:
         """Constructs this object.
@@ -182,16 +196,13 @@ class TimeAxis(Axis):
             size: The number of datum in the axis.
             datetimes: The datetimes to populate this axis.
             s_name: The name of the axis (scale).
-            build: Determines if the axis should be created and filled.
+            require: Determines if the axis should be created and filled.
             **kwargs: The keyword arguments for the HDF5Dataset.
         """
-        if "data" in kwargs:
-            kwargs["build"] = build
-            build = False
+        # Construct the dataset and handle creation here unless data is present.
+        super().construct(s_name=s_name, require=False, **kwargs)
 
-        super().construct(s_name=s_name, **kwargs)
-
-        if build:
+        if require and "data" not in kwargs:
             if datetimes is not None:
                 self.from_datetimes(datetimes=datetimes)
             elif start is not None:
@@ -315,6 +326,16 @@ class TimeAxis(Axis):
         super().refresh()
         self.get_datetimes.clear_cache()
 
+    # Masking
+    def mask_time_zone(self, tz: datetime.tzinfo | None) -> None:
+        """Masks the time zone of this another timezone.
+
+        Args:
+            tz: The time zone to use instead or None to use the original time zone.
+        """
+        self._time_zone_mask = tz
+        self.get_datetimes.cache_clear()
+
     # Getters/Setter
     @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
     def get_all_data(self) -> np.ndarray:
@@ -327,7 +348,7 @@ class TimeAxis(Axis):
         with self:
             return self._dataset[...]
 
-    def get_time_zone(self, refresh: bool = True) -> zoneinfo.ZoneInfo | None:
+    def get_time_zone(self, refresh: bool = True) -> datetime.tzinfo | None:
         """Get the timezone of this axis.
 
         Args:
@@ -335,27 +356,37 @@ class TimeAxis(Axis):
         """
         if refresh:
             self.attributes.refresh()
-        tz_str = self.attributes.get("time_zone", self.sentinel)
-        if tz_str is self.sentinel or isinstance(tz_str, h5py.Empty) or tz_str == "":
-            return None
-        else:
-            return zoneinfo.ZoneInfo(tz_str)
 
-    def set_time_zone(self, value: str | zoneinfo.ZoneInfo | None = None) -> None:
+        tz_name = self.attributes.get("time_zone", self.sentinel)
+        tz_offset = self.attributes.get("time_zone_offset", self.sentinel)
+        if tz_name is not self.sentinel and not isinstance(tz_name, h5py.Empty) and tz_name != "":
+            return zoneinfo.ZoneInfo(tz_name)
+        elif tz_offset is not self.sentinel and not isinstance(tz_offset, h5py.Empty):
+            return datetime.timezone(datetime.timedelta(seconds=tz_offset))
+        else:
+            return None
+
+    def set_time_zone(self, value: str | datetime.tzinfo | None = None, offset: float | None = None) -> None:
         """Sets the timezone of this axis.
 
         Args:
-            value: The timezone to set this axis to.
+            value: The time zone to set this axis to.
+            offset: The time zone offset from UTC.
         """
         if value is None:
             value = ""
-        elif isinstance(value, zoneinfo.ZoneInfo):
+            offset = h5py.Empty('f8')
+        elif isinstance(value, datetime.tzinfo):
+            offset = timezone_offset(value)
             value = str(value)
         elif value.lower() == "local" or value.lower() == "localtime":
+            offset = timezone_offset(zoneinfo.ZoneInfo(self.local_timezone))
             value = self.local_timezone
         else:
              zoneinfo.ZoneInfo(value)  # Raises an error if the given string is not a time zone.
+
         self.attributes["time_zone"] = value
+        self.attributes["time_zone_offset"] = offset
 
     # Get Data
     def get_timestamps(self) -> np.ndarray:
