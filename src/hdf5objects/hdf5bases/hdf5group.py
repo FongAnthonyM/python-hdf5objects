@@ -13,6 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
+from collections.abc import Iterable
 import pathlib
 from typing import Any
 
@@ -27,6 +28,9 @@ from .hdf5attributes import HDF5Attributes
 
 
 # Definitions #
+# Names #
+_SENTIEL = object()
+
 # Classes #
 class HDF5Group(HDF5BaseObject):
     """A wrapper object which wraps a HDF5 group and gives more functionality.
@@ -87,7 +91,7 @@ class HDF5Group(HDF5BaseObject):
     # Container Methods
     def __getitem__(self, key: str) -> HDF5BaseObject:
         """Gets an item within this group."""
-        return self.get_item(key)
+        return self.get(key)
 
     # Instance Methods #
     # Constructors/Destructors
@@ -360,21 +364,35 @@ class HDF5Group(HDF5BaseObject):
                         )
         return self.members.copy()
 
-    def get_item(self, key: str) -> HDF5BaseObject:
+    def get(self, key: str | Iterable[str], sentiel: Any = _SENTIEL) -> HDF5BaseObject:
         """Get a member of this group.
 
         Args:
-            key: The key name of the member to get
+            key: The key name of the member to get.
+            sentiel: An object to return if the key cannot be found.
 
         Returns:
             The requested member.
         """
+        keys = key.strip('/').split('/') if isinstance(key, str) else list(key)
+        key = keys.pop(0)
         key = self._parse_name(key)
+
         item = self.members.get(key, self.sentinel)
-        if item is not self.sentinel:
-            return item
+        if item is self.sentinel:
+            try:
+                item = self.get_member(key)
+            except ValueError as error:
+                if sentiel is not _SENTIEL:
+                    return sentiel
+                else:
+                    raise error
+
+        if keys:
+            return item.get(key=keys, sentiel=sentiel)
         else:
-            return self.get_member(key)
+            return item
+
 
     # Group Modification
     def create(self, name: str | None = None, track_order: bool | None = None) -> "HDF5Group":

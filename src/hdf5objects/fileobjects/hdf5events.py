@@ -159,7 +159,7 @@ class HDF5eventLogger(BaseHDF5):
             name = "TimeSet"
         if index is None:
             index = -1
-        start_event = self.hierarchy.get_item(index, name)
+        start_event = self.hierarchy.get(index, name)
         self.start_datetime = datetime.datetime.fromtimestamp(start_event[self.TIME_NAME])
         self.start_time_offset = (now_datatime - self.start_datetime).total_seconds()
         self.append({"Time": now_datatime, "DeltaTime": self.start_time_offset,

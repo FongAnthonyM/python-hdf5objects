@@ -131,9 +131,9 @@ class HDF5LinkedDatasets(object):
             for name, child_index in valid_children.items():
                 result[name] = self.references[name][child_index]
         else:
-            result = [self.references[name].get_item(location, dict_=False)]
+            result = [self.references[name].get(location)]
             for name, child_index in valid_children.items():
-                result.append(self.references[name].get_item(child_index, dict_=False))
+                result.append(self.references[name].get(child_index))
             result = tuple(result)
 
         return result
