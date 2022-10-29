@@ -269,7 +269,7 @@ class HDF5EEG(BaseHDF5):
         start: datetime.datetime | float | None = None,
         map_: HDF5Map = None,
         load: bool = False,
-        build: bool = False,
+        require: bool = False,
     ) -> None:
         """Creates the attributes for this group.
 
@@ -277,24 +277,24 @@ class HDF5EEG(BaseHDF5):
             start: The start time of the data, if creating.
             map_: The map to use to create the attributes.
             load: Determines if this object will load the attribute values from the file on construction.
-            build: Determines if this object will create and fill the attributes in the file on construction.
+            require: Determines if this object will create and fill the attributes in the file on construction.
         """
-        super().construct_file_attributes(map_=map_, load=load, build=build)
+        super().construct_file_attributes(map_=map_, load=load, require=require)
         if isinstance(start, datetime.datetime):
             self.attributes["start"] = start.timestamp()
         elif isinstance(start, float):
             self.attributes["start"] = start
         self.attributes["subject_id"] = self._subject_id
 
-    def construct_dataset(self, load: bool = False, build: bool = False, **kwargs: Any) -> None:
+    def construct_dataset(self, load: bool = False, require: bool = False, **kwargs: Any) -> None:
         """Constructs the main EEG dataset.
 
         Args:
             load: Determines if this object will load the dataset.
-            build: Determines if this object will create and fill the dataset.
+            require: Determines if this object will create and fill the dataset.
             **kwargs: The keyword arguments for creating the dataset.
         """
-        self._group.get_member(name="data", load=load, build=build, **kwargs)
+        self._group.get_member(name="data", load=load, require=require, **kwargs)
 
     # File
     def generate_file_name(self, s_id: str | None = None, start: datetime.datetime | float | None = None) -> str:

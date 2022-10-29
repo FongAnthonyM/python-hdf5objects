@@ -247,10 +247,7 @@ class HDF5Map(BaseObject):
         Returns:
             The HDF5Object that this map is for.
         """
-        temp_kwargs = self.kwargs.copy()
-        temp_kwargs.update(kwargs)
-
-        self.object = self.type(**temp_kwargs)
+        self.object = self.type(**(self.kwargs | kwargs))
 
         return self.object
 

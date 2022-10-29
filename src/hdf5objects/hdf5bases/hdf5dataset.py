@@ -46,8 +46,7 @@ class DatasetMap(HDF5Map):
         Returns:
             The HDF5Object that this map is for.
         """
-        temp_kwargs = self.kwargs.copy()
-        temp_kwargs.update(kwargs)
+        temp_kwargs = self.kwargs | kwargs
 
         if "require" in temp_kwargs and "data" not in temp_kwargs and (
                 "shape" not in temp_kwargs or "dtype" not in temp_kwargs or "maxshape" not in temp_kwargs):
@@ -73,6 +72,7 @@ class HDF5Dataset(HDF5BaseObject):
         _dataset: The HDF5 dataset to wrap.
         _scale_name: The name of this dataset if it is a scale.
         attributes: The attributes of this dataset.
+        kwargs: The kwargs to use when creating the dataset.
 
     Args:
         data: The data to fill in this dataset.
@@ -112,6 +112,7 @@ class HDF5Dataset(HDF5BaseObject):
         self._dataset: h5py.Dataset | None = None
         self._scale_name: str | None = None
         self.attributes: HDF5Attributes | None = None
+        self.kwargs: dict[str, Any] | None = None
 
         # Object Construction #
         if init:
@@ -206,13 +207,16 @@ class HDF5Dataset(HDF5BaseObject):
         if dataset is not None:
             self.set_dataset(dataset)
 
+        if kwargs is not None:
+            self.kwargs = kwargs
+
         self.construct_attributes()
 
         if load and self.exists:
             self.load()
 
         if require or data is not None:
-            self._require_dataset(data=data, **kwargs)
+            self.require(name=self._full_name, **kwargs)
 
     def construct_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
         """Creates the attributes for this dataset.
@@ -231,14 +235,6 @@ class HDF5Dataset(HDF5BaseObject):
             load=load,
             require=require,
         )
-
-    def _require_dataset(self, **kwargs: Any) -> None:
-        """Creates and fills the data if it does not exist.
-
-        Args:
-            **kwargs: The keyword arguments for constructing a HDF5 Dataset.
-        """
-        self.require(name=self._full_name, **kwargs)
 
     # File
     def load(self) -> None:
@@ -427,15 +423,12 @@ class HDF5Dataset(HDF5BaseObject):
         if name is not None:
             self._name = name
 
-        if "data" in kwargs:
-            if "shape" not in kwargs:
-                kwargs["shape"] = kwargs["data"].shape
-            if "maxshape" not in kwargs:
-                kwargs["maxshape"] = kwargs["data"].shape
+        if "data" in kwargs and kwargs["data"] is not None:
+            kwargs["shape"] = kwargs["data"].shape
 
         with self._file.temp_open():
             if not self.exists:
-                self._dataset = self._file._file.create_dataset(name=self._full_name, **kwargs)
+                self._dataset = self._file._file.create_dataset(name=self._full_name, **(self.kwargs | kwargs))
                 if self._file._file.swmr_mode:
                     if self._file.allow_swmr_create:
                         self._file.close()

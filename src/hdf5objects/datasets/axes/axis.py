@@ -136,13 +136,13 @@ class Axis(HDF5Dataset):
             self._scale_name = s_name
 
         # Construct the dataset and handle creation here unless data is present.
-        super().construct(require=False, **kwargs)
+        super().construct(require=False, **(self.default_kwargs | kwargs))
 
         if require and "data" not in kwargs:
             if start is not None and size != 0:
                 self.from_range(start, stop, step, rate, size)
             else:
-                self.require(**self.default_kwargs)
+                self.require()
 
     def from_range(
         self,
@@ -163,9 +163,6 @@ class Axis(HDF5Dataset):
             size: The number of datum in the axis.
             **kwargs: The keyword arguments for the HDF5Dataset.
         """
-        d_kwargs = self.default_kwargs.copy()
-        d_kwargs.update(kwargs)
-
         if step is None and rate is not None:
             step = 1 / rate
 
@@ -175,10 +172,10 @@ class Axis(HDF5Dataset):
         if stop is None:
             stop = start + step * size
 
-        if size is not None:
-            self.set_data(data=np.linspace(start, stop, size), **d_kwargs)
+        if step is not None:
+            self.set_data(data=np.arange(start, stop, step), **kwargs)
         else:
-            self.set_data(data=np.arange(start, stop, step), **d_kwargs)
+            self.set_data(data=np.linspace(start, stop, size), **kwargs)
 
     # File
     def refresh(self) -> None:
@@ -310,5 +307,3 @@ class Axis(HDF5Dataset):
 
 # Assign Cyclic Definitions
 AxisMap.default_type = Axis
-Axis.default_map = AxisMap()
-

@@ -28,6 +28,7 @@ import numpy as np
 import tzlocal
 
 # Local Packages #
+from ...hdf5bases import HDF5Map
 from .axis import AxisMap, Axis
 
 
@@ -71,6 +72,7 @@ class TimeAxis(Axis):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the HDF5Dataset.
     """
+    default_map: HDF5Map = TimeAxisMap()
     default_scale_name: str | None = "time axis"
     local_timezone: str = tzlocal.get_localzone_name()
 
@@ -581,4 +583,3 @@ class TimeAxis(Axis):
 
 # Assign Cyclic Definitions
 TimeAxisMap.default_type = TimeAxis
-TimeAxis.default_map = TimeAxisMap()

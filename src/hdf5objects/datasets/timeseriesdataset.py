@@ -199,7 +199,7 @@ class TimeSeriesDataset(HDF5Dataset):
             require: Determines if this object will create and fill the timeseries in the file on construction.
             **kwargs: The keyword arguments to construct the base HDF5 dataset.
         """
-        super().construct(data=data, require=require, make_axes=False, **kwargs)
+        super().construct(**kwargs)
 
         if sample_rate is not None:
             self._sample_rate = sample_rate
@@ -211,7 +211,7 @@ class TimeSeriesDataset(HDF5Dataset):
             self.load()
 
         if (require or data is not None) and self.exists:
-            self.construct_axes(channels=channels, samples=samples, timestamps=timestamps)
+            self.require(data=data, channels=channels, samples=samples, timestamps=timestamps)
 
     def construct_axes(
         self,

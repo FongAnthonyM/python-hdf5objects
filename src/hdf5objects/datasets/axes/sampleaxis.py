@@ -19,6 +19,7 @@ from typing import Any
 import numpy as np
 
 # Local Packages #
+from ...hdf5bases import HDF5Map
 from .axis import AxisMap, Axis
 
 
@@ -50,6 +51,7 @@ class SampleAxis(Axis):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the HDF5Dataset.
     """
+    default_map: HDF5Map = SampleAxisMap()
     default_scale_name: str | None = "sample axis"
 
     @property
@@ -75,4 +77,3 @@ class SampleAxis(Axis):
 
 # Assign Cyclic Definitions
 SampleAxisMap.default_type = SampleAxis
-SampleAxis.default_map = SampleAxisMap()
