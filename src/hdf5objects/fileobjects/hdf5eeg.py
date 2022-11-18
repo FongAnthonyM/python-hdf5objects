@@ -296,6 +296,16 @@ class HDF5EEG(BaseHDF5):
         """
         self._group.get_member(name="data", load=load, require=require, **kwargs)
 
+    def require_dataset(self, load: bool = False, require: bool = True, **kwargs: Any) -> Any:
+        """Requires the main EEG dataset.
+
+        Args:
+            load: Determines if this object will load the dataset.
+            require: Determines if this object will create and fill the dataset.
+            **kwargs: The keyword arguments for creating the dataset.
+        """
+        return self._group.require_member(name="data", load=load, require=require, **kwargs)
+
     # File
     def generate_file_name(self, s_id: str | None = None, start: datetime.datetime | float | None = None) -> str:
         """Generates a file name based on the subject ID and start time.
@@ -345,6 +355,17 @@ class HDF5EEG(BaseHDF5):
 
         super().create_file(name=name, **kwargs)
 
+    def close(self) -> bool:
+        """Closes the HDF5 file.
+
+        Returns:
+            If the file was successfully closed.
+        """
+        try:
+            self.standardize_attributes()
+        finally:
+            return super().close()
+
     # Attributes Modification
     def validate_attributes(self) -> bool:
         """Checks if the attributes that correspond to data match what is in the data.
@@ -358,5 +379,5 @@ class HDF5EEG(BaseHDF5):
         """Sets the attributes that correspond to data the actual data values."""
         if self.data.exists:
             self.data.standardize_attributes()
-            self.start = self.data._time_axis.start
-            self.end = self.data._time_axis.end
+            self.attributes["start"] = self.data._time_axis.get_start()
+            self.attributes["end"] = self.data._time_axis.get_end()

@@ -150,9 +150,9 @@ class TimeAxis(Axis):
     def time_zone(self) -> zoneinfo.ZoneInfo | None:
         """The timezone of the timestamps for this axis. Setter validates before assigning."""
         if self._time_zone_mask is None:
-            return self._time_zone_mask
-        else:
             return self.get_time_zone(refresh=False)
+        else:
+            return self._time_zone_mask
 
     @time_zone.setter
     def time_zone(self, value: str | zoneinfo.ZoneInfo) -> None:
@@ -362,7 +362,13 @@ class TimeAxis(Axis):
         tz_name = self.attributes.get("time_zone", self.sentinel)
         tz_offset = self.attributes.get("time_zone_offset", self.sentinel)
         if tz_name is not self.sentinel and not isinstance(tz_name, h5py.Empty) and tz_name != "":
-            return zoneinfo.ZoneInfo(tz_name)
+            try:
+                return zoneinfo.ZoneInfo(tz_name)
+            except zoneinfo.ZoneInfoNotFoundError as e:
+                if tz_offset is not self.sentinel and not isinstance(tz_offset, h5py.Empty):
+                    return datetime.timezone(datetime.timedelta(seconds=tz_offset))
+                else:
+                    raise e
         elif tz_offset is not self.sentinel and not isinstance(tz_offset, h5py.Empty):
             return datetime.timezone(datetime.timedelta(seconds=tz_offset))
         else:
@@ -379,10 +385,10 @@ class TimeAxis(Axis):
             value = ""
             offset = h5py.Empty('f8')
         elif isinstance(value, datetime.tzinfo):
-            offset = timezone_offset(value)
+            offset = timezone_offset(value).total_seconds()
             value = str(value)
         elif value.lower() == "local" or value.lower() == "localtime":
-            offset = timezone_offset(zoneinfo.ZoneInfo(self.local_timezone))
+            offset = timezone_offset(zoneinfo.ZoneInfo(self.local_timezone)).total_seconds()
             value = self.local_timezone
         else:
              zoneinfo.ZoneInfo(value)  # Raises an error if the given string is not a time zone.

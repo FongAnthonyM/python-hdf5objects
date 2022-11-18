@@ -59,6 +59,7 @@ class HDF5File(HDF5BaseObject):
         load: Determines if this object will load the file on construction.
         create: Determines if this object will create an empty file on construction.
         require: Determines if this object will create and fill the file on construction.
+        path: The path to the file.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the open method.
     """
@@ -142,6 +143,7 @@ class HDF5File(HDF5BaseObject):
         load: bool = False,
         create: bool = False,
         require: bool = False,
+        path: str | pathlib.Path | h5py.File | None = None,
         init: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -170,6 +172,7 @@ class HDF5File(HDF5BaseObject):
                 load=load,
                 create=create,
                 require=require,
+                path=path,
                 **kwargs,
             )
 
@@ -220,7 +223,7 @@ class HDF5File(HDF5BaseObject):
         Returns:
             dict: A dictionary of this object's attributes.
         """
-        state = self.__dict__.copy()
+        state = super().__getstate__()
         state["open_state"] = self.is_open
         del state["_file"]
         return state
@@ -231,10 +234,10 @@ class HDF5File(HDF5BaseObject):
         Args:
             state: The attributes to build this object from.
         """
-        state["_file"] = h5py.File(state["path"].as_posix(), "r+")
-        if not state.pop("open_state"):
-            state["_file"].close()
-        self.__dict__.update(state)
+        was_open = state.pop("open_state")
+        super().__setstate__(state=state)
+        if was_open:
+            self.open()
 
     # Container Methods
     def __getitem__(self, key: str | h5py.Reference) -> HDF5BaseObject:
@@ -288,7 +291,7 @@ class HDF5File(HDF5BaseObject):
         load: bool = False,
         create: bool = False,
         require: bool = False,
-        init: bool = True,
+        path: str | pathlib.Path | h5py.File | None = None,
         **kwargs: Any,
     ) -> "HDF5File":
         """Constructs this object.
@@ -301,7 +304,7 @@ class HDF5File(HDF5BaseObject):
             load: Determines if this object will load the file on construction.
             create: Determines if this object will create an empty file on construction.
             require: Determines if this object will create and fill the file on construction.
-            init: Determines if this object will construct.
+            path: The path to the file.
             **kwargs: The keyword arguments for the open method.
 
         Returns:
@@ -315,6 +318,9 @@ class HDF5File(HDF5BaseObject):
 
         if mode is not None:
             self.set_mode(mode, timed=False)
+
+        if path is not None:
+            self._set_path(path)
 
         if file is not None:
             self._set_path(file)
@@ -396,6 +402,7 @@ class HDF5File(HDF5BaseObject):
         if file:
             self._path = pathlib.Path(file.filename)
             self._file = file
+            self._get_file = self._get_file_direct.__func__
         else:
             raise ValueError("The supplied HDF5 File must be open.")
 
@@ -492,6 +499,7 @@ class HDF5File(HDF5BaseObject):
                 if "libver" not in kwargs:
                     kwargs["libver"] = "latest"
                 self._file = h5py.File(self.path.as_posix(), mode=self._mode_, **kwargs)
+                self._get_file = self._get_file_direct.__func__
                 return self
             except Exception as error:
                 if exc:

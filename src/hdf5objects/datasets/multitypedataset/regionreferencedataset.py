@@ -121,7 +121,7 @@ class RegionReferenceDataset(MultiTypeDataset):
             ds = ds.ref
 
         if not isinstance(sl, h5py.ref_dtype):
-            sl = self._file[ds].regionref[sl]
+            sl = self.file[ds].regionref[sl]
 
         item = self[index]
         item[self._types_dict[self.region_reference_fields[ref_name][0]]] = ds
@@ -130,8 +130,8 @@ class RegionReferenceDataset(MultiTypeDataset):
 
     def get_from_reference(self, index: int | tuple, ref_name: str | None = None):
         ds_ref, sl_ref = self.get_region_reference(index=index, ref_name=ref_name)
-        return self._file[ds_ref][sl_ref]
+        return self.file[ds_ref][sl_ref]
 
     def set_to_reference(self, index: int | tuple, value: Any, ref_name: str | None = None):
         ds_ref, sl_ref = self.get_region_reference(index=index, ref_name=ref_name)
-        self._file[ds_ref][sl_ref] = value
+        self.file[ds_ref][sl_ref] = value

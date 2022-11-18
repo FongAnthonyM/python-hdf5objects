@@ -13,6 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
+from collections.abc import Mapping
 import pathlib
 from typing import Any
 import warnings
@@ -158,6 +159,27 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             return self._dataset.__array__(dtype=dtype)
 
+    # Pickling
+    def __getstate__(self) -> dict[str, Any]:
+        """Creates a dictionary of attributes which can be used to rebuild this object
+
+        Returns:
+            dict: A dictionary of this object's attributes.
+        """
+        state = super().__getstate__()
+        state["_dataset"] = None
+        return state
+
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
+        """Builds this object based on a dictionary of corresponding attributes.
+
+        Args:
+            state: The attributes to build this object from.
+        """
+        super().__setstate__(state=state)
+        with self.file.temp_open:
+            self._dataset = self.file._file[self._full_name]
+
     # Container Methods
     def __getitem__(self, key: Any) -> Any:
         """Ensures HDF5 object is open for getitem"""
@@ -231,7 +253,7 @@ class HDF5Dataset(HDF5BaseObject):
         self.attributes = map_.attributes_type(
             name=self._full_name,
             map_=map_,
-            file=self._file,
+            file=self.file,
             load=load,
             require=require,
         )
@@ -327,15 +349,15 @@ class HDF5Dataset(HDF5BaseObject):
         getattr(self, self._wrap_attributes[0])[key] = value
 
     @singlekwargdispatchmethod("dataset")
-    def set_dataset(self, dataset: h5py.Dataset) -> None:
+    def set_dataset(self, dataset: "HDF5Dataset") -> None:
         """Sets the wrapped dataset.
 
         Args:
             dataset: The dataset this object will wrap.
         """
         if isinstance(dataset, HDF5Dataset):
-            if self._file is None:
-                self._file = dataset._file
+            if self.file is None:
+                self.set_file(dataset.file)
             self.set_name(dataset._name)
             self._dataset = dataset._dataset
         else:
@@ -350,8 +372,8 @@ class HDF5Dataset(HDF5BaseObject):
         """
         if not dataset:
             raise ValueError("Dataset needs to be open")
-        if self._file is None:
-            self._file = self.file_type(dataset.file)
+        if self.file is None:
+            self.set_file(dataset.file)
         self.set_name(dataset.name)
         self._dataset = dataset
 
@@ -395,13 +417,13 @@ class HDF5Dataset(HDF5BaseObject):
             if "maxshape" not in kwargs:
                 kwargs["maxshape"] = kwargs["data"].shape
 
-        with self._file.temp_open():
-            self._dataset = self._file._file.create_dataset(name=self._full_name, **kwargs)
-            if self._file._file.swmr_mode:
-                if self._file.allow_swmr_create:
-                    self._file.close()
-                    self._file.open()
-                    self._file._file.swmr_mode = True
+        with self.file.temp_open():
+            self._dataset = self.file._file.create_dataset(name=self._full_name, **kwargs)
+            if self.file._file.swmr_mode:
+                if self.file.allow_swmr_create:
+                    self.file.close()
+                    self.file.open()
+                    self.file._file.swmr_mode = True
                 else:
                     raise RuntimeError("Creating a new dataset with SWMR mode on causes issues")
             self.attributes.construct_attributes()
@@ -426,21 +448,21 @@ class HDF5Dataset(HDF5BaseObject):
         if "data" in kwargs and kwargs["data"] is not None:
             kwargs["shape"] = kwargs["data"].shape
 
-        with self._file.temp_open():
+        with self.file.temp_open():
             if not self.exists:
-                self._dataset = self._file._file.create_dataset(name=self._full_name, **(self.kwargs | kwargs))
-                if self._file._file.swmr_mode:
-                    if self._file.allow_swmr_create:
-                        self._file.close()
-                        self._file.open(mode='a')
-                        self._file._file.swmr_mode = True
+                self._dataset = self.file._file.create_dataset(name=self._full_name, **(self.kwargs | kwargs))
+                if self.file._file.swmr_mode:
+                    if self.file.allow_swmr_create:
+                        self.file.close()
+                        self.file.open(mode='a')
+                        self.file._file.swmr_mode = True
                     else:
                         raise RuntimeError("Creating a new dataset with SWMR mode on causes issues")
                 self.attributes.construct_attributes()
                 if self.scale_name is not None:
                     self.make_scale()
             else:
-                self._dataset = self._file._file[self._full_name]
+                self._dataset = self.file._file[self._full_name]
                 data = kwargs.get("data", None)
                 if data is not None:
                     self.replace_data(data=data)

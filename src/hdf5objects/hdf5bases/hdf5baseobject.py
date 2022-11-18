@@ -13,13 +13,17 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
+from collections.abc import Mapping
 import pathlib
+from types import MethodType
 from typing import Any
+import weakref
 
 # Third-Party Packages #
 from baseobjects import singlekwargdispatchmethod, search_sentinel
 from baseobjects.cachingtools import CachingInitMeta, CachingObject
 from baseobjects.wrappers import StaticWrapper
+from baseobjects.typing import AnyCallable
 import h5py
 
 # Local Packages #
@@ -57,7 +61,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
     default_map: HDF5Map | None = None
     write_modes: set[str] = {"a", "r+"}
 
-    # Class Methods
+    # Class Methods #
     # Wrapped Attribute Callback Functions
     @classmethod
     def _get_attribute(cls, obj: Any, wrap_name: str, attr_name: str) -> Any:
@@ -99,7 +103,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         with obj:  # Ensures the hdf5 dataset is open when accessing attributes
             super()._del_attribute(obj, wrap_name, attr_name)
 
-    # Magic Methods
+    # Magic Methods #
     # Constructors/Destructors
     def __init__(
         self,
@@ -115,7 +119,10 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
 
         # New Attributes #
         self._file_was_open: bool | None = None
+        self._weak_signal: weakref.ref | None = None
+        self._weak_file: weakref.ref | None = None
         self._file: h5py.File | "HDF5File" | None = None
+        self._get_file: AnyCallable = self._get_weak_file.__func__
 
         self._name_: str | None = None
         self._parents: list[str] | None = None
@@ -174,6 +181,63 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         """Checks if this object exists in the hdf5 file."""
         return self.is_exist()
 
+    @property
+    def file(self) -> Any:
+        """Returns the owning file of this HDF5 Object"""
+        return self.get_file()
+
+    @property
+    def get_file(self) -> AnyCallable:
+        """A descriptor to create the bound get file method."""
+        return self._get_file.__get__(self, self.__class__)
+
+    @get_file.setter
+    def get_file(self, value: AnyCallable) -> None:
+        self._get_file = value
+
+    # Pickling
+    def __getstate__(self) -> dict[str, Any]:
+        """Creates a dictionary of attributes which can be used to rebuild this object
+
+        Returns:
+            dict: A dictionary of this object's attributes.
+        """
+        state = self.__dict__.copy()
+        
+        weak_file = state.pop("_weak_file")
+        if weak_file is not None:
+            state["file"] = weak_file()
+        else:
+            state["file"] = None
+
+        weak_signal = state.pop("_weak_signal")
+        if weak_signal is not None:
+            state["signal"] = weak_signal()
+        else:
+            state["signal"] = None
+        
+        return state
+
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
+        """Builds this object based on a dictionary of corresponding attributes.
+
+        Args:
+            state: The attributes to build this object from.
+        """
+        file = state.pop("file")
+        if file is not None:
+            state["_weak_file"] = weakref.ref(file)
+        else:
+            state["_weak_file"] = None
+
+        signal = state.pop("signal")
+        if signal is not None:
+            state["_weak_signal"] = weakref.ref(signal)
+        else:
+            state["_weak_signal"] = None
+        
+        self.__dict__.update(state)
+    
     # Container Methods
     def __getitem__(self, key: Any) -> Any:
         """Ensures HDF5 object is open for getitem"""
@@ -208,7 +272,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         """
         return bool(getattr(self, self._wrap_attributes[0]))
 
-    # Instance Methods
+    # Instance Methods #
     # Constructors/Destructors
     def construct(
         self,
@@ -246,13 +310,13 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         if file is not None:
             self.set_file(file)
             if mode is None and self._mode_ is None:
-                self.set_mode(self._file._mode, timed=False)
+                self.set_mode(self.file._mode, timed=False)
 
     def is_exist(self) -> bool:
         """Determine if this object exists in the HDF5 file."""
-        with self._file.temp_open():
+        with self.file.temp_open():
             try:
-                self._file._file[self._full_name]
+                self.file._file[self._full_name]
                 return True
             except KeyError:
                 return False
@@ -268,17 +332,17 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         Returns:
             This object.
         """
-        self._file_was_open = self._file.is_open
+        self._file_was_open = self.file.is_open
         if not getattr(self, self._wrap_attributes[0]):
-            self._file.open(mode=mode, **kwargs)
-            setattr(self, self._wrap_attributes[0], self._file._file[self._full_name])
+            self.file.open(mode=mode, **kwargs)
+            setattr(self, self._wrap_attributes[0], self.file._file[self._full_name])
 
         return self
 
     def close(self) -> None:
         """Closes the file of this dataset."""
         if not self._file_was_open:
-            self._file.close()
+            self.file.close()
 
     # Getters/Setters
     @singlekwargdispatchmethod("file")
@@ -289,7 +353,8 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
             file: An object to set the file to.
         """
         if isinstance(file, self.file_type):
-            self._file = file
+            self._weak_file = weakref.ref(file)
+            self.get_file = self._get_weak_file.__func__
         else:
             raise TypeError("file must be a path, File, or HDF5File")
 
@@ -302,7 +367,29 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         Args:
             file: An object to set the file to.
         """
+        self._weak_signal = weakref.ref(file)
         self._file = self.file_type(file)
+        self.get_file = self._get_weak_file_indirect.__func__
+
+    def _get_weak_file(self):
+        """Returns the owning file of this HDF5 Object using a weak reference."""
+        try:
+            return self._weak_file()
+        except TypeError:
+            return None
+
+    def _get_weak_file_indirect(self):
+        """Returns the owning file of this HDF5 Object using a weak reference as signal."""
+        try:
+            if self._weak_signal() is None:
+                self._file = None
+            return self._file
+        except TypeError:
+            return None
+
+    def _get_file_direct(self):
+        """Returns the owning file of this HDF5 Object."""
+        return self._file
 
     def set_parent(self, parent: str) -> None:
         """Sets the parent of this object to the str

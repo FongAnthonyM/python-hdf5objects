@@ -13,7 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
-from collections.abc import Iterable, Iterator, ValuesView, ItemsView
+from collections.abc import Iterable, Iterator, ValuesView, ItemsView, Mapping
 import pathlib
 from typing import Any
 
@@ -70,7 +70,7 @@ class HDF5Attributes(HDF5BaseObject):
         init: bool = True,
     ) -> None:
         # Parent Attributes #
-        super().__init__(file=file, init=False)
+        super().__init__(init=False)
 
         # New Attributes #
         self._attribute_manager: h5py.AttributeManager | None = None
@@ -87,6 +87,27 @@ class HDF5Attributes(HDF5BaseObject):
                 require=require,
                 parent=parent,
             )
+
+    # Pickling
+    def __getstate__(self) -> dict[str, Any]:
+        """Creates a dictionary of attributes which can be used to rebuild this object
+
+        Returns:
+            dict: A dictionary of this object's attributes.
+        """
+        state = super().__getstate__()
+        state["_attribute_manager"] = None
+        return state
+
+    def __setstate__(self, state: Mapping[str, Any]) -> None:
+        """Builds this object based on a dictionary of corresponding attributes.
+
+        Args:
+            state: The attributes to build this object from.
+        """
+        super().__setstate__(state=state)
+        with self.file.temp_open:
+            self._attribute_manager = self.file._file[self._full_name]
 
     # Container Methods
     def __getitem__(self, key: str) -> Any:
@@ -197,8 +218,8 @@ class HDF5Attributes(HDF5BaseObject):
         """
         if not attributes:
             raise ValueError("Attributes needs to be open")
-        if self._file is None:
-            self._file = self.file_type(attributes.file)
+        if self.file is None:
+            self.set_file(attributes.file)
         self._name = attributes.name
         self._attribute_manager = attributes
 
@@ -209,7 +230,7 @@ class HDF5Attributes(HDF5BaseObject):
         Args:
             attributes: An object that holds the attribute_manager this object will wrap.
         """
-        self._file = attributes._file
+        self.set_file(attributes.file)
         self._name = attributes._name
         if isinstance(attributes, HDF5Attributes):
             self._attribute_manager = attributes._attribute_manager
@@ -398,14 +419,14 @@ class HDF5Attributes(HDF5BaseObject):
         Returns:
             This object.
         """
-        self._file_was_open = self._file.is_open
+        self._file_was_open = self.file.is_open
         try:
             if not self._attribute_manager:
-                self._file.open(mode=mode, **kwargs)
-                self._attribute_manager = self._file._file[self._name].attrs
+                self.file.open(mode=mode, **kwargs)
+                self._attribute_manager = self.file._file[self._name].attrs
         except ValueError:
-            self._file.open(mode=mode, **kwargs)
-            self._attribute_manager = self._file._file[self._name].attrs
+            self.file.open(mode=mode, **kwargs)
+            self._attribute_manager = self.file._file[self._name].attrs
 
         return self
 

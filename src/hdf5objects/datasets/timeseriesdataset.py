@@ -201,23 +201,29 @@ class TimeSeriesDataset(HDF5Dataset):
         """
         super().construct(**kwargs)
 
-        if sample_rate is not None:
-            self._sample_rate = sample_rate
-
-        if data is not None:
-            self.n_samples = data.shape[self.t_axis]
-        
         if load and self.exists:
             self.load()
 
-        if (require or data is not None) and self.exists:
+        if require or data is not None:
             self.require(data=data, channels=channels, samples=samples, timestamps=timestamps)
+            if sample_rate is not None:
+                self.sample_rate = sample_rate
+        elif sample_rate is not None:
+            self._sample_rate = sample_rate
+
+        if data is not None:
+            try:
+                t_axis = self.t_axis
+            except KeyError:
+                t_axis = self.map.default_attributes["t_axis"]
+            self.n_samples = data.shape[t_axis]
 
     def construct_axes(
         self,
         channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
+
     ) -> None:
         """Constructs the axes of this timeseries.
 
@@ -226,9 +232,26 @@ class TimeSeriesDataset(HDF5Dataset):
             samples: An object to build the sample axis from.
             timestamps: An object to build the time axis from.
         """
-        self.construct_channel_axis(channels=channels)
-        self.construct_sample_axis(samples=samples)
-        self.construct_time_axis(timestamps=timestamps)
+        max_shape = self.kwargs.get("maxshape", self.sentinel)
+        if max_shape is not self.sentinel:
+            try:
+                c_axis = self.c_axis
+                t_axis = self.t_axis
+            except KeyError:
+                c_axis = self.map.default_attributes["c_axis"]
+                t_axis = self.map.default_attributes["t_axis"]
+
+            c_kwargs = {"maxshape": (max_shape[c_axis],)}
+            s_kwargs = {"maxshape": (max_shape[t_axis],)}
+            t_kwargs = {"maxshape": (max_shape[t_axis],)}
+        else:
+            c_kwargs = {}
+            s_kwargs = {}
+            t_kwargs = {}
+
+        self.construct_channel_axis(channels=channels, **c_kwargs)
+        self.construct_sample_axis(samples=samples, **s_kwargs)
+        self.construct_time_axis(timestamps=timestamps, **t_kwargs)
 
     @singlekwargdispatchmethod("channels")
     def construct_channel_axis(
@@ -677,7 +700,7 @@ class TimeSeriesDataset(HDF5Dataset):
             size=size,
             s_name=self.channel_scale_name,
             require=True,
-            file=self._file,
+            file=self.file,
             **kwargs,
         )
         self.attach_axis(self._channel_axis, axis)
@@ -740,7 +763,7 @@ class TimeSeriesDataset(HDF5Dataset):
             size=size,
             s_name=self.sample_scale_name,
             require=True,
-            file=self._file,
+            file=self.file,
             **kwargs,
         )
         self.attach_axis(self._sample_axis, axis)
@@ -807,7 +830,7 @@ class TimeSeriesDataset(HDF5Dataset):
             datetimes=datetimes,
             s_name=self.time_scale_name,
             require=True,
-            file=self._file,
+            file=self.file,
             **kwargs,
         )
         self.attach_axis(self._time_axis, axis)
@@ -844,7 +867,7 @@ class TimeSeriesDataset(HDF5Dataset):
                 self._channel_axis = self.map["channel_axis"].type(
                     dataset=dataset,
                     s_name=self.channel_scale_name,
-                    file=self._file
+                    file=self.file
                 )
 
             if self.sample_scale_name in self._dataset.dims[self.t_axis]:
@@ -852,7 +875,7 @@ class TimeSeriesDataset(HDF5Dataset):
                 self._sample_axis = self.map["sample_axis"].type(
                     dataset=dataset,
                     s_name=self.sample_scale_name,
-                    file=self._file
+                    file=self.file
                 )
 
             if self.time_scale_name in self._dataset.dims[self.t_axis]:
@@ -860,7 +883,7 @@ class TimeSeriesDataset(HDF5Dataset):
                 self._time_axis = self.map["time_axis"].type(
                     dataset=dataset,
                     s_name=self.time_scale_name,
-                    file=self._file
+                    file=self.file
                 )
 
     # Axis Getters
