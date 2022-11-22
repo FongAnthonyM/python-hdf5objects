@@ -254,8 +254,8 @@ class HDF5EEG(BaseHDF5):
         if s_id is not None:
             self._subject_id = s_id
 
-        if file is None and self.path is None and start is not None:
-            self.path = self.subject_dir.joinpath(self.generate_file_name(s_id=s_id, start=start))
+        if file is None and kwargs["path"] is None and start is not None:
+            kwargs["path"] = self.subject_dir.joinpath(self.generate_file_name(s_id=s_id, start=start))
 
         super().construct(file=file, **kwargs)
 
@@ -326,7 +326,7 @@ class HDF5EEG(BaseHDF5):
         if isinstance(start, float):
             start = datetime.datetime.fromtimestamp(start)
 
-        return s_id + '_' + start.isoformat('_', 'seconds').replace(':', '~') + ".h5"
+        return f"{s_id}_{start.isoformat('_', 'seconds').replace(':', '~')}.h5"
 
     def create_file(
         self,
