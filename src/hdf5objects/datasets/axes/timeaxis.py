@@ -15,6 +15,7 @@ __email__ = __email__
 # Standard Libraries #
 from collections.abc import Iterable, Mapping
 import datetime
+from decimal import Decimal
 from typing import Any
 import zoneinfo
 
@@ -22,7 +23,7 @@ import zoneinfo
 from baseobjects import singlekwargdispatchmethod
 from baseobjects.cachingtools import timed_keyless_cache
 from baseobjects.operations import timezone_offset
-from dspobjects.dataclasses import IndexDateTime, FoundTimeRange
+from framestructure import TimeAxisContainer
 import h5py
 import numpy as np
 import tzlocal
@@ -49,7 +50,7 @@ class TimeAxisMap(AxisMap):
     default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "f8"}
 
 
-class TimeAxis(Axis):
+class TimeAxis(Axis, TimeAxisContainer):
     """An Axis that represents the time at each sample of a signal.
 
     Class Attributes:
@@ -91,8 +92,12 @@ class TimeAxis(Axis):
         init: bool = True,
         **kwargs: Any,
     ) -> None:
+        # Override Attributes #
+        self._precise: bool = False
+
         # Parent Attributes #
-        super().__init__(init=False)
+        Axis.__init__(self, init=False)
+        TimeAxisContainer.__init__(self, init=False)
 
         # New Attributes #
         self._time_zone_mask: datetime.tzinfo | None = None
@@ -112,59 +117,99 @@ class TimeAxis(Axis):
             )
 
     @property
-    def start_timestamp(self) -> float:
-        """Get the first element of this axis."""
+    def precise(self) -> bool:
+        """Determines if this frame returns nanostamps (True) or timestamps (False)."""
+        return self._precise
+
+    @precise.setter
+    def precise(self, value: bool) -> None:
+        self.set_precision(nano=value)
+
+    @property
+    def _nanostamps(self) -> np.ndarray | None:
+        """The nanosecond timestamps of this frame."""
+        if self.get_original_precision():
+            return self.get_all_data.caching_method()
+        else:
+            return None
+
+    @_nanostamps.setter
+    def _nanostamps(self, value: np.ndarray | None) -> None:
+        pass
+
+    @property
+    def _timestamps(self) -> np.ndarray | None:
+        """The timestamps of this frame."""
+        if not self.get_original_precision():
+            return self.get_all_data.caching_method()
+        else:
+            return None
+
+    @_timestamps.setter
+    def _timestamps(self, value: np.ndarray | None) -> None:
+        pass
+
+    @property
+    def nanostamps(self) -> np.ndarray | None:
+        """The nanosecond timestamps of this frame."""
         try:
-            return self.get_start.caching_call()
+            return self.get_nanostamps.caching_call()
         except AttributeError:
-            return self.get_start()
+            return self.get_nanostamps()
+
+    @nanostamps.setter
+    def nanostamps(self, value: np.ndarray | None) -> None:
+        pass
 
     @property
-    def end_timestamp(self) -> float:
-        """Get the last element of this axis."""
+    def timestamps(self) -> np.ndarray | None:
+        """The timestamps of this frame."""
         try:
-            return self.get_end.caching_call()
+            return self.get_timestamps.caching_call()
         except AttributeError:
-            return self.get_end()
-    
-    @property
-    def start_datetime(self) -> datetime.datetime:
-        """Returns the start as a datetime."""
-        return datetime.datetime.fromtimestamp(self.start_timestamp, self.time_zone)
+            return self.get_timestamps()
+
+    @timestamps.setter
+    def timestamps(self, value: np.ndarray | None) -> None:
+        pass
 
     @property
-    def end_datetime(self) -> datetime.datetime:
-        """Returns the end as a datetime."""
-        return datetime.datetime.fromtimestamp(self.end_timestamp, self.time_zone)
-
-    @property
-    def sample_rate(self) -> float | h5py.Empty:
+    def _sample_rate(self) -> Decimal | None:
         """The sample rate of this timeseries."""
-        return self.attributes["sample_rate"]
+        try:
+            return Decimal(self.attributes["sample_rate"])
+        except TypeError:
+            return None
 
-    @sample_rate.setter
-    def sample_rate(self, value: int | float) -> None:
-        self.attributes.set_attribute("sample_rate", value)
+    @_sample_rate.setter
+    def _sample_rate(self, value: Decimal) -> None:
+        if self.attributes is not None:
+            self.attributes.set_attribute("sample_rate", float(value))
 
     @property
     def time_zone(self) -> zoneinfo.ZoneInfo | None:
-        """The timezone of the timestamps for this axis. Setter validates before assigning."""
+        """The time zone of the timestamps for this axis. Setter validates before assigning."""
         if self._time_zone_mask is None:
             return self.get_time_zone(refresh=False)
         else:
             return self._time_zone_mask
 
     @time_zone.setter
-    def time_zone(self, value: str | zoneinfo.ZoneInfo) -> None:
+    def time_zone(self, value: str | zoneinfo.ZoneInfo | None) -> None:
         self.set_time_zone(value)
 
     @property
-    def timestamps(self) -> np.ndarray:
-        """Returns all the data for this object as unix timestamps."""
-        try:
-            return self.get_all_data.caching_call()
-        except AttributeError:
-            return self.get_all_data()
+    def tzinfo(self) -> datetime.tzinfo:
+        """The timezone of the timestamps for this axis. Setter validates before assigning."""
+        if self._time_zone_mask is None:
+            return self.get_time_zone(refresh=False)
+        else:
+            return self._time_zone_mask
+
+    @tzinfo.setter
+    def tzinfo(self, value: str | datetime.datetime | None) -> None:
+        if self.attributes is not None:
+            self.set_time_zone(value)
 
     @property
     def datetimes(self) -> tuple[datetime.datetime]:
@@ -202,7 +247,7 @@ class TimeAxis(Axis):
             **kwargs: The keyword arguments for the HDF5Dataset.
         """
         # Construct the dataset and handle creation here unless data is present.
-        super().construct(s_name=s_name, require=False, **kwargs)
+        Axis.construct(self, s_name=s_name, require=False, **kwargs)
 
         if require and "data" not in kwargs:
             if datetimes is not None:
@@ -211,6 +256,8 @@ class TimeAxis(Axis):
                 self.from_range(start=start, stop=stop, step=step, rate=rate, size=size)
             else:
                 self.require(shape=(0,), maxshape=(None,), dtype="f8")
+
+        TimeAxisContainer.construct(self, sample_rate=rate)
 
     def from_range(
         self,
@@ -350,6 +397,15 @@ class TimeAxis(Axis):
         with self:
             return self._dataset[...]
 
+    def get_original_precision(self) -> bool:
+        """Gets the presision of the timestamps from the orignial file.
+
+        Args:
+            nano: Determines if this frame returns nanostamps (True) or timestamps (False).
+        """
+        with self:
+            return self._dataset.dtype == np.uint64
+
     def get_time_zone(self, refresh: bool = True) -> datetime.tzinfo | None:
         """Get the timezone of this axis.
 
@@ -395,196 +451,6 @@ class TimeAxis(Axis):
 
         self.attributes["time_zone"] = value
         self.attributes["time_zone_offset"] = offset
-
-    # Get Data
-    def get_timestamps(self) -> np.ndarray:
-        """Returns all the data for this object as unix timestamps.
-
-        Returns:
-            All the unix timestamps in this axis.
-        """
-        return self.get_all_data()
-
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
-    def get_datetimes(self, tz=None) -> tuple[datetime.datetime]:
-        """Returns all the data for this object as datetimes.
-
-        Args:
-            tz: The timezone information that can be assigned to the datetimes.
-
-        Returns:
-            All the unix datetimes in this axis.
-        """
-        origin_tz = self.time_zone
-        timestamps = self.get_all_data()
-        if tz is not None:
-            return tuple(datetime.datetime.fromtimestamp(t, origin_tz).astimezone(tz) for t in timestamps)
-        else:
-            return tuple(datetime.datetime.fromtimestamp(t, origin_tz) for t in timestamps)
-
-    def get_datetime(self, index: int) -> datetime.datetime:
-        """Get a datatime from this axis with an index.
-
-        Args:
-            index: The index to get the datetime from.
-
-        Returns:
-            The requested datetime.
-        """
-        return self.datetimes[index]
-
-    def get_timestamp_range(
-        self,
-        start: int | None = None,
-        stop: int | None = None,
-        step: int | None = None,
-    ) -> np.ndarray:
-        """Get a range of timestamps with indices.
-
-        Args:
-            start: The start index.
-            stop: The stop index.
-            step: The interval between indices to get timestamps.
-
-        Returns:
-            The requested range of timestamps.
-        """
-        return self.timestamps[slice(start, stop, step)]
-
-    def get_datetime_range(
-        self,
-        start: int | None = None,
-        stop: int | None = None,
-        step: int | None = None,
-    ) -> tuple[datetime.datetime]:
-        """Get a range of datetimes with indices.
-
-        Args:
-            start: The start index.
-            stop: The stop index.
-            step: The interval between indices to get datetimes.
-
-        Returns:
-            The requested range of datetimes.
-        """
-        return self.datetimes[slice(start, stop, step)]
-
-    # Find
-    def find_time_index(
-        self, 
-        timestamp: datetime.datetime | float, 
-        approx: bool = False, 
-        tails: bool = False,
-    ) -> IndexDateTime:
-        """Finds the index with given time, can give approximate values.
-        
-        Args:
-            timestamp: 
-            approx: Determines if an approximate index will be given if the time is not present.
-            tails: Determines if the first or last index will be give the requested time is outside the axis.
-
-        Returns:
-            The requested closest index and the value at that index.
-        """
-        if isinstance(timestamp, datetime.datetime):
-            timestamp = timestamp.timestamp()
-
-        samples = self.timestamps.shape[0]
-        if timestamp < self.timestamps[0]:
-            if tails:
-                return IndexDateTime(0, self.start_datetime, self.start)
-        elif timestamp > self.timestamps[-1]:
-            if tails:
-                return IndexDateTime(samples, self.end_datetime, self.end)
-        else:
-            index = int(np.searchsorted(self.timestamps, timestamp, side="right") - 1)
-            true_timestamp = self.timestamps[index]
-            if approx or timestamp == true_timestamp:
-                return IndexDateTime(index, datetime.datetime.fromtimestamp(true_timestamp), true_timestamp)
-        
-        raise IndexError("Timestamp out of range.")
-
-    def find_timestamp_range(
-        self,
-        start: datetime.datetime | float | None = None,
-        stop: datetime.datetime | float | None = None,
-        step: int | float | datetime.timedelta | None = None,
-        approx: bool = False,
-        tails: bool = False,
-    ) -> FoundTimeRange:
-        """Finds the timestamp range on the axis inbetween two times, can give approximate values.
-        
-        Args:
-            start: The first time to find for the range.
-            stop: The last time to find for the range.
-            step: The step between elements in the range.
-            approx: Determines if an approximate indices will be given if the time is not present.
-            tails: Determines if the first or last times will be give the requested item is outside the axis.
-
-        Returns:
-            The timestamp range on the axis and the start and stop indices.
-        """
-        if isinstance(step, datetime.timedelta):
-            step = step.total_seconds()
-        
-        if start is None:
-            start_index = 0
-        else:
-            start_index, _ = self.find_time_index(timestamp=start, approx=approx, tails=tails)
-
-        if stop is None:
-            stop_index = self.shape[0] - 1
-        else:
-            stop_index, _ = self.find_time_index(timestamp=stop, approx=approx, tails=tails)
-
-        if start_index is None and stop_index is None:
-            return FoundTimeRange(None, None, None)
-        else:
-            data = self.timestamps[start_index:stop_index:step]
-
-            return FoundTimeRange(data, start_index, stop_index)
-
-    def find_datetime_range(
-        self,
-        start: datetime.datetime | float | None = None,
-        stop: datetime.datetime | float | None = None,
-        step: int | float | datetime.timedelta | None = None,
-        approx: bool = False,
-        tails: bool = False,
-    ) -> FoundTimeRange:
-        """Finds the datetime range on the axis inbetween two times, can give approximate values.
-
-        Args:
-            start: The first time to find for the range.
-            stop: The last time to find for the range.
-            step: The step between elements in the range.
-            approx: Determines if an approximate indices will be given if the time is not present.
-            tails: Determines if the first or last times will be give the requested item is outside the axis.
-
-        Returns:
-            The datetime range on the axis and the start and stop indices.
-        """
-        if isinstance(step, datetime.timedelta):
-            step = step.total_seconds()
-
-        if start is None:
-            start_index = 0
-        else:
-            start_index, _ = self.find_time_index(timestamp=start, approx=approx, tails=tails)
-
-        if stop is None:
-            stop_index = self.shape[0] - 1
-        else:
-            stop_index, _ = self.find_time_index(timestamp=stop, approx=approx, tails=tails)
-
-        if start_index is None and stop_index is None:
-            return FoundTimeRange(None, None, None)
-        else:
-            data = self.datetimes[start_index:stop_index:step]
-
-            return FoundTimeRange(data, start_index, stop_index)
-
-    # Todo: Add Fill Methods
 
 
 # Assign Cyclic Definitions

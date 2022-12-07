@@ -21,7 +21,7 @@ from typing import Any, Union
 
 # Third-Party Packages #
 from dspobjects.dataclasses import IndexDateTime, FoundTimeRange, FoundData
-from framestructure import TimeSeriesFrame, TimeSeriesFrameInterface, FileTimeFrame
+from framestructure import TimeSeriesFrame, TimeSeriesFrameInterface, FileTimeContainerInterface
 import h5py
 import numpy as np
 
@@ -32,7 +32,7 @@ from ..fileobjects import HDF5EEG
 
 # Definitions #
 # Classes #
-class HDF5EEGFrame(FileTimeFrame):
+class HDF5EEGFrame(FileTimeContainerInterface):
     """A frame that interfaces with a HDF5EEG file.
 
     Class Attributes:

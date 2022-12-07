@@ -15,11 +15,13 @@ __email__ = __email__
 # Standard Libraries #
 from collections.abc import Mapping, Iterable
 import datetime
+from decimal import Decimal
 from typing import Any
 
 # Third-Party Packages #
 from baseobjects import singlekwargdispatchmethod
-from dspobjects.dataclasses import FoundData, FoundTimeRange, FoundDataRange
+from dspobjects.dataclasses import FoundData
+from framestructure import TimeSeriesContainer
 import h5py
 import numpy as np
 
@@ -48,7 +50,7 @@ class TimeSeriesMap(DatasetMap):
                                            "time_axis": TimeAxisMap()}
 
 
-class TimeSeriesDataset(HDF5Dataset):
+class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
     """A Dataset designed to be a timeseries.
 
     Class Attributes:
@@ -80,7 +82,7 @@ class TimeSeriesDataset(HDF5Dataset):
     def __init__(
         self, 
         data: np.ndarray | None = None, 
-        sample_rate: int | float | None = None,
+        sample_rate: Decimal | int | float | None = None,
         channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
@@ -90,10 +92,11 @@ class TimeSeriesDataset(HDF5Dataset):
         **kwargs: Any,
     ) -> None:
         # Parent Attributes #
-        super().__init__(init=False)
+        HDF5Dataset.__init__(self, init=False)
+        TimeSeriesContainer.__init__(self, init=False)
 
         # New Attributes #
-        self._sample_rate: float | None = None
+        self._sample_rate_: Decimal | float | None = None
         self._channel_axis: ChannelAxis | None = None
         self._sample_axis: SampleAxis | None = None
         self._time_axis: TimeAxis | None = None
@@ -116,13 +119,15 @@ class TimeSeriesDataset(HDF5Dataset):
             )
 
     @property
-    def sample_rate(self) -> float | h5py.Empty:
+    def _sample_rate(self) -> Decimal | h5py.Empty:
         """The sample rate of this timeseries."""
-        return self._time_axis.sample_rate if self.time_axis is not None else self._sample_rate
+        return self._time_axis.sample_rate if self.time_axis is not None else self._sample_rate_
 
-    @sample_rate.setter
-    def sample_rate(self, value: int | float) -> None:
-        self._sample_rate = value
+    @_sample_rate.setter
+    def _sample_rate(self, value: Decimal | int | float | None ) -> None:
+        if value is not None and not isinstance(value, Decimal):
+            value = Decimal(value)
+        self._sample_rate_ = value
         if self.time_axis is not None:
             self._time_axis.sample_rate = value
 
@@ -173,13 +178,17 @@ class TimeSeriesDataset(HDF5Dataset):
         if self._time_axis is None:
             self.load_axes()
         return self._time_axis
+
+    @time_axis.setter
+    def time_axis(self, value: TimeAxis | None) -> None:
+        self._time_axis = value
     
     # Instance Methods
     # Constructors/Destructors
     def construct(
         self,
         data: np.ndarray | None = None,
-        sample_rate: int | float | None = None,
+        sample_rate: Decimal | int | float | None = None,
         channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
@@ -199,7 +208,7 @@ class TimeSeriesDataset(HDF5Dataset):
             require: Determines if this object will create and fill the timeseries in the file on construction.
             **kwargs: The keyword arguments to construct the base HDF5 dataset.
         """
-        super().construct(**kwargs)
+        HDF5Dataset.construct(self, **kwargs)
 
         if load and self.exists:
             self.load()
@@ -223,7 +232,6 @@ class TimeSeriesDataset(HDF5Dataset):
         channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
-
     ) -> None:
         """Constructs the axes of this timeseries.
 
@@ -886,72 +894,6 @@ class TimeSeriesDataset(HDF5Dataset):
                     file=self.file
                 )
 
-    # Axis Getters
-    def get_datetime(self, index: int) -> datetime.datetime:
-        """Get a datetime at an index.
-
-        Args:
-            index: The index to get the datetime from.
-
-        Returns:
-            The request datetime.
-        """
-        return self.time_axis.get_datetime(index)
-
-    def get_timestamp_range(
-        self,
-        start: int | None = None,
-        stop: int | None = None,
-        step: int | None = None,
-    ) -> np.ndarray:
-        """Get a range of timestamps with indices.
-
-        Args:
-            start: The start index.
-            stop: The stop index.
-            step: The interval between indices to get timestamps.
-
-        Returns:
-            The requested range of timestamps.
-        """
-        return self.time_axis.get_timestamp_range(start=start, stop=stop, step=step)
-
-    def get_datetime_range(
-        self,
-        start: int | None = None,
-        stop: int | None = None,
-        step: int | None = None,
-    ) -> tuple[datetime.datetime]:
-        """Get a range of datetimes with indices.
-
-        Args:
-            start: The start index.
-            stop: The stop index.
-            step: The interval between indices to get datetimes.
-
-        Returns:
-            The requested range of datetimes.
-        """
-        return self.time_axis.get_datetime_range(start=start, stop=stop, step=step)
-
-    def get_time_intervals(
-        self,
-        start: int | None = None,
-        stop: int | None = None,
-        step: int | None = None,
-    ) -> np.ndarray:
-        """Get the intervals between each sample of the axis.
-
-        Args:
-            start: The start index to get the intervals.
-            stop: The last index to get the intervals.
-            step: The step of the indices to the intervals.
-
-        Returns:
-            The intervals between each datum of the axis.
-        """
-        return self.time_axis.get_intervals(start=start, stop=stop, step=step)
-
     # Find Data
     def find_data(self, timestamp: datetime.datetime | float, approx: bool = False, tails: bool = False,) -> FoundData:
         """Find the data at a specific time.
@@ -968,162 +910,7 @@ class TimeSeriesDataset(HDF5Dataset):
         slices = (slice(None),) * self.t_axis + (index,)
         data = self._dataset[slices]
 
-        return FoundData(data, index, dt, timestamp)
-
-    # Find Range
-    def find_timestamp_range(
-        self,
-        start: datetime.datetime | float | None = None,
-        stop: datetime.datetime | float | None = None,
-        step: int | float | datetime.timedelta | None = None,
-        approx: bool = False,
-        tails: bool = False,
-    ) -> FoundTimeRange:
-        """Finds the timestamp range on the axis inbetween two times, can give approximate values.
-
-        Args:
-            start: The first time to find for the range.
-            stop: The last time to find for the range.
-            step: The step between elements in the range.
-            approx: Determines if an approximate indices will be given if the time is not present.
-            tails: Determines if the first or last times will be give the requested item is outside the axis.
-
-        Returns:
-            The timestamp range on the axis and the start and stop indices.
-        """
-        return self.time_axis.find_timestamp_range(start=start, stop=stop, step=step, approx=approx, tails=tails)
-
-    def find_datetime_range(
-        self,
-        start: datetime.datetime | float | None = None,
-        stop: datetime.datetime | float | None = None,
-        step: int | float | datetime.timedelta | None = None,
-        approx: bool = False,
-        tails: bool = False,
-    ) -> FoundTimeRange:
-        """Finds the datetime range on the axis inbetween two times, can give approximate values.
-
-        Args:
-            start: The first time to find for the range.
-            stop: The last time to find for the range.
-            step: The step between elements in the range.
-            approx: Determines if an approximate indices will be given if the time is not present.
-            tails: Determines if the first or last times will be give the requested item is outside the axis.
-
-        Returns:
-            The datetime range on the axis and the start and stop indices.
-        """
-        return self.time_axis.find_datetime_range(start=start, stop=stop, step=step, approx=approx, tails=tails)
-
-    def find_data_range_sample(
-        self,
-        start: int | None = None,
-        stop: int | None = None,
-        step: int | float | datetime.timedelta | None = None,
-        approx: bool = False,
-        tails: bool = False,
-    ) -> FoundDataRange:
-        """Finds the range of data inbetween two samples, can give approximate values.
-
-        Args:
-            start: The first sample to find for the range.
-            stop: The last sample to find for the range.
-            step: The step between samples in the range.
-            approx: Determines if an approximate indices will be given if the samples are not present.
-            tails: Determines if the first or last indices will be give the requested samples are outside the axis.
-
-        Returns:
-            The data range on the axis and the start and stop indices.
-        """
-        axis, start_index, stop_index = self.sample_axis.find_range(
-            start=start,
-            stop=stop,
-            step=step,
-            approx=approx,
-            tails=tails,
-        )
-
-        if axis is None:
-            return FoundData(None, None, None, None, None, None)
-        else:
-            with self:
-                slices = (slice(None),) * self.t_axis + (slice(start=start_index, stop=stop_index, step=step),)
-                data = self._dataset[slices]
-                return FoundData(data, axis, axis[0], axis[-1], start_index, stop_index)
-
-    def find_data_range_timestamp(
-        self,
-        start: datetime.datetime | float | None = None,
-        stop: datetime.datetime | float | None = None,
-        step: int | float | datetime.timedelta | None = None,
-        approx: bool = False,
-        tails: bool = False,
-    ) -> FoundDataRange:
-        """Finds the data range on the axis inbetween two times, can give approximate values.
-
-        Args:
-            start: The first time to find for the range.
-            stop: The last time to find for the range.
-            step: The step between elements in the range.
-            approx: Determines if an approximate indices will be given if the time is not present.
-            tails: Determines if the first or last times will be give the requested item is outside the axis.
-
-        Returns:
-            The data range on the axis and the time axis as timestamps.
-        """
-        axis, start_index, stop_index = self.time_axis.find_timestamp_range(
-            start=start, 
-            stop=stop, 
-            step=step, 
-            approx=approx, 
-            tails=tails,
-        )
-
-        if axis is None:
-            return FoundData(None, None, None, None, None, None)
-        else:
-            with self:
-                slices = (slice(None),) * self.t_axis + (slice(start=start_index, stop=stop_index, step=step),)
-                data = self._dataset[slices]
-                return FoundData(data, axis, axis[0], axis[-1], start_index, stop_index)
-
-    def find_data_range_datetime(
-        self,
-        start: datetime.datetime | float | None = None,
-        stop: datetime.datetime | float | None = None,
-        step: int | float | datetime.timedelta | None = None,
-        approx: bool = False,
-        tails: bool = False,
-    ) -> FoundDataRange:
-        """Finds the data range on the axis inbetween two times, can give approximate values.
-
-        Args:
-            start: The first time to find for the range.
-            stop: The last time to find for the range.
-            step: The step between elements in the range.
-            approx: Determines if an approximate indices will be given if the time is not present.
-            tails: Determines if the first or last times will be give the requested item is outside the axis.
-
-        Returns:
-            The data range on the axis and the time axis as datetimes.
-        """
-        axis, start_index, stop_index = self.time_axis.find_datetime_range(
-            start=start,
-            stop=stop,
-            step=step,
-            approx=approx,
-            tails=tails,
-        )
-
-        if axis is None:
-            return FoundData(None, None, None, None, None, None)
-        else:
-            with self:
-                slices = (slice(None),) * self.t_axis + (slice(start=start_index, stop=stop_index, step=step),)
-                data = self._dataset[slices]
-                return FoundData(data, axis, axis[0], axis[-1], start_index, stop_index)
-
-    # Todo: Add Fill Methods
+        return FoundData(data, index, dt)
 
     # Manipulation
     def append(self, data: np.ndarray, axis: int | None = 0, **kwargs: np.ndarray) -> None:
@@ -1141,40 +928,6 @@ class TimeSeriesDataset(HDF5Dataset):
         for name, axis_data in kwargs.items():
             axis = getattr(self, name)
             axis.append(data=axis_data)
-
-    def shift_samples(
-        self,
-        shift: int | float,
-        start: int | None = None,
-        stop: int | None = None,
-        step: int | None = None,
-    ) -> None:
-        """Shifts the samples over a range in the axis.
-
-        Args:
-            shift: The value to shift the samples by.
-            start: The first value to shift.
-            stop: The last value to shift.
-            step: The interval to apply the shift across the range.
-        """
-        self.sample_axis.shift(shift=shift, start=start, stop=stop, step=step)
-
-    def shift_timestamps(
-        self,
-        shift: int | float,
-        start: int | None = None,
-        stop: int | None = None,
-        step: int | None = None,
-    ) -> None:
-        """Shifts the timestamps over a range in the axis.
-
-        Args:
-            shift: The value to shift the timestamps by.
-            start: The first value to shift.
-            stop: The last value to shift.
-            step: The interval to apply the shift across the range.
-        """
-        self.time_axis.shift(shift=shift, start=start, stop=stop, step=step)
 
 
 # Assign Cyclic Definitions
