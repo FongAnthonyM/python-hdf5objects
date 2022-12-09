@@ -22,7 +22,6 @@ import h5py
 from ..hdf5bases import HDF5Group, HDF5Dataset
 
 
-
 # Definitions #
 # Classes #
 class LinkedGroup(HDF5Group):

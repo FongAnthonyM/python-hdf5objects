@@ -13,6 +13,5 @@ __email__ = __email__
 
 # Imports #
 # Local Packages #
-from .multitypedataset import MultiTypeDataset
 from .iddataset import IDDataset
 from .regionreferencedataset import RegionReferenceDataset

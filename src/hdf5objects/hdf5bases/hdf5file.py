@@ -303,7 +303,7 @@ class HDF5File(HDF5BaseObject):
             map_: The map for this HDF5 object.
             load: Determines if this object will load the file on construction.
             create: Determines if this object will create an empty file on construction.
-            require: Determines if this object will create and fill the file on construction.
+            require: Determines if this object fill the file on construction.
             path: The path to the file.
             **kwargs: The keyword arguments for the open method.
 
@@ -331,7 +331,7 @@ class HDF5File(HDF5BaseObject):
             elif load:
                 raise ValueError("A file is required to load this file.")
             elif require:
-                raise ValueError("A file is required to create this file.")
+                raise ValueError("A file is required to fill this file.")
         elif open_ or load or require:
             self.open(**kwargs)
 

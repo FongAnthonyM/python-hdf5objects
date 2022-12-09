@@ -22,12 +22,15 @@ import h5py
 import numpy as np
 
 # Local Packages #
-from .multitypedataset import MultiTypeDataset
+from ...hdf5bases import HDF5Dataset, DatasetMap
 
 
 # Definitions #
 # Classes #
-class RegionReferenceDataset(MultiTypeDataset):
+
+
+
+class RegionReferenceDataset(HDF5Dataset):
     """
 
     Class Attributes:

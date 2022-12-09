@@ -21,11 +21,15 @@ from typing import Any
 from baseobjects import BaseObject, singlekwargdispatchmethod, search_sentinel
 from baseobjects.operations import timezone_offset
 import numpy as np
+import h5py
 
 # Local Packages #
 
 
 # Definitions #
+STRING_TYPE = h5py.string_dtype(encoding='utf-8')
+
+
 # Classes #
 class HDF5Caster(BaseObject):
     """
@@ -33,20 +37,22 @@ class HDF5Caster(BaseObject):
     Class Attributes:
 
     """
-    _pass_types = int | float | str
-    pass_types = {int, float, str}
+    _pass_types = int | float | bytes
+    pass_types = {int, float, bytes}
     type_map = {
+        bytes: STRING_TYPE,
+        str: STRING_TYPE,
         datetime.datetime: float,
         datetime.tzinfo: float,
         datetime.timedelta: float,
-        uuid.UUID: str,
+        uuid.UUID: STRING_TYPE,
     }
 
     # Class Methods #
     # Map Type
     @classmethod
     def map_type(cls, type_: Any) -> Any:
-        if type_ in cls._pass_types:
+        if type_ in cls.pass_types:
             return type_
 
         new_type = cls.type_map.get(type_, search_sentinel)
@@ -69,8 +75,8 @@ class HDF5Caster(BaseObject):
         return item.total_seconds()
 
     @classmethod
-    def from_uuid(cls, item: uuid.UUID) -> str:
-        return str(item)
+    def from_uuid(cls, item: uuid.UUID) -> bytes:
+        return item.bytes
     
     @singlekwargdispatchmethod("item")
     @classmethod
@@ -79,14 +85,14 @@ class HDF5Caster(BaseObject):
             return item
         else:
             raise TypeError(f"{type(item)} does not have a cast method from.")
-    
+
+    @cast_from.register(str)
     @cast_from.register(int)
     @cast_from.register(float)
-    @cast_from.register(str)
     @classmethod
     def _cast_from(cls, item: _pass_types) -> _pass_types:
         return item
-    
+
     @cast_from.register
     @classmethod
     def _cast_from(cls, item: datetime.datetime) -> float:
@@ -104,13 +110,17 @@ class HDF5Caster(BaseObject):
 
     @cast_from.register
     @classmethod
-    def _cast_from(cls, item: uuid.UUID) -> str:
+    def _cast_from(cls, item: uuid.UUID) -> bytes:
         return cls.from_uuid(item)
 
     # Casting To
     @classmethod
     def to_pass(cls, item: _pass_types) -> _pass_types:
         return item
+
+    @classmethod
+    def to_str(cls, item: bytes) -> str:
+        return item.decode(encoding='utf-8')
 
     @classmethod
     def to_datetime(cls, item: float, tzinfo: datetime.tzinfo | None = None) -> datetime.datetime:
@@ -125,23 +135,23 @@ class HDF5Caster(BaseObject):
         return datetime.timedelta(seconds=item)
 
     @classmethod
-    def to_uuid(cls, item: str) -> uuid.UUID:
-        return uuid.UUID(item)
+    def to_uuid(cls, item: bytes) -> uuid.UUID:
+        return uuid.UUID(bytes=item)
 
     @classmethod
     def cast_to(cls, type_: type, item: Any, **kwargs: Any) -> Any:
-        to_method = cls.to_registery.get(type_, search_sentinel)
+        to_method = cls.to_registry.get(type_, search_sentinel)
         if to_method is search_sentinel:
             raise TypeError(f"{type(item)} does not have a cast method to.")
         elif isinstance(type_, np.dtype):
             return item
         else:
-            return to_method(item, **kwargs)
+            return to_method.__get__(cls, cls.__class__)(item, **kwargs)
 
-    to_registery = {
+    to_registry = {
         int: to_pass,
         float: to_pass,
-        str: to_pass,
+        str: to_str,
         datetime.datetime: to_datetime,
         datetime.tzinfo: to_timezone,
         datetime.timedelta: to_timedelta,
