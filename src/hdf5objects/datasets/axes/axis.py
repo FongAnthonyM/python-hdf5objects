@@ -70,13 +70,13 @@ class Axis(HDF5Dataset):
         init: bool = True, 
         **kwargs: Any,
     ) -> None:
+        # New Attributes #
+        self.default_kwargs: Mapping[str, Any] = self.default_map.kwargs
+
+        self._scale_name = self.default_scale_name
+
         # Parent Attributes #
         super().__init__(init=False)
-
-        # New Attributes #
-        self.default_kwargs: Mapping[str, Any] = self.map.kwargs
-        
-        self._scale_name = self.default_scale_name
 
         # Object Construction #
         if init:

@@ -34,7 +34,7 @@ from src.hdf5objects import BaseHDF5, BaseHDF5Map, HDF5Dataset, DatasetMap
 # Definitions #
 # Classes #
 # Module Implementation
-class DatasetTest(HDF5Dataset):
+class DatasetTestMap(DatasetMap):
     """Implementation of Dataset."""
     default_dtype: tuple[tuple[str, type]] = (("First", float), ("Second", int), ("Third", str), ("Fourth", uuid.UUID))
 
@@ -42,7 +42,7 @@ class DatasetTest(HDF5Dataset):
 class DatasetTestFileMap(BaseHDF5Map):
     """The map for the file which implements Dataset."""
     default_map_names: Mapping[str, str] = {"test_dataset": "test_dataset"}
-    default_maps: Mapping[str, HDF5Map] = {"test_dataset": DatasetMap(type_=DatasetTest, shape=(1,), maxshape=(None,))}
+    default_maps: Mapping[str, HDF5Map] = {"test_dataset": DatasetTestMap(shape=(1,), maxshape=(None,))}
 
 
 class DatasetTestHDF5(BaseHDF5):

@@ -27,6 +27,7 @@ from baseobjects.typing import AnyCallable
 import h5py
 
 # Local Packages #
+from .hdf5caster import HDF5Caster
 from .hdf5map import HDF5Map
 
 
@@ -113,10 +114,9 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         file: str | pathlib.Path | h5py.File | None = None,
         parent: str | None = None,
         init: bool = True,
+        *args,
+        **kwargs: Any,
     ) -> None:
-        # Parent Attributes #
-        super().__init__()
-
         # New Attributes #
         self._file_was_open: bool | None = None
         self._weak_signal: weakref.ref | None = None
@@ -129,7 +129,10 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
 
         self._mode_: str | None = None
 
-        self.map: HDF5Map = self.default_map.copy()
+        self.map: HDF5Map = self.default_map.deepcopy()
+
+        # Parent Attributes #
+        super().__init__(*args, init=init, **kwargs)
 
         # Object Construction #
         if init:
@@ -194,6 +197,24 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
     @get_file.setter
     def get_file(self, value: AnyCallable) -> None:
         self._get_file = value
+
+    @property
+    def caster(self) -> HDF5Caster:
+        """An object that can cast python objects to and from HDF5 data types."""
+        return self.map.caster
+
+    @caster.setter
+    def caster(self, value: Any) -> None:
+        self.map.caster = value
+
+    @property
+    def kwargs(self) -> dict:
+        """The kwargs to use when creating this object in the HDF5 file."""
+        return self.map.kwargs
+
+    @kwargs.setter
+    def kwargs(self, value: dict) -> None:
+        self.map.kwargs = value
 
     # Pickling
     def __getstate__(self) -> dict[str, Any]:

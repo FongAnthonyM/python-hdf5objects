@@ -76,14 +76,14 @@ class HDF5Group(HDF5BaseObject):
         parent: str | None = None,
         init: bool = True,
     ) -> None:
-        # Parent Attributes #
-        super().__init__(file=file, init=False)
-
         # New Attributes #
         self._group: h5py.Group | None = None
         self.attributes: HDF5Attributes | None = None
 
         self.members: dict[str, HDF5BaseObject] = {}
+
+        # Parent Attributes #
+        super().__init__(file=file, init=False)
 
         # Object Construction #
         if init:
@@ -184,9 +184,9 @@ class HDF5Group(HDF5BaseObject):
         for name, value in self.map.items():
             name = self._parse_name(name)
             if name not in self.members:
-                obj = value.construct_object(map_=value, load=load, require=require, file=self.file)
+                obj = value.require_object(load=load, require=require, file=self.file)
                 if obj is None:
-                    self.members[name] = value.construct_object(map_=value, load=load, file=self.file)
+                    self.members[name] = value.require_object(load=load, file=self.file)
                 else:
                     self.members[name] = obj
 
@@ -214,9 +214,9 @@ class HDF5Group(HDF5BaseObject):
         member = self.members.get(name, self.sentinel)
         if member is self.sentinel:
             value = self.map[name]
-            member = value.construct_object(map_=value, load=load, require=require, file=self.file, **kwargs)
+            member = value.require_object(load=load, require=require, file=self.file, **kwargs)
             if member is None:
-                self.members[name] = member = value.construct_object(map_=value, load=load, file=self.file, **kwargs)
+                self.members[name] = member = value.require_object(load=load, file=self.file, **kwargs)
             else:
                 self.members[name] = member
 
@@ -414,7 +414,8 @@ class HDF5Group(HDF5BaseObject):
                         self.members[name] = self.default_group(
                             group=value,
                             file=self.file,
-                            load=load, require=require,
+                            load=load,
+                            require=require,
                         )
         return self.members.copy()
 

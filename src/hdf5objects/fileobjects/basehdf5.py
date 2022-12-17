@@ -306,12 +306,12 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         init: bool = True,
         **kwargs: Any,
     ) -> None:
-        # Parent Attributes #
-        super().__init__(init=False)
-
         # New Attributes #
         self._file_type: str = ""
         self._file_version: str = ""
+
+        # Parent Attributes #
+        super().__init__(init=False)
 
         # Object Construction #
         if init:

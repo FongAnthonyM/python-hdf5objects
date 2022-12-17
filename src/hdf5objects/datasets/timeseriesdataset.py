@@ -91,19 +91,18 @@ class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
         init: bool = True, 
         **kwargs: Any,
     ) -> None:
-        # Parent Attributes #
-        HDF5Dataset.__init__(self, init=False)
-        TimeSeriesContainer.__init__(self, init=False)
-
         # New Attributes #
         self._sample_rate_: Decimal | float | None = None
         self._channel_axis: ChannelAxis | None = None
         self._sample_axis: SampleAxis | None = None
         self._time_axis: TimeAxis | None = None
-        
+
         self.channel_scale_name: str = "channel axis"
         self.sample_scale_name: str = "sample axis"
         self.time_scale_name: str = "time axis"
+
+        # Parent Attributes #
+        super().__init__(self, init=False)
 
         # Object Construction #
         if init:
@@ -531,7 +530,6 @@ class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
                 self.construct_sample_axis(samples)
             if timestamps is not None:
                 self.construct_time_axis(timestamps)
-            self._time_axis.sample_rate = self._sample_rate
         elif make_axes:
             if timestamps is None and start is not None:
                 timestamps = {"start": start, "rate": self._sample_rate, "size": self.n_samples}
@@ -700,7 +698,7 @@ class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
         if "name" not in kwargs:
             kwargs["name"] = self._full_name + "_" + self.map.map_names["channel_axis"]
         
-        self._channel_axis = self.map["channel_axis"].construct_object(
+        self._channel_axis = self.map["channel_axis"].require_object(
             start=start,
             stop=stop,
             step=step,
@@ -872,7 +870,7 @@ class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
         with self:
             if self.channel_scale_name in self._dataset.dims[self.c_axis]:
                 dataset = self._dataset.dims[self.c_axis][self.channel_scale_name]
-                self._channel_axis = self.map["channel_axis"].type(
+                self._channel_axis = self.map["channel_axis"].require_object(
                     dataset=dataset,
                     s_name=self.channel_scale_name,
                     file=self.file
@@ -880,7 +878,7 @@ class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
 
             if self.sample_scale_name in self._dataset.dims[self.t_axis]:
                 dataset = self._dataset.dims[self.t_axis][self.sample_scale_name]
-                self._sample_axis = self.map["sample_axis"].type(
+                self._sample_axis = self.map["sample_axis"].require_object(
                     dataset=dataset,
                     s_name=self.sample_scale_name,
                     file=self.file
@@ -888,7 +886,7 @@ class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
 
             if self.time_scale_name in self._dataset.dims[self.t_axis]:
                 dataset = self._dataset.dims[self.t_axis][self.time_scale_name]
-                self._time_axis = self.map["time_axis"].type(
+                self._time_axis = self.map["time_axis"].require_object(
                     dataset=dataset,
                     s_name=self.time_scale_name,
                     file=self.file

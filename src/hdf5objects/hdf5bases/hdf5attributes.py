@@ -69,12 +69,12 @@ class HDF5Attributes(HDF5BaseObject):
         parent: str | None = None,
         init: bool = True,
     ) -> None:
-        # Parent Attributes #
-        super().__init__(init=False)
-
         # New Attributes #
         self._attribute_manager: h5py.AttributeManager | None = None
         self._attributes_dict: TimedDict = TimedDict()
+
+        # Parent Attributes #
+        super().__init__(init=False)
 
         # Object Construction #
         if init:

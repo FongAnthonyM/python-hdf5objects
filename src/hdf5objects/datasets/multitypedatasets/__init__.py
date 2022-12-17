@@ -14,4 +14,4 @@ __email__ = __email__
 # Imports #
 # Local Packages #
 from .iddataset import IDDataset
-from .regionreferencedataset import RegionReferenceDataset
+from .regionreferencedataset import RegionReferenceDataset, RegionReferenceMap

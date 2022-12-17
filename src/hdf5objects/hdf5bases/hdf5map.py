@@ -17,12 +17,15 @@ __email__ = __email__
 from collections.abc import Mapping, Iterator, ItemsView, KeysView, ValuesView
 import copy
 from typing import Any
+import weakref
 
 # Third-Party Packages #
 from baseobjects import BaseObject, search_sentinel
 from bidict import bidict
+import numpy as np
 
 # Local Packages #
+from .hdf5caster import HDF5Caster
 
 
 # Definitions #
@@ -53,7 +56,7 @@ class HDF5Map(BaseObject):
         attributes: The default values of the attributes of the represented hdf5 object. 
         type: The type of the hdf5 object this map represents.
         kwargs: The keyword arguments for the object this map represents.
-        object: The object that this map represents.
+        weak_object: A weak reference to the object that this map represents.
         map_names: The name map of python name vs hdf5 name of the maps contained within this map.
         maps: The nested maps.
         
@@ -76,7 +79,7 @@ class HDF5Map(BaseObject):
         "attributes",
         "type",
         "kwargs",
-        "object",
+        "weak_object",
         "map_names",
         "maps",
     }
@@ -90,6 +93,7 @@ class HDF5Map(BaseObject):
     default_kwargs: dict[str, Any] = {}
     default_map_names: Mapping[str, str] = {}
     default_maps: Mapping[str, "HDF5Map"] = {}
+    caster = HDF5Caster
 
     # Magic Methods
     # Construction/Destruction
@@ -103,7 +107,8 @@ class HDF5Map(BaseObject):
         maps: Mapping[str, "HDF5Map"] | None = None, 
         parent: str | None = None, 
         init: bool = True,
-        **kwargs: Any
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         # New Attributes #
         self._name: str | None = None
@@ -115,10 +120,13 @@ class HDF5Map(BaseObject):
 
         self.type: type = self.default_type
         self.kwargs: dict[str, Any] = self.default_kwargs.copy()
-        self.object: Any = None
+        self.weak_object: weakref.ReferenceType | None = None
 
         self.map_names: bidict = bidict(self.default_map_names)
         self.maps: Mapping[str, "HDF5Map"] = copy.deepcopy(self.default_maps)
+
+        # Parent Attributes #
+        super().__init__(*args, init=False, **kwargs)
 
         # Object Construction #
         if init:
@@ -167,6 +175,11 @@ class HDF5Map(BaseObject):
         else:
             return f"{''.join(f'/{p}' for p in self.parents)}/{'' if self._name is None else self._name}"
 
+    @property
+    def object(self) -> Any:
+        """The object that this map represents"""
+        return self.weak_object()
+
     # Container Methods
     def __getitem__(self, key: str) -> "HDF5Map":
         """Gets a map within this object."""
@@ -211,6 +224,7 @@ class HDF5Map(BaseObject):
             map_names: The name map of python name vs hdf5 name of the maps contained within this map.
             maps: The nested maps.
             parent: The parent of this map.
+            **kwargs: The keyword arguments for the object this map represents.
         """
         if parent is not None:
             self.set_parent(parent=parent)
@@ -238,8 +252,8 @@ class HDF5Map(BaseObject):
 
         self.set_children()
 
-    def construct_object(self, **kwargs: Any) -> Any:
-        """Constructs the object that this map is for.
+    def create_object(self, **kwargs: Any) -> Any:
+        """Creates the object that this map is for.
 
         Args:
             **kwargs: The keyword arguments for the object.
@@ -247,9 +261,13 @@ class HDF5Map(BaseObject):
         Returns:
             The HDF5Object that this map is for.
         """
-        self.object = self.type(**(self.kwargs | kwargs))
+        if "map_" not in kwargs:
+            kwargs["map_"] = self
 
-        return self.object
+        object_ = self.type(**kwargs)
+        self.weak_object = weakref.ref(object_)
+
+        return object_
 
     def require_object(self, **kwargs: Any) -> Any:
         """Get the object that this map is for or constructs it if it has not been created.
@@ -260,10 +278,10 @@ class HDF5Map(BaseObject):
         Returns:
             The HDF5Object that this map is for.
         """
-        if self.object is None:
-            return self.construct_object(**kwargs)
+        if self.weak_object is None or self.weak_object() is None:
+            return self.create_object(**kwargs)
         else:
-            return self.object
+            return self.weak_object()
 
     # Parsers
     def _parse_attribute_name(self, name: str) -> str:

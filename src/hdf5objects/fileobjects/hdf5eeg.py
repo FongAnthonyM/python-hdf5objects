@@ -80,12 +80,12 @@ class HDF5EEG(BaseHDF5):
         init: bool = True,
         **kwargs: Any,
     ) -> None:
-        # Parent Attributes #
-        super().__init__(init=False)
-
         # New Attributes #
         self._subject_id: str = ""
         self._subject_dir: pathlib.Path | None = None
+
+        # Parent Attributes #
+        super().__init__(init=False)
 
         # Object Construction #
         if init:

@@ -147,12 +147,6 @@ class HDF5File(HDF5BaseObject):
         init: bool = True,
         **kwargs: Any,
     ) -> None:
-        # Parent Attributes #
-        super().__init__(init=False)
-
-        # Override Attributes #
-        self._mode_: str = 'r'
-
         # New Attributes #
         self._is_open: bool = False
 
@@ -161,6 +155,12 @@ class HDF5File(HDF5BaseObject):
         self.allow_swmr_create: bool = False
 
         self._group: HDF5Group | None = None
+
+        # Parent Attributes #
+        super().__init__(init=False)
+
+        # Override Attributes #
+        self._mode_: str = 'r'
 
         # Object Construction #
         if init:
@@ -250,7 +250,7 @@ class HDF5File(HDF5BaseObject):
             The HDF5 object requested.
         """
         if isinstance(key, h5py.Reference):
-            with self:
+            with self.temp_open():
                 key = self._file[key].name
         return self._group[key]
 

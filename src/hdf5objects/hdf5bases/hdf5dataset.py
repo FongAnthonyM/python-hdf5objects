@@ -17,6 +17,7 @@ from collections.abc import Mapping, Iterable
 import pathlib
 from typing import Any
 import warnings
+import weakref
 
 # Third-Party Packages #
 from bidict import bidict
@@ -29,19 +30,156 @@ import numpy as np
 from .hdf5map import HDF5Map
 from .hdf5baseobject import HDF5BaseObject
 from .hdf5attributes import HDF5Attributes
-from .hdf5caster import HDF5Caster
 
 
 # Definitions #
 # Classes #
 class DatasetMap(HDF5Map):
-    """A general map for HDF5 Datasets."""
+    """A general map for HDF5 Datasets.
+
+    Class Attributes:
+        default_attributes_type: The default type for attribute objects in this map.
+        default_dtype: The default dtype of the dataset this class will map.
+        default_casting_kwargs: The default keyword arguments for the dtype casting.
+
+    Attributes:
+        _dtypes: The dtypes of this dataset if it has multiple data types.
+        dtypes_dict: A mapping of the data type names to their type index.
+        casting_kwargs: The keyword arguments for the dtype casting.
+
+    Args:
+        name: The name of this map.
+        type_: The type of the hdf5 object this map represents.
+        attribute_names: The name map of python name vs hdf5 name of the attribute.
+        attributes: The default values of the attributes of the represented hdf5 object.
+        map_names: The name map of python name vs hdf5 name of the maps contained within this map.
+        maps: The nested maps.
+        parent: The parent of this map.
+        dtype: The dtype of the dataset this object will map.
+        casting_kwargs: The keyword arguments for the dtype casting.
+        init: Determines if this object will construct.
+        **kwargs: The keyword arguments for the object this map represents.
+    """
+    __slots__ = HDF5Map.__slots__ | {"_dtypes", "dtypes_dict", "casting_kwargs"}
     default_attributes_type = HDF5Attributes
+    default_dtype: np.dtype | str | tuple[tuple[str, type]] | None = None
+    default_casting_kwargs: list[dict[str, Any]] | None = None
+
+    # Magic Methods
+    # Construction/Destruction
+    def __init__(
+        self,
+        name: str | None = None,
+        type_: type | None = None,
+        attribute_names: Mapping[str, str] | None = None,
+        attributes: Mapping[str, Any] | None = None,
+        map_names: Mapping[str, str] | None = None,
+        maps: Mapping[str, HDF5Map] | None = None,
+        parent: str | None = None,
+        dtype: np.dtype | str | tuple[tuple[str, type]] | None = None,
+        casting_kwargs: tuple[dict[str, Any]] | None = None,
+        init: bool = True,
+        **kwargs: Any
+    ) -> None:
+        # Parent Attributes #
+        super().__init__(init=False)
+
+        # New Attributes #
+        self._dtypes: tuple[tuple[str, type]] = tuple()
+        self.dtypes_dict: bidict = bidict()
+
+        self.casting_kwargs: list[dict[str, Any]] | None = None
+
+        # Object Construction #
+        if init:
+            name = name if name is not None else self.default_name
+            parent = parent if parent is not None else self.default_parent
+            self.construct(
+                name=name,
+                type_=type_,
+                attribute_names=attribute_names,
+                attributes=attributes,
+                map_names=map_names,
+                maps=maps,
+                parent=parent,
+                dtype=dtype,
+                casting_kwargs=casting_kwargs,
+                **kwargs,
+            )
+
+    @property
+    def dtype(self) -> np.dtype | str | tuple[tuple[str, type]] | None:
+        """The dtype of this object's type, stored in the kwargs."""
+        return self.kwargs["dtype"]
+
+    @dtype.setter
+    def dtype(self, value: np.dtype | str | tuple[tuple[str, type]] | None) -> None:
+        self.set_dtype(value)
+
+    @property
+    def dtypes(self) -> np.dtype | str | tuple[tuple[str, type]] | None:
+        """The dtypes of this object's type, if it has multiple types."""
+        return self._dtypes
+
+    @dtypes.setter
+    def dtypes(self, value: np.dtype | str | tuple[tuple[str, type]] | None) -> None:
+        self.set_dtype(value)
 
     # Instance Methods
     # Constructors/Destructors
-    def construct_object(self, **kwargs: Any) -> Any:
-        """Constructs the object that this map is for.
+    def construct(
+        self,
+        name: str | None = None,
+        type_: type | None = None,
+        attribute_names: Mapping[str, str] | None = None,
+        attributes: Mapping[str, Any] | None = None,
+        map_names: Mapping[str, str] | None = None,
+        maps: Mapping[str, HDF5Map] | None = None,
+        parent: str | None = None,
+        dtype: np.dtype | str | tuple[tuple[str, type]] | None = None,
+        casting_kwargs: tuple[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Constructs this object, setting attributes and sets nested maps' parents.
+
+        Args:
+            name: The name of this map.
+            type_: The type of the hdf5 object this map represents.
+            attribute_names: The name map of python name vs hdf5 name of the attribute.
+            attributes: The default values of the attributes of the represented hdf5 object.
+            map_names: The name map of python name vs hdf5 name of the maps contained within this map.
+            maps: The nested maps.
+            parent: The parent of this map.
+            dtype: The dtype of the dataset this object will map.
+            casting_kwargs: The keyword arguments for the dtype casting.
+            **kwargs: The keyword arguments for the object this map represents.
+        """
+        super().construct(
+            name=name,
+            type_=type_,
+            attribute_names=attribute_names,
+            attributes=attributes,
+            map_names=map_names,
+            maps=maps,
+            parent=parent,
+            **kwargs,
+        )
+
+        if dtype is None:
+            dtype = self.default_dtype
+
+        if dtype is not None:
+            self.set_dtype(dtype)
+
+        if casting_kwargs is not None:
+            self.casting_kwargs = casting_kwargs
+        elif self.default_casting_kwargs is None:
+            self.casting_kwargs = ([{}] * len(self.dtypes))
+        else:
+            self.casting_kwargs = self.default_casting_kwargs.copy()
+
+    def create_object(self, **kwargs: Any) -> Any:
+        """Creates the object that this map is for.
 
         Args:
             **kwargs: The keyword arguments for the object.
@@ -57,9 +195,47 @@ class DatasetMap(HDF5Map):
             warnings.warn("Cannot build dataset without data or shape and maxshape - skipping.")
             return None
 
-        self.object = self.type(**temp_kwargs)
+        if "map_" not in kwargs:
+            kwargs["map_"] = self
 
-        return self.object
+        object_ = self.type(**kwargs)
+        self.weak_object = weakref.ref(object_)
+
+        return object_
+
+    # Setters
+    def set_dtype(self, dtype: tuple[tuple[str, type]] | None = None):
+        """Sets the dataset to have multiple types with the give types.
+
+        The caster allows python types to be given and translated to an HDF5 compatible type.
+
+        Args:
+            dtype: The dtype which this dataset will contain.
+        """
+        self.dtypes_dict.clear()
+        if not isinstance(dtype, str) and not isinstance(dtype, np.dtype):
+            self._dtypes = dtype
+            self.dtypes_dict.update({name: i for i, (name, _) in enumerate(dtype)})
+            dtype = list((name, self.caster.map_type(type_)) for name, type_ in dtype)
+            if self.casting_kwargs is None or len(self.casting_kwargs) != len(self._dtypes):
+                if self.default_casting_kwargs is None or len(self.default_casting_kwargs) != len(self._dtypes):
+                    self.casting_kwargs = ([{}] * len(self._dtypes))
+                else:
+                    self.casting_kwargs = self.default_casting_kwargs
+
+        self.kwargs["dtype"] = dtype
+
+    def set_children(self) -> None:
+        """Sets the nested maps parents to the correct hierarchy."""
+        for name, child in self.maps.items():
+            child.set_parent(parent=self.parent)
+            child_name = child.name
+            if child_name is None:
+                child_name = self.map_names.get(name, self.sentinel)
+                if child_name is self.sentinel:
+                    child_name = name
+                child.name = child_name
+            child.set_children()
 
 
 class HDF5Dataset(HDF5BaseObject):
@@ -75,12 +251,6 @@ class HDF5Dataset(HDF5BaseObject):
         _dataset: The HDF5 dataset to wrap.
         _scale_name: The name of this dataset if it is a scale.
         attributes: The attributes of this dataset.
-        kwargs: The kwargs to use when creating the dataset.
-        _dtypes: The dtypes of this dataset if it has multiple data types.
-        _types_dict: A mapping of the data type names to their type index.
-        _dtype: This dataset's data type.
-
-        casting_kwargs: list[dict[str, Any]] | None = None
 
     Args:
         data: The data to fill in this dataset.
@@ -99,9 +269,6 @@ class HDF5Dataset(HDF5BaseObject):
     _wrapped_types: list[type | object] = [h5py.Dataset]
     _wrap_attributes: list[str] = ["dataset"]
     default_map: HDF5Map = DatasetMap()
-    default_dtype: np.dtype | str | tuple[tuple[str, type]] | None = None
-    default_casting_kwargs: list[dict[str, Any]] | None = None
-    caster = HDF5Caster
 
     # Magic Methods
     # Constructors/Destructors
@@ -120,20 +287,13 @@ class HDF5Dataset(HDF5BaseObject):
         init: bool = True,
         **kwargs: Any,
     ) -> None:
-        # Parent Attributes #
-        super().__init__(file=file, init=False)
-
         # New Attributes #
         self._dataset: h5py.Dataset | None = None
         self._scale_name: str | None = None
         self.attributes: HDF5Attributes | None = None
-        self.kwargs: dict[str, Any] | None = None
 
-        self._dtypes: tuple[tuple[str, type]] = tuple()
-        self._types_dict: bidict = bidict()
-        self._dtype: np.dtype | str | tuple[tuple[str, type]] | None = None
-
-        self.casting_kwargs: list[dict[str, Any]] | None = None
+        # Parent Attributes #
+        super().__init__(init=False)
 
         # Object Construction #
         if init:
@@ -150,6 +310,29 @@ class HDF5Dataset(HDF5BaseObject):
                 casting_kwargs=casting_kwargs,
                 **kwargs,
             )
+
+    @property
+    def dtypes(self) -> tuple[tuple[str, type]] | None:
+        """The dtypes of this object if it has multiple types"""
+        return self.map.dtypes
+
+    @dtypes.setter
+    def dtypes(self, value: np.dtype | str | tuple[tuple[str, type]] | None) -> None:
+        self.map.dtypes = value
+
+    @property
+    def dtypes_dict(self) -> bidict:
+        """The dictionary mapping of the dtypes of this object if it has multiple types"""
+        return self.map.dtypes_dict
+
+    @property
+    def casting_kwargs(self) -> list[dict[str, Any]]:
+        """The keyword arguments for the dtype casting."""
+        return self.map.casting_kwargs
+
+    @casting_kwargs.setter
+    def casting_kwargs(self, value: list[dict[str, Any]]) -> None:
+        self.map.casting_kwargs = value
 
     @property
     def scale_name(self) -> str:
@@ -252,34 +435,16 @@ class HDF5Dataset(HDF5BaseObject):
         if self.map.type is None:
             self.map.type = self.__class__
 
-        if dtype is None:
-            if "dtype" in self.map.kwargs:
-                dtype = self.map.kwargs["dtype"]
-            else:
-                dtype = self.default_dtype
-
         if dtype is not None:
-            if not isinstance(dtype, str) and not isinstance(dtype, np.dtype):
-                self.set_types(dtype)
-                dtype = list(self._dtype)
-            else:
-                self._dtype = dtype
-            kwargs["dtype"] = dtype
-        elif require and data is None:
+            self.map.set_dtype(dtype)
+        elif dtype is None and require and data is None:
             raise ValueError("Cannot build dataset without data or a given dtype.")
-
-        if casting_kwargs is not None:
-            self.casting_kwargs = casting_kwargs
-        elif self.default_casting_kwargs is None:
-            self.casting_kwargs = ([{}] * len(self._dtypes))
-        else:
-            self.casting_kwargs = self.default_casting_kwargs.copy()
 
         if dataset is not None:
             self.set_dataset(dataset)
 
         if kwargs is not None:
-            self.kwargs = kwargs
+            self.kwargs.update(kwargs)
 
         self.construct_attributes()
 
@@ -377,16 +542,23 @@ class HDF5Dataset(HDF5BaseObject):
         self.set_lifetimes(lifetime=lifetime, **kwargs)
 
     # Item Data Types
-    def item_to_dict(self, item: Any) -> dict:
+    def item_to_dict(self, item: Any, casting_kwargs: list[dict[str | Any]] | None = None) -> dict:
         """Translates an item of the dataset's type to a dictionary that multi-type.
 
         Args:
             item: The item to translate.
+            casting_kwargs: The keyword arguments for casting HDF5 dtypes to python types.
 
         Returns:
             The dictionary representation of the item.
         """
-        types = zip(self._dtypes, self.casting_kwargs)
+        if isinstance(item, np.ndarray):
+            item = item[0]
+
+        if casting_kwargs is None:
+            casting_kwargs = self.casting_kwargs
+
+        types = zip(self.dtypes, casting_kwargs)
         return {name: self.caster.cast_to(type_, item[i], **kwargs) for i, ((name, type_), kwargs) in enumerate(types)}
 
     def dict_to_item(self, dict_: dict) -> Any:
@@ -398,22 +570,9 @@ class HDF5Dataset(HDF5BaseObject):
         Returns:
             The item representation of the dictionary.
         """
-        return tuple(self.caster.cast_from(dict_[name]) for i, (name, _) in enumerate(self._dtypes))
+        return tuple(self.caster.cast_from(dict_[name]) for i, (name, _) in enumerate(self.dtypes))
 
     # Getters/Setters
-    def set_types(self, types: tuple[tuple[str, type]] | None = None):
-        """Sets the dataset to have multiple types with the give types.
-
-        The caster allows python types to be given and translated to an HDF5 compatible type.
-
-        Args:
-            types: The types which this dataset will contain.
-        """
-        self._dtypes = types
-        self._types_dict.clear()
-        self._types_dict.update({name: i for i, (name, _) in enumerate(types)})
-        self._dtype = tuple((name, self.caster.map_type(type_)) for name, type_ in types)
-
     def get_item(self, key: Any) -> Any:
         """Gets an item or items from the dataset.
 
@@ -425,7 +584,7 @@ class HDF5Dataset(HDF5BaseObject):
         """
         return getattr(self, self._wrap_attributes[0])[key]
 
-    def get_item_dict(self, index: int | tuple) -> dict:
+    def get_item_dict(self, index: int | tuple | h5py.Reference) -> dict:
         """Gets an item from the given an index and translates a multi-type into a dictionary.
 
         Args:
@@ -445,7 +604,7 @@ class HDF5Dataset(HDF5BaseObject):
         """
         getattr(self, self._wrap_attributes[0])[key] = value
 
-    def set_item_dict(self, index: int | tuple, dict_: dict) -> None:
+    def set_item_dict(self, index: int | tuple | h5py.Reference, dict_: dict) -> None:
         """Sets an item from the given an index to a translated a multi-type from a dictionary.
 
         Args:
@@ -556,7 +715,8 @@ class HDF5Dataset(HDF5BaseObject):
 
         with self.file.temp_open():
             if not self.exists:
-                self._dataset = self.file._file.create_dataset(name=self._full_name, **(self.kwargs | kwargs))
+                self.kwargs.update(kwargs)
+                self._dataset = self.file._file.create_dataset(name=self._full_name, **self.kwargs)
                 if self.file._file.swmr_mode:
                     if self.file.allow_swmr_create:
                         self.file.close()
@@ -634,7 +794,7 @@ class HDF5Dataset(HDF5BaseObject):
             dict_: The dictionary to add as an item to the dataset.
             axis: The axis to add the dictionary along.
         """
-        self.append(np.array(self.dict_to_item(dict_), dtype=list(self._dtype)), axis=axis)
+        self.append(np.array(self.dict_to_item(dict_), dtype=self.dtype), axis=axis)
 
     def extend_item_dicts(self, iter_: Iterable[dict], axis: int = 0) -> None:
         """Extends the dataset with an iterable of dictionaries which would represent single items.

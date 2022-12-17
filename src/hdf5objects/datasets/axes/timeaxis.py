@@ -92,15 +92,12 @@ class TimeAxis(Axis, TimeAxisContainer):
         init: bool = True,
         **kwargs: Any,
     ) -> None:
-        # Override Attributes #
+        # New Attributes #
         self._precise: bool = False
+        self._time_zone_mask: datetime.tzinfo | None = None
 
         # Parent Attributes #
-        Axis.__init__(self, init=False)
-        TimeAxisContainer.__init__(self, init=False)
-
-        # New Attributes #
-        self._time_zone_mask: datetime.tzinfo | None = None
+        super().__init__(init=False)
 
         # Object Construction #
         if init:
