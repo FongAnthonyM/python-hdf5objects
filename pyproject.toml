@@ -24,7 +24,7 @@ framestructure = "^0.4.0"
 h5py = "^3.5.0"
 numpy = "^1.21.1"
 tzlocal = "^3.0"
-bidict = "^0.21.3"
+bidict = "^0.22.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
