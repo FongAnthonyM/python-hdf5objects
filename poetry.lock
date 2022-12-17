@@ -171,7 +171,7 @@ unicode_backport = ["unicodedata2"]
 
 [[package]]
 name = "classversioning"
-version = "0.4.1"
+version = "0.6.0"
 description = "Tools for create versioning for classes using inheritance."
 category = "main"
 optional = false
