@@ -16,6 +16,7 @@ __email__ = __email__
 from collections.abc import Iterable, Mapping
 import datetime
 from decimal import Decimal
+import time
 from typing import Any
 import zoneinfo
 
@@ -26,7 +27,6 @@ from baseobjects.operations import timezone_offset
 from framestructure import TimeAxisContainer
 import h5py
 import numpy as np
-import tzlocal
 
 # Local Packages #
 from ...hdf5bases import HDF5Map
@@ -75,7 +75,6 @@ class TimeAxis(Axis, TimeAxisContainer):
     """
     default_map: HDF5Map = TimeAxisMap()
     default_scale_name: str | None = "time axis"
-    local_timezone: str = tzlocal.get_localzone_name()
 
     # Magic Methods
     # Construction/Destruction
@@ -435,14 +434,15 @@ class TimeAxis(Axis, TimeAxisContainer):
             offset: The time zone offset from UTC.
         """
         if value is None:
-            value = ""
             offset = h5py.Empty('f8')
+            value = ""
         elif isinstance(value, datetime.tzinfo):
             offset = timezone_offset(value).total_seconds()
             value = str(value)
         elif value.lower() == "local" or value.lower() == "localtime":
-            offset = timezone_offset(zoneinfo.ZoneInfo(self.local_timezone)).total_seconds()
-            value = self.local_timezone
+            local_time = time.localtime()
+            offset = local_time.tm_gmtoff
+            value = local_time.tm_zone
         else:
              zoneinfo.ZoneInfo(value)  # Raises an error if the given string is not a time zone.
 
