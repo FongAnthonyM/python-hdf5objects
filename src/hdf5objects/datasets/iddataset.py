@@ -2,7 +2,7 @@
 A Dataset which contains IDs in each datum.
 """
 # Package Header #
-from ...header import *
+from ..header import *
 
 # Header #
 __author__ = __author__
@@ -23,7 +23,7 @@ from bidict import bidict
 import numpy as np
 
 # Local Packages #
-from ...hdf5bases import HDF5Map, HDF5Dataset, DatasetMap
+from ..hdf5bases import HDF5Map, HDF5Dataset, DatasetMap
 
 
 # Definitions #
