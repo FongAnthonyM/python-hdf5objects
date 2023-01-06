@@ -1,5 +1,5 @@
 """ __init__.py
-Test suite for the baseobjects package.
+Test suite for the hdf5objects package.
 """
 # Package Header #
 from src.hdf5objects.header import *

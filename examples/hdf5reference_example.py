@@ -19,11 +19,13 @@ from collections.abc import Mapping
 import datetime
 import pathlib
 from typing import Any
+import uuid
 
 # Third-Party Packages #
 from classversioning import Version, TriNumberVersion
+import h5py
 from hdf5objects import HDF5Map
-from hdf5objects.datasets import RegionReferenceDataset
+from hdf5objects.datasets import RegionReferenceDataset, RegionReferenceMap, TimeReferenceMap
 from hdf5objects.fileobjects import BaseHDF5, BaseHDF5Map
 import numpy as np
 
@@ -35,59 +37,40 @@ import numpy as np
 # Any changes should be done in a subclass or on the instance level.
 # Classes #
 # Define Model Dataset
-class TimeTensorMap(TimeSeriesMap):
-    """A map for a time Tensor dataset."""
-    # Create names for the attributes
-    default_attribute_names: Mapping[str, str] = {"n_samples": "n_samples",
-                                                  "c_axis": "c_axis",
-                                                  "t_axis": "t_axis",
-                                                  "r_axis": "r_axis",
-                                                  "w_axis": "w_axis"}
-    # Create and set the initial values for the attributes
-    default_attributes: Mapping[str, Any] = {"n_samples": 0,
-                                             "c_axis": 1,
-                                             "t_axis": 0,
-                                             "r_axis": 2,
-                                             "w_axis": 3}
+class TimeReferenceMap(TimeReferenceMap):
+    """Implementation of TimeReferenceMap."""
+    default_attribute_names = RegionReferenceMap.default_attribute_names | {"test_attribute": "TestAttribute"}
+    default_dtype = (
+        ("ID", uuid.UUID),
+        ("Text", str),
+        ("multiple_object", h5py.ref_dtype),
+        ("multiple_region", h5py.regionref_dtype),
+        ("single_region", h5py.regionref_dtype),
+    )
+    default_single_reference_fields = {"test_single": ("test_attribute", "single_region")}
+    default_multiple_reference_fields = {"test_multiple": ("multiple_object", "multiple_region")}
+    default_primary_reference_field = "test_single"
 
 
-
-class TimeTensorDataset(RegionReferenceDataset):
-    """A dataset that holds a series of Tensors that are related in time."""
-    default_map: HDF5Map = TimeTensorMap()
-
-
-# Assign Cyclic Definitions
-TimeTensorMap.default_type = TimeTensorDataset  # This allows maps to construct the dataset directly
-
-
-# Define File Type
-class ReferenceFileMap(BaseHDF5Map):
-    """A map for the Tensor Models HDF5 file."""
-    # Create names for the attributes
-    default_attribute_names: Mapping[str, str] = {"file_type": "FileType",
-                                                  "file_version": "FileVersion",
-                                                  "subject_id": "subject_id",
-                                                  "start": "start",
-                                                  "end": "end"}
+class RegionReferenceDatasetTestFileMap(BaseHDF5Map):
+    """The map for the file which implements RegionReferenceDataset."""
     # Create names for the contained maps and future objects
-    default_map_names: Mapping[str, str] = {"model_1": "model_1", "model_2": "model_2", "model_3": "model_3"}
+    default_map_names: Mapping[str, str] = {"main_dataset": "main_dataset"}
     # Create the contained maps.
     # Note: For datasets the shape, maxshape, and dtype must be initialized to build the datasets on file creation.
     # If you want set the maxshape, do it at the instance level, do not redefine this map just to set it.
     default_maps: Mapping[str, HDF5Map] = {
-        "model_1": TimeTensorMap(shape=(0, 0, 0, 0), maxshape=(None, None, None, None), dtype='f8'),
-        "model_2": TimeTensorMap(shape=(0, 0, 0, 0), maxshape=(None, None, None, None), dtype='f8'),
-        "model_3": TimeTensorMap(shape=(0, 0, 0, 0), maxshape=(None, None, None, None), dtype='f8'),
+        "main_dataset": TimeReferenceMap(shape=(0,), maxshape=(None,)),
     }
 
 
-class ReferenceFileHDF5(BaseHDF5):
-    """The Tensor Models HDF5 file object."""
+# Define File Type
+class RegionReferenceDatasetTestHDF5(BaseHDF5):
+    """The file object that implements the RegionReferenceDataset."""
     _registration: bool = True  # Version registration, to learn more about versioning ask Anthony.
-    FILE_TYPE: str = "TensorModels"
+    FILE_TYPE: str = "TestRegionReference"
     VERSION: Version = TriNumberVersion(0, 0, 0)  # To learn more about versioning ask Anthony.
-    default_map: HDF5Map = TensorModelsMap()
+    default_map: HDF5Map = RegionReferenceDatasetTestFileMap()
 
 
 # Main #

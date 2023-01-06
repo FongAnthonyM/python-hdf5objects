@@ -14,5 +14,7 @@ __email__ = __email__
 # Imports #
 # Local Packages #
 from .axes import *
-from .multitypedatasets import *
 from .timeseriesdataset import TimeSeriesDataset, TimeSeriesMap
+from .iddataset import IDDataset, IDDatasetMap
+from .regionreferencedataset import RegionReferenceDataset, RegionReferenceMap
+from .timereferencedataset import TimeSeriesDataset, TimeReferenceMap
