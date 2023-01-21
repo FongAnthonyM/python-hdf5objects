@@ -22,8 +22,9 @@ from typing import Any
 
 # Third-Party Packages #
 from classversioning import Version, TriNumberVersion
-from hdf5objects import HDF5Map
-from hdf5objects.datasets import TimeSeriesMap, TimeSeriesDataset
+from hdf5objects import HDF5Map, DatasetMap
+from hdf5objects.datasets import ChannelAxisMap, SampleAxisMap, TimeAxisMap
+from hdf5objects.datasets.components import TimeSeriesComponent
 from hdf5objects.fileobjects import BaseHDF5, BaseHDF5Map
 import numpy as np
 
@@ -35,7 +36,7 @@ import numpy as np
 # Any changes should be done in a subclass or on the instance level.
 # Classes #
 # Define Model Dataset
-class TimeTensorMap(TimeSeriesMap):
+class TimeTensorMap(DatasetMap):
     """A map for a time Tensor dataset."""
     # Create names for the attributes
     default_attribute_names: Mapping[str, str] = {"n_samples": "n_samples",
@@ -53,19 +54,13 @@ class TimeTensorMap(TimeSeriesMap):
     # default_map_names = {"channel_axis": "channel_axis",
     #                      "sample_axis": "sample_axis",
     #                      "time_axis": "time_axis"}
-    # default_maps = {"channel_axis": ChannelAxisMap(),
-    #                 "sample_axis": SampleAxisMap(),
-    #                 "time_axis": TimeAxisMap(attributes={"sample_rate": h5py.Empty('f8'), "time_zone": ""})}
+    default_component_types = {"timeseries": (TimeSeriesComponent, {"scale_name": "time_axis"})}
+    default_axis_maps = [
+        {"sample_axis": SampleAxisMap(), "time_axis": TimeAxisMap()},
+        {"channel_axis": ChannelAxisMap()},
+    ]
+    # TimeAxisMap(attributes={"sample_rate": h5py.Empty('f8'), "time_zone": ""})}
     # Can set the default sample rate and time zone by filling in the dict values above.
-
-
-class TimeTensorDataset(TimeSeriesDataset):
-    """A dataset that holds a series of Tensors that are related in time."""
-    default_map: HDF5Map = TimeTensorMap()
-
-
-# Assign Cyclic Definitions
-TimeTensorMap.default_type = TimeTensorDataset  # This allows maps to construct the dataset directly
 
 
 # Define File Type
@@ -80,7 +75,7 @@ class TensorModelsMap(BaseHDF5Map):
     # Create names for the contained maps and future objects
     default_map_names: Mapping[str, str] = {"model_1": "model_1", "model_2": "model_2", "model_3": "model_3"}
     # Create the contained maps.
-    # Note: For datasets the shape, maxshape, and dtype must be initialized to build the datasets on file creation.
+    # Note: For dataset the shape, maxshape, and dtype must be initialized to build the dataset on file creation.
     # If you want set the maxshape, do it at the instance level, do not redefine this map just to set it.
     default_maps: Mapping[str, HDF5Map] = {
         "model_1": TimeTensorMap(shape=(0, 0, 0, 0), maxshape=(None, None, None, None), dtype='f8'),
@@ -142,10 +137,11 @@ if __name__ == '__main__':
     # Create the file
     # The map_ kwarg overrides the default map, in this case the same map with the maxsahpe changed.
     # The create kwarg determines if the file will be created.
-    # The require kwarg determines if the file's structure will be built, which is highly suggested for SWMR.
-    with TensorModelsHDF5(file=out_path, mode='a', map_=new_map, create=True, require=True) as model_file:
+    # The construct kwarg determines if the file's structure will be built.
+    # The require kwarg determines if the file's structure will be filled, which is highly suggested for SWMR.
+    with TensorModelsHDF5(file=out_path, mode='a', map_=new_map, create=True, construct=True, require=True) as model_file:
         # Note: Caching is off while in write mode. Caching can be turned on using methods covered in the load/read file
-        # section. Caching is particularly useful when writing to a file.
+        # section. Caching is particularly useful when reading a file.
 
         # Assign a File Attribute
         # These attributes were not defined as a property in the TensorModelHDF5 class, so they have to be set and get
@@ -154,12 +150,11 @@ if __name__ == '__main__':
         model_file.attributes["start"] = start.timestamp()
 
         # Create Dataset and Directly Add Some Data (Full Data and Time)
-        # The method bellow will work on both a built file and an un-built file.
-        model_1_dataset = model_file["model_1"]
+        # The method bellow will work on both a constructed and un-constructed file.
+        model_1_dataset = model_file.construct_member("model_1")
         model_1_dataset.require(
             data=tensor_series_1,
-            sample_rate=sample_rate,
-            timestamps=timestamps_1,
+            axes_kwargs=[{"time_axis": {"data": timestamps_1, "rate": sample_rate}}]
         )
         # Note: Timestamps do not need to be explicitly given, instead they can be interpolated from the start and fs.
 
@@ -175,7 +170,7 @@ if __name__ == '__main__':
         model_2_dataset.sample_rate = sample_rate
 
         # Set Single Write Multiple Reader
-        # Note: that the swr_mode should only be set to true after all the datasets and attributes have been set.
+        # Note: that the swr_mode should only be set to true after all the dataset and attributes have been set.
         # Once in SWMR only add data to dataset and do not change attributes.
         model_file.swmr_mode = True
 
@@ -184,21 +179,21 @@ if __name__ == '__main__':
 
         # Append One Point
         ts_array = np.array([start.timestamp()])  # Create a singe point in time to append.
-        t_axis = model_2_dataset.t_axis  # Get the axis to append along, default is the time axis.
-        model_2_dataset.append(data=single_tensor_1, axis=t_axis, time_axis=ts_array)
+        t_axis = model_2_dataset.components["timeseries"].t_axis  # Get the axis to append along, default is the time axis.
+        model_2_dataset.append(data=single_tensor_1, axis=t_axis, component_kwargs={"timeseries": {"data": ts_array}})
 
         print(f"The shape of model 2 after first append: {model_2_dataset.shape}")
 
         # Append Another Point
         ts_array = np.array([datetime.datetime.now().timestamp()])  # Create a singe point in time to append.
-        model_2_dataset.append(data=single_tensor_2, time_axis=ts_array)
+        model_2_dataset.append(data=single_tensor_2, axis=t_axis, component_kwargs={"timeseries": {"data": ts_array}})
 
         print(f"The shape of model 2 after second append: {model_2_dataset.shape}")
 
         # Append Array with multiple time points
         now = datetime.datetime.now().timestamp()
         stop = now + sample_rate * n_samples_1
-        model_2_dataset.append(data=tensor_series_2, time_axis=np.linspace(now, stop, n_samples_1))
+        model_2_dataset.append(data=tensor_series_2, axis=t_axis, component_kwargs={"timeseries": {"data": np.linspace(now, stop, n_samples_1)}})
 
         print(f"The shape of model 2 after third append: {model_2_dataset.shape}")
 
@@ -252,9 +247,6 @@ if __name__ == '__main__':
         model_2_dataset = model_file["model_2"]
         print(f"The shape of model 2: {model_2_dataset.shape}")
         print("")
-
-        a = model_1_dataset.ref
-        thing = model_file[a]
 
     # Alternate File instantiation methods
     # The open_ kwarg determines if the file will remain open after instantiation, True by default.

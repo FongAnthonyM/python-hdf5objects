@@ -23,16 +23,12 @@ import numpy as np
 
 # Local Packages #
 from ...hdf5bases import HDF5Map, DatasetMap, HDF5Dataset
+from ..basedatasetcomponent import BaseDatasetComponent
 
 
 # Definitions #
 # Classes #
-class AxisMap(DatasetMap):
-    """A map for the Axis object."""
-    default_kwargs: dict[str, Any] = {}
-
-
-class Axis(HDF5Dataset):
+class AxisComponent(BaseDatasetComponent):
     """A HDF5Dataset whose primary role is to be an axis (scale).
 
     Class_Attributes:
@@ -43,51 +39,44 @@ class Axis(HDF5Dataset):
         _scale_name: The scale name of this axis.
 
     Args:
+        composite: The object which this object is a component of.
         start: The start of the axis.
         stop: The end of the axis.
         step: The interval between each datum of the axis.
         rate: The frequency of the data of the axis.
         size: The number of datum in the axis.
-        s_name: The name of the axis (scale).
-        require: Determines if the axis should be created and filled.
+        create: Determines if the axis should be created and filled.
         init: Determines if this object will construct.
-        **kwargs: The keyword arguments for the HDF5Dataset.
+        **kwargs: Keyword arguments for inheritance.
     """
-    default_map: HDF5Map = AxisMap()
-    default_scale_name: str | None = None  # Set this to the name of the axis
 
     # Magic Methods #
     # Construction/Destruction
     def __init__(
-        self, 
-        start: int | float | None = None, 
-        stop: int | float | None = None, 
-        step: int | float | None = None, 
-        rate: float | None = None, 
+        self,
+        composite: Any = None,
+        start: int | float | None = None,
+        stop: int | float | None = None,
+        step: int | float | None = None,
+        rate: float | None = None,
         size: int | None = None,
-        s_name: str | None = None, 
-        require: bool | None = None,
-        init: bool = True, 
+        create: bool | None = None,
+        init: bool = True,
         **kwargs: Any,
     ) -> None:
-        # New Attributes #
-        self.default_kwargs: Mapping[str, Any] = self.default_map.kwargs
-
-        self._scale_name = self.default_scale_name
-
         # Parent Attributes #
         super().__init__(init=False)
 
         # Object Construction #
         if init:
             self.construct(
-                start=start, 
-                stop=stop, 
-                step=step, 
-                rate=rate, 
+                composite=composite,
+                start=start,
+                stop=stop,
+                step=step,
+                rate=rate,
                 size=size,
-                s_name=s_name, 
-                require=require,
+                create=create,
                 **kwargs,
             )
 
@@ -111,38 +100,31 @@ class Axis(HDF5Dataset):
     # Constructors/Destructors
     def construct(
         self,
+        composite: Any = None,
         start: int | float | None = None,
         stop: int | float | None = None,
         step: int | float | None = None,
         rate: float | None = None,
         size: int | None = None,
-        s_name: str | None = None,
-        require: bool | None = None,
+        create: bool | None = None,
         **kwargs: Any,
     ) -> None:
         """Constructs this object.
-        
+
         Args:
+            composite: The object which this object is a component of.
             start: The start of the axis.
             stop: The end of the axis.
             step: The interval between each datum of the axis.
             rate: The frequency of the data of the axis.
             size: The number of datum in the axis.
-            s_name: The name of the axis (scale).
-            require: Determines if the axis should be created and filled.
-            **kwargs: The keyword arguments for the HDF5Dataset.
+            create: Determines if the axis should be created and filled.
+            **kwargs: Keyword arguments for inheritance.
         """
-        if s_name is not None:
-            self._scale_name = s_name
+        super().construct(composite=composite, **kwargs)
 
-        # Construct the dataset and handle creation here unless data is present.
-        super().construct(require=False, **(self.default_kwargs | kwargs))
-
-        if require and "data" not in kwargs:
-            if start is not None and size != 0:
-                self.from_range(start, stop, step, rate, size)
-            else:
-                self.require()
+        if create and start is not None and size != 0:
+            self.from_range(start, stop, step, rate, size)
 
     def from_range(
         self,
@@ -154,7 +136,7 @@ class Axis(HDF5Dataset):
         **kwargs: Any,
     ) -> None:
         """Creates the axis from a range style of input.
-        
+
         Args:
             start: The start of the axis.
             stop: The end of the axis.
@@ -173,14 +155,13 @@ class Axis(HDF5Dataset):
             stop = start + step * size
 
         if step is not None:
-            self.set_data(data=np.arange(start, stop, step), **kwargs)
+            self.composite.set_data(data=np.arange(start, stop, step), **kwargs)
         else:
-            self.set_data(data=np.linspace(start, stop, size), **kwargs)
+            self.composite.set_data(data=np.linspace(start, stop, size), **kwargs)
 
     # File
     def refresh(self) -> None:
         """Reloads the axis and clears the caches."""
-        super().refresh()
         self.get_start.clear_cache()
         self.get_end.clear_cache()
 
@@ -188,12 +169,11 @@ class Axis(HDF5Dataset):
     @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
     def get_start(self) -> Any:
         """Get the first element of this axis, using caching.
-        
+
         Returns:
             The first element of this axis.
         """
-        with self:
-            return self._dataset[0]
+        return self.composite[0]
 
     @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
     def get_end(self) -> Any:
@@ -202,8 +182,7 @@ class Axis(HDF5Dataset):
         Returns:
             The last element of this axis.
         """
-        with self:
-            return self._dataset[-1]
+        return self.composite[-1]
 
     def get_intervals(self, start: int | None = None, stop: int | None = None, step: int | None = None) -> np.ndarray:
         """Get the intervals between each datum of the axis.
@@ -216,7 +195,7 @@ class Axis(HDF5Dataset):
         Returns:
             The intervals between each datum of the axis.
         """
-        return np.ediff1d(self.all_data[slice(start, stop, step)])
+        return np.ediff1d(self.composite.all_data[slice(start, stop, step)])
 
     # Find
     def find_index(self, item: int | float, approx: bool = False, tails: bool = False) -> IndexValue:
@@ -230,17 +209,17 @@ class Axis(HDF5Dataset):
         Returns:
             The requested closest index and the value at that index.
         """
-        samples = self.shape[0]
-        if item < self.start:
+        samples = self.composite.shape[0]
+        if item < self.composite.start:
             if tails:
                 return IndexValue(0, self.start)
         elif item > self.end:
             if tails:
                 return IndexValue(samples - 1, self.end)
         else:
-            item = int(np.searchsorted(self.all_data, item, side="right") - 1)
-            if approx or item == self.all_data[item]:
-                return IndexValue(item, self.all_data[item])
+            item = int(np.searchsorted(self.composite.all_data, item, side="right") - 1)
+            if approx or item == self.composite.all_data[item]:
+                return IndexValue(item, self.composite.all_data[item])
             else:
                 return IndexValue(None, None)
 
@@ -270,14 +249,14 @@ class Axis(HDF5Dataset):
             start_index, _ = self.find_index(item=start, approx=approx, tails=tails)
 
         if stop is None:
-            stop_index = self.shape[0] - 1
+            stop_index = self.composite.shape[0] - 1
         else:
             stop_index, _ = self.find_index(item=stop, approx=approx, tails=tails)
 
         if start_index is None and stop_index is None:
             return FoundRange(None, None, None)
         else:
-            data = self.all_data[slice(start=start_index, stop=stop_index, step=step)]
+            data = self.composite.all_data[slice(start=start_index, stop=stop_index, step=step)]
 
             if step is not None and step != 1:
                 stop_index = int(data.shape[0] * step + start_index)
@@ -301,9 +280,12 @@ class Axis(HDF5Dataset):
             step: The interval to apply the shift across the range.
         """
         with self:
-            self._dataset[start:stop:step] += shift
+            self.composite[start:stop:step] += shift
         self.refresh()
 
-
-# Assign Cyclic Definitions
-AxisMap.default_type = Axis
+class AxisMap(DatasetMap):
+    """A map for the Axis Datset."""
+    default_kwargs: dict[str, Any] = {}
+    default_component_types = {
+        "axis": (AxisComponent, {}),
+    }

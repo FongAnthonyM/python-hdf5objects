@@ -30,17 +30,17 @@ import numpy as np
 
 # Local Packages #
 from src.hdf5objects import BaseHDF5, BaseHDF5Map, HDF5Dataset, DatasetMap
-from src.hdf5objects.datasets import RegionReferenceDataset, RegionReferenceMap
+from src.hdf5objects.dataset.components import RegionReferenceComponent
 from .test_dataset import DatasetTestMap
 
 
 # Definitions #
 # Classes #
 # Module Implementation
-class RegionReferenceTestMap(RegionReferenceMap):
+class RegionReferenceTestMap(DatasetMap):
     """Implementation of RegionReferenceMap."""
-    default_attribute_names = RegionReferenceMap.default_attribute_names | {"test_attribute": "TestAttribute"}
-    # default_attributes = RegionReferenceMap.default_attributes | {"test_attribute": h5py.Reference()}
+    default_attribute_names = {"test_attribute": "TestAttribute"}
+    # default_attributes = {"test_attribute": h5py.Reference()}
     default_dtype = (
         ("ID", uuid.UUID),
         ("Text", str),
@@ -48,9 +48,13 @@ class RegionReferenceTestMap(RegionReferenceMap):
         ("multiple_region", h5py.regionref_dtype),
         ("single_region", h5py.regionref_dtype),
     )
-    default_single_reference_fields = {"test_single": ("test_attribute", "single_region")}
-    default_multiple_reference_fields = {"test_multiple": ("multiple_object", "multiple_region")}
-    default_primary_reference_field = "test_single"
+    default_component_types = {
+        "reference": (RegionReferenceComponent, {
+            "single_reference_fields": {"test_single": ("test_attribute", "single_region")},
+            "multiple_reference_fields": {"test_multiple": ("multiple_object", "multiple_region")},
+            "primary_reference_field": "test_single",
+        }),
+    }
 
 
 class RegionReferenceDatasetTestFileMap(BaseHDF5Map):
@@ -109,18 +113,21 @@ class TestDataset(ClassTest):
             multi_dataset.set_item_dict(0, test_tertiary_entry)
 
             test_dataset.attributes["test_attribute"] = normal_dataset.ref
-            obj_1, region_1 = test_dataset.generate_region_reference(region=(slice(20, 30), slice(20, 30)))
-            obj_2, region_2 = test_dataset.generate_region_reference(region=0, object_=multi_dataset, ref_name="test_multiple")
+            obj_1, region_1 = test_dataset.components["reference"].generate_object_reference(
+                region=(slice(20, 30), slice(20, 30)))
+            obj_2, region_2 = test_dataset.components["reference"].generate_object_reference(region=0,
+                                                                                             object_=multi_dataset,
+                                                                                             ref_name="test_multiple")
 
             test_ref_entry["single_region"] = region_1
             #test_ref_entry.update({"multiple_region": region_2, "multiple_object": obj_2})
 
             test_dataset.set_item_dict(0, test_ref_entry)
-            grabbed_data = test_dataset.get_from_reference(0)
+            grabbed_data = test_dataset.components["reference"].get_from_reference(0)
 
             test_ref_entry.update({"multiple_region": region_2, "multiple_object": obj_2})
             test_dataset.append_item_dict(test_ref_entry)
-            grabbed_entry = test_dataset.get_from_reference_dict(1, ref_name="test_multiple")
+            grabbed_entry = test_dataset.components["reference"].get_from_reference_dict(1, ref_name="test_multiple")
 
         assert grabbed_data.shape == (10, 10)
         assert tuple(grabbed_entry) == tuple(test_tertiary_entry)

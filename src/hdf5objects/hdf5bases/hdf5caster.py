@@ -69,7 +69,7 @@ class HDF5Caster(BaseObject):
         new_type = cls.type_map.get(type_, search_sentinel)
         if new_type is not search_sentinel:
             return new_type
-        elif isinstance(type_, np.dtype):
+        else:
             return type_
 
     # Casting From
@@ -99,15 +99,12 @@ class HDF5Caster(BaseObject):
         """Casts an item to a type that can be stored in an HDF5.
 
         Args:
-            item: The item to cast a type that can be stored in and HDF5 object.
+            item: The item to cast a type that can be stored in an HDF5 object.
 
         Returns:
             The item as the new type.
         """
-        if isinstance(item, np.dtype):
-            return item
-        else:
-            raise TypeError(f"{type(item)} does not have a cast method from.")
+        return item
 
     @cast_from.register(str)
     @cast_from.register(int)
@@ -188,8 +185,6 @@ class HDF5Caster(BaseObject):
         """
         to_method = cls.to_registry.get(type_, search_sentinel)
         if to_method is search_sentinel:
-            raise TypeError(f"{type(item)} does not have a cast method to.")
-        elif isinstance(type_, np.dtype):
             return item
         else:
             return to_method.__get__(cls, cls.__class__)(item, **kwargs)

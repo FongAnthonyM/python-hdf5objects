@@ -58,8 +58,10 @@ class HDF5File(HDF5BaseObject):
         map_: The map for this HDF5 object.
         load: Determines if this object will load the file on construction.
         create: Determines if this object will create an empty file on construction.
+        construct: Determines if this object will create members int the file on construction.
         require: Determines if this object will create and fill the file on construction.
         path: The path to the file.
+        component_kwargs: The keyword arguments for the components.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the open method.
     """
@@ -142,8 +144,10 @@ class HDF5File(HDF5BaseObject):
         map_: HDF5Map | None = None,
         load: bool = False,
         create: bool = False,
+        construct: bool = False,
         require: bool = False,
         path: str | pathlib.Path | h5py.File | None = None,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
         init: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -171,8 +175,10 @@ class HDF5File(HDF5BaseObject):
                 map_=map_,
                 load=load,
                 create=create,
+                construct=construct,
                 require=require,
                 path=path,
+                component_kwargs=component_kwargs,
                 **kwargs,
             )
 
@@ -290,8 +296,10 @@ class HDF5File(HDF5BaseObject):
         map_: HDF5Map | None = None,
         load: bool = False,
         create: bool = False,
+        construct: bool = False,
         require: bool = False,
         path: str | pathlib.Path | h5py.File | None = None,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> "HDF5File":
         """Constructs this object.
@@ -303,8 +311,10 @@ class HDF5File(HDF5BaseObject):
             map_: The map for this HDF5 object.
             load: Determines if this object will load the file on construction.
             create: Determines if this object will create an empty file on construction.
+            construct: Determines if this object will create members int the file on construction.
             require: Determines if this object fill the file on construction.
             path: The path to the file.
+            component_kwargs: The keyword arguments for the components.
             **kwargs: The keyword arguments for the open method.
 
         Returns:
@@ -335,10 +345,15 @@ class HDF5File(HDF5BaseObject):
         elif open_ or load or require:
             self.open(**kwargs)
 
-        self.construct_group(load=load, require=require)
+        if component_kwargs is None:
+            self.construct_components()
+        else:
+            self.construct_components(**component_kwargs)
 
-        if require:
-            self.construct_file_attributes()
+        self.construct_group(load=load, construct=construct, require=require)
+
+        if construct or require:
+            self.construct_file_attributes(require=require)
 
         if not open_:
             self.close()
@@ -357,19 +372,43 @@ class HDF5File(HDF5BaseObject):
         """
         self._group.construct_attributes(map_=map_, load=load, require=require)
 
-    def construct_group(self, map_: HDF5Map = None, load: bool = False, require: bool = False):
+    def construct_group(
+        self,
+        map_: HDF5Map = None,
+        load: bool = False,
+        construct: bool = False,
+        require: bool = False,
+    ) -> None:
         """Creates the group object for this file.
 
         Args:
             map_: The map to use to create the attributes.
             load: Determines if this object will recursively load the members from the file on construction.
+            construct: Determines if this object will create members int the file on construction.
             require: Determines if this object will recursively create and fill the members in the file on construction.
         """
         if map_ is not None:
             self.map = map_
-        self._group = self.group_type(name=self._name_, map_=self.map, file=self, load=load, require=require)
+        self._group = self.group_type(
+            name=self._name_,
+            map_=self.map,
+            file=self,
+            load=load,
+            construct=construct,
+            require=require,
+        )
 
     # Getters/Setters
+    def set_map(self, map_: HDF5Map) -> None:
+        """Changes the current map with a different one.
+
+        Args:
+            map_: The map to replace the current map.
+        """
+        self.map_ = map_
+        if self._group is not None:
+            self._group.set_map(map_)
+
     @singlekwargdispatchmethod("file")
     def _set_path(self, file: str | pathlib.Path | h5py.File) -> None:
         """Sets the path for the file.
@@ -441,6 +480,34 @@ class HDF5File(HDF5BaseObject):
 
         return self
 
+    def create(
+        self,
+        name: str | pathlib.Path = None,
+        open_: bool = True,
+        map_: HDF5Map = None,
+        load: bool = False,
+        require: bool = False,
+        component_kwargs: dict[str, Any] = {},
+        **kwargs: Any
+    ) -> "HDF5File":
+        """Creates the HDF5 file.
+
+        Args:
+            name: The file name as path.
+            open_: Determines if this object will remain open after creation.
+            map_: The map for this HDF5 object.
+            load: Determines if the values of this file will be loaded.
+            require: Determines if the values of this file will be filled.
+            component_kwargs: The keyword arguments for the components' create methods.
+            **kwargs: The keyword arguments for the open method.
+
+        Returns:
+            This object.
+        """
+        self.create_file(name=name, open_=open_, map_=map_, load=load, require=require, **kwargs)
+        self.create_components(**component_kwargs)
+        return self
+
     def require_file(
         self,
         name: str | pathlib.Path = None,
@@ -475,6 +542,34 @@ class HDF5File(HDF5BaseObject):
         else:
             self.create_file(open_=open_, map_=map_, require=require, **kwargs)
 
+        return self
+
+    def require(
+        self,
+        name: str | pathlib.Path = None,
+        open_: bool = True,
+        map_: HDF5Map = None,
+        load: bool = False,
+        require: bool = False,
+        component_kwargs: dict[str, Any] = {},
+        **kwargs: Any
+    ) -> "HDF5File":
+        """Creates the HDF5 file or loads it if it exists.
+
+        Args:
+            name: The file name as path.
+            open_: Determines if this object will remain open after creation.
+            map_: The map for this HDF5 object.
+            load: Determines if the values of this file will be loaded.
+            require: Determines if the values of this file will be filled.
+            component_kwargs: The keyword arguments for the components' create methods.
+            **kwargs: The keyword arguments for the open method.
+
+        Returns:
+            This object.
+        """
+        self.require_file(name=name, open_=open_, map_=map_, load=load, require=require, **kwargs)
+        self.require_components(**component_kwargs)
         return self
 
     # def copy_file(self, path):  # Todo: Implement this.

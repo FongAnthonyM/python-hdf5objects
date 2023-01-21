@@ -51,6 +51,7 @@ class HDF5Attributes(HDF5BaseObject):
         load: Determines if this object will load the attribute values from the file on construction.
         require: Determines if this object will create and fill the attributes in the file on construction.
         parent: The HDF5 name of the parent of this HDF5 object.
+        component_kwargs: The keyword arguments for the components.
         init: Determines if this object will construct.
     """
     _wrapped_types: list[type | object] = [h5py.AttributeManager]
@@ -67,6 +68,7 @@ class HDF5Attributes(HDF5BaseObject):
         load: bool = False,
         require: bool = False,
         parent: str | None = None,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
         init: bool = True,
     ) -> None:
         # New Attributes #
@@ -86,6 +88,7 @@ class HDF5Attributes(HDF5BaseObject):
                 load=load,
                 require=require,
                 parent=parent,
+                component_kwargs=component_kwargs,
             )
 
     # Pickling
@@ -143,6 +146,7 @@ class HDF5Attributes(HDF5BaseObject):
         load: bool = False,
         require: bool = False,
         parent: str | None = None,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
     ) -> None:
         """Constructs this object.
 
@@ -154,8 +158,14 @@ class HDF5Attributes(HDF5BaseObject):
             load: Determines if this object will load the attribute values from the file on construction.
             require: Determines if this object will create and fill the attributes in the file on construction.
             parent: The HDF5 name of the parent of this HDF5 object.
+            component_kwargs: The keyword arguments for the components.
         """
         super().construct(name=name, map_=map_, file=file, parent=parent)
+
+        if component_kwargs is None:
+            self.construct_components()
+        else:
+            self.construct_components(**component_kwargs)
 
         if attributes is not None:
             self.set_attribute_manager(attributes)
@@ -183,6 +193,17 @@ class HDF5Attributes(HDF5BaseObject):
                     self._attribute_manager.create(name, value)
                 elif override:
                     self._attribute_manager[name] = value
+
+    def construct_components(self, **component_kwargs: Any) -> None:
+        """Constructs the components of this dataset.
+
+        Args:
+            component_kwargs: The keyword arguments for the components.
+        """
+        for name, (component, kwargs)  in self.map.attribute_component_types.items():
+            new_kwargs = component_kwargs.get(name, {})
+            temp_kwargs = kwargs | new_kwargs
+            self.components[name] = component(composite=self, **temp_kwargs)
 
     # Parsers
     def _parse_name(self, name: str) -> str:
@@ -423,10 +444,10 @@ class HDF5Attributes(HDF5BaseObject):
         try:
             if not self._attribute_manager:
                 self.file.open(mode=mode, **kwargs)
-                self._attribute_manager = self.file._file[self._name].attrs
+                self._attribute_manager = self.file._file[self._full_name].attrs
         except ValueError:
             self.file.open(mode=mode, **kwargs)
-            self._attribute_manager = self.file._file[self._name].attrs
+            self._attribute_manager = self.file._file[self._full_name].attrs
 
         return self
 

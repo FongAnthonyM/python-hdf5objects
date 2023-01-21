@@ -28,6 +28,7 @@ import h5py
 
 # Local Packages #
 from .hdf5caster import HDF5Caster
+from .hdf5basecomponent import HDF5BaseComponent
 from .hdf5map import HDF5Map
 
 
@@ -130,6 +131,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         self._mode_: str | None = None
 
         self.map: HDF5Map = self.default_map.deepcopy()
+        self.components: dict[str, HDF5BaseComponent] = {}
 
         # Parent Attributes #
         super().__init__(*args, init=init, **kwargs)
@@ -168,7 +170,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         if self._parents is None:
             return f"/{self._name_}"
         else:
-            return f"{''.join(f'/{p}' for p in self._parents)}{self._name_}"
+            return f"{''.join(f'/{p}' for p in self._parents)}/{'' if self._name is None else self._name_}"
 
     @property
     def _mode(self) -> str:
@@ -333,6 +335,17 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
             if mode is None and self._mode_ is None:
                 self.set_mode(self.file._mode, timed=False)
 
+    def construct_components(self, **component_kwargs: Any) -> None:
+        """Constructs the components of this dataset.
+
+        Args:
+            component_kwargs: The keyword arguments for the components.
+        """
+        for name, (component, kwargs)  in self.map.component_types.items():
+            new_kwargs = component_kwargs.get(name, {})
+            temp_kwargs = kwargs | new_kwargs
+            self.components[name] = component(composite=self, **temp_kwargs)
+
     def is_exist(self) -> bool:
         """Determine if this object exists in the HDF5 file."""
         with self.file.temp_open():
@@ -461,3 +474,33 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
             self.timed_caching()
         else:
             self.timeless_caching()
+
+    def set_map(self, map_: HDF5Map) -> None:
+        """Changes the current map with a different one.
+
+        Args:
+            map_: The map to replace the current map.
+        """
+        self.map_ = map_
+
+    def create_components(self, **component_kwargs: dict[str, Any]) -> None:
+        """Creates the components of this HDF5 object.
+
+        Args:
+            **component_kwargs: The keyword arguments for the components' create methods as keywords.
+        """
+        for name, component in self.components.items():
+            kwargs = component_kwargs.get(name, {})
+            component.create_component(**kwargs)
+
+    def require_components(self, **component_kwargs: dict[str, Any]) -> None:
+        """Requires the components of thisHDF5 object.
+
+        Args:
+            **component_kwargs: The keyword arguments for the components' require methods as keywords.
+        """
+        for name, component in self.components.items():
+            kwargs = component_kwargs.get(name, {})
+            component.require_component(**kwargs)
+
+

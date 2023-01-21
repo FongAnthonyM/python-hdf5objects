@@ -1,8 +1,8 @@
-""" timeseriescomponent.py
-
+""" timeseriesdataset.py
+A Dataset designed to be a timeseries.
 """
 # Package Header #
-from ...header import *
+from ..header import *
 
 # Header #
 __author__ = __author__
@@ -13,42 +13,82 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
+from collections.abc import Mapping, Iterable
+import datetime
+from decimal import Decimal
+from typing import Any
 
 # Third-Party Packages #
 from baseobjects import singlekwargdispatchmethod
-from baseobjects.composition import Component
 from dspobjects.dataclasses import FoundData
 from framestructure import TimeSeriesContainer
 import h5py
 import numpy as np
 
 # Local Packages #
+from ..hdf5bases import HDF5Map, DatasetMap, HDF5Dataset
+from .axes import ChannelAxisMap, ChannelAxis
+from .axes import SampleAxisMap, SampleAxis
+from .axes import TimeAxisMap, TimeAxis
 
 
 # Definitions #
 # Classes #
-class TimeSeriesComponent(Component, TimeSeriesContainer):
-    """
+class TimeSeriesMap(DatasetMap):
+    """A map for a timeseries dataset."""
+    default_attribute_names: Mapping[str, str] = {"n_samples": "n_samples",
+                                                  "c_axis": "c_axis",
+                                                  "t_axis": "t_axis"}
+    default_attributes: Mapping[str, Any] = {"n_samples": 0,
+                                             "c_axis": 1,
+                                             "t_axis": 0}
+    default_map_names: Mapping[str, str] = {"channel_axis": "channel_axis",
+                                            "sample_axis": "sample_axis",
+                                            "time_axis": "time_axis"}
+    default_maps: Mapping[str, HDF5Map] = {"channel_axis": ChannelAxisMap(),
+                                           "sample_axis": SampleAxisMap(),
+                                           "time_axis": TimeAxisMap()}
+
+
+class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
+    """A Dataset designed to be a timeseries.
 
     Class Attributes:
-
+        default_map: The default map that outlines this object in the HDF5 file.
+        
     Attributes:
-
+        _channel_axis: The channel axis for this dataset.
+        _sample_axis: The sample axis for this dataset.
+        _time_axis: The time axis for this dataset.
+        channel_scale_name: The scale name for the channel axis. 
+        sample_scale_name: The scale name for the sample axis. 
+        time_scale_name: The scale name for the time axis. 
+        
     Args:
-
+        data: The data to fill in this timeseries.
+        sample_rate: The sample rate of the data in Hz.
+        channels: An object to build the channel axis from.
+        samples: An object to build the sample axis from.
+        timestamps: An object to build the time axis from.
+        load: Determines if this object will load the timeseries from the file on construction.
+        require: Determines if this object will create and fill the timeseries in the file on construction.
+        init: Determines if this object will construct.
+        **kwargs: The keyword arguments to construct the base HDF5 dataset.
     """
-    # Magic Methods #
+    default_map: HDF5Map = TimeSeriesMap()
+
+    # Magic Methods
     # Construction/Destruction
     def __init__(
-        self,
-        data: np.ndarray | None = None,
+        self, 
+        data: np.ndarray | None = None, 
         sample_rate: Decimal | int | float | None = None,
         channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
         timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
-        load: bool = False,
+        load: bool = False, 
         require: bool = False,
-        init: bool = True,
+        init: bool = True, 
         **kwargs: Any,
     ) -> None:
         # New Attributes #
@@ -67,12 +107,12 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
         # Object Construction #
         if init:
             self.construct(
-                data=data,
-                sample_rate=sample_rate,
-                channels=channels,
-                samples=samples,
-                timestamps=timestamps,
-                load=load,
+                data=data, 
+                sample_rate=sample_rate, 
+                channels=channels, 
+                samples=samples, 
+                timestamps=timestamps, 
+                load=load, 
                 require=require,
                 **kwargs,
             )
@@ -83,7 +123,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
         return self._time_axis.sample_rate if self.time_axis is not None else self._sample_rate_
 
     @_sample_rate.setter
-    def _sample_rate(self, value: Decimal | int | float | None) -> None:
+    def _sample_rate(self, value: Decimal | int | float | None ) -> None:
         if value is not None and not isinstance(value, Decimal):
             value = Decimal(value)
         self._sample_rate_ = value
@@ -103,7 +143,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
     def c_axis(self) -> int:
         """The axis which the channel axis is attached."""
         return self.attributes["c_axis"]
-
+    
     @c_axis.setter
     def c_axis(self, value: int) -> None:
         self.attributes.set_attribute("c_axis", value)
@@ -116,7 +156,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
     @t_axis.setter
     def t_axis(self, value: int) -> None:
         self.attributes.set_attribute("t_axis", value)
-
+    
     @property
     def channel_axis(self) -> ChannelAxis | None:
         """Loads and returns the channel axis."""
@@ -141,7 +181,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
     @time_axis.setter
     def time_axis(self, value: TimeAxis | None) -> None:
         self._time_axis = value
-
+    
     # Instance Methods
     # Constructors/Destructors
     def construct(
@@ -187,10 +227,10 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
             self.n_samples = data.shape[t_axis]
 
     def construct_axes(
-            self,
-            channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
-            samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
-            timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
+        self,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
     ) -> None:
         """Constructs the axes of this timeseries.
 
@@ -222,10 +262,10 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
 
     @singlekwargdispatchmethod("channels")
     def construct_channel_axis(
-            self,
-            channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None,
-            *args: Any,
-            **kwargs: Any,
+        self,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """Constructs the channel axis based on the arguments.
 
@@ -283,13 +323,13 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
             self.create_channel_axis(**kwargs)
         else:
             self._channel_axis.from_range(**kwargs)
-
+    
     @singlekwargdispatchmethod("samples")
     def construct_sample_axis(
-            self,
-            samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None,
-            *args: Any,
-            **kwargs: Any,
+        self,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None,
+        *args: Any,
+        **kwargs: Any,
     ) -> None:
         """Constructs the sample axis based on the arguments.
 
@@ -347,13 +387,13 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
             self.create_sample_axis(**kwargs)
         else:
             self._sample_axis.from_range(**kwargs)
-
+    
     @singlekwargdispatchmethod("timestamps")
     def construct_time_axis(
-            self,
-            timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None,
-            *args: Any,
-            **kwargs: Any,
+        self, 
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None,
+        *args: Any, 
+        **kwargs: Any,
     ) -> None:
         """Constructs the time axis based on the arguments.
 
@@ -367,7 +407,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
     @construct_time_axis.register
     def _(self, timestamps: TimeAxis) -> None:
         """Constructs the time axis by attaching TimeAxis object to this object.
-
+        
         Args:
             timestamps: The TimeAxis to attach.
         """
@@ -414,14 +454,14 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
 
     # File
     def create(
-            self,
-            data: np.ndarray | None = None,
-            start: datetime.datetime | float | None = None,
-            sample_rate: int | float | None = None,
-            channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
-            samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
-            timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
-            **kwargs: Any,
+        self,
+        data: np.ndarray | None = None,
+        start: datetime.datetime | float | None = None,
+        sample_rate: int | float | None = None,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
+        **kwargs: Any,
     ) -> "TimeSeriesDataset":
         """Creates the TimeSeriesDataset by creating the dataset and axes.
 
@@ -451,15 +491,15 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
         return self
 
     def require(
-            self,
-            data: np.ndarray | None = None,
-            start: datetime.datetime | float | None = None,
-            sample_rate: int | float | None = None,
-            channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
-            samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
-            timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
-            make_axes: bool = True,
-            **kwargs: Any,
+        self,
+        data: np.ndarray | None = None,
+        start: datetime.datetime | float | None = None,
+        sample_rate: int | float | None = None,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
+        make_axes: bool = True,
+        **kwargs: Any,
     ) -> "TimeSeriesDataset":
         """Creates the TimeSeriesDataset by creating the dataset and axes if it does not exist.
 
@@ -498,13 +538,13 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
         return self
 
     def set_data(
-            self,
-            data: np.ndarray | None = None,
-            sample_rate: int | float | None = None,
-            channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
-            samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
-            timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
-            **kwargs: Any,
+        self,
+        data: np.ndarray | None = None,
+        sample_rate: int | float | None = None,
+        channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None = None,
+        timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None = None,
+        **kwargs: Any,
     ) -> None:
         """Sets the data of the timeseries and creates it if it does not exist.
 
@@ -539,7 +579,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
     def standardize_attributes(self) -> None:
         """Ensures that the attributes have the correct values based on the contained data."""
         self.attributes["n_samples"] = self.get_shape()[self.t_axis]
-
+    
     def clear_all_caches(self, **kwargs: Any) -> None:
         """Clears all caches in this object and all contained objects.
 
@@ -554,7 +594,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
             self._sample_axis.clear_caches(**kwargs)
         if self._time_axis is not None:
             self._time_axis.clear_caches(**kwargs)
-
+    
     def enable_all_caching(self, **kwargs: Any) -> None:
         """Enables caching on this object and all contained objects.
 
@@ -584,7 +624,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
             self._sample_axis.disable_caching(**kwargs)
         if self._time_axis is not None:
             self._time_axis.disable_caching(**kwargs)
-
+        
     def timeless_all_caching(self, **kwargs: Any) -> None:
         """Allows timeless caching on this object and all contained objects.
 
@@ -599,7 +639,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
             self._sample_axis.timeless_caching(**kwargs)
         if self._time_axis is not None:
             self._time_axis.timeless_caching(**kwargs)
-
+        
     def timed_all_caching(self, **kwargs: Any) -> None:
         """Allows timed caching on this object and all contained objects.
 
@@ -633,14 +673,14 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
 
     # Axes
     def create_channel_axis(
-            self,
-            start: int = 0,
-            stop: int | None = None,
-            step: int | None = 1,
-            rate: float | None = None,
-            size: int | None = None,
-            axis: int | None = None,
-            **kwargs: Any,
+        self,
+        start: int = 0,
+        stop: int | None = None,
+        step: int | None = 1,
+        rate: float | None = None,
+        size: int | None = None,
+        axis: int | None = None,
+        **kwargs: Any,
     ) -> None:
         """Creates a channel axis for this time series.
 
@@ -657,18 +697,10 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
         size = self.shape[axis] if size is None else size
         if "name" not in kwargs:
             kwargs["name"] = self._full_name + "_" + self.map.map_names["channel_axis"]
-
-        self._channel_axis = self.map["channel_axis"].require_object(
-            start=start,
-            stop=stop,
-            step=step,
-            rate=rate,
-            size=size,
-            s_name=self.channel_scale_name,
-            require=True,
-            file=self.file,
-            **kwargs,
-        )
+        
+        self._channel_axis = self.map["channel_axis"].get_object(start=start, stop=stop, step=step, rate=rate,
+                                                                 size=size, scale_name=self.channel_scale_name,
+                                                                 require=True, file=self.file, **kwargs)
         self.attach_axis(self._channel_axis, axis)
 
     def attach_channel_axis(self, dataset: h5py.Dataset | ChannelAxis, axis: int | None = None) -> None:
@@ -696,14 +728,14 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
         self._channel_axis = None
 
     def create_sample_axis(
-            self,
-            start: int = 0,
-            stop: int | None = None,
-            step: int | None = 1,
-            rate: float | None = None,
-            size: int | None = None,
-            axis: int | None = None,
-            **kwargs: Any,
+        self,
+        start: int = 0,
+        stop: int | None = None,
+        step: int | None = 1,
+        rate: float | None = None,
+        size: int | None = None,
+        axis: int | None = None,
+        **kwargs: Any,
     ) -> None:
         """Creates a sample axis for this time series.
 
@@ -727,7 +759,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
             step=step,
             rate=rate,
             size=size,
-            s_name=self.sample_scale_name,
+            scale_name=self.sample_scale_name,
             require=True,
             file=self.file,
             **kwargs,
@@ -759,15 +791,15 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
         self._sample_axis = None
 
     def create_time_axis(
-            self,
-            start: datetime.datetime | float | None = None,
-            stop: datetime.datetime | float | None = None,
-            step: int | float | datetime.timedelta | None = None,
-            rate: int | float | None = None,
-            size: int | None = None,
-            axis: int | None = None,
-            datetimes: Iterable[datetime.datetime | float] | np.ndarray | None = None,
-            **kwargs: Any,
+        self,
+        start: datetime.datetime | float | None = None,
+        stop: datetime.datetime | float | None = None,
+        step: int | float | datetime.timedelta | None = None,
+        rate: int | float | None = None,
+        size: int | None = None,
+        axis: int | None = None,
+        datetimes: Iterable[datetime.datetime | float] | np.ndarray | None = None,
+        **kwargs: Any,
     ) -> None:
         """Creates a time axis for this time series.
 
@@ -794,7 +826,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
             rate=rate,
             size=size,
             datetimes=datetimes,
-            s_name=self.time_scale_name,
+            scale_name=self.time_scale_name,
             require=True,
             file=self.file,
             **kwargs,
@@ -830,31 +862,23 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
         with self:
             if self.channel_scale_name in self._dataset.dims[self.c_axis]:
                 dataset = self._dataset.dims[self.c_axis][self.channel_scale_name]
-                self._channel_axis = self.map["channel_axis"].require_object(
-                    dataset=dataset,
-                    s_name=self.channel_scale_name,
-                    file=self.file
-                )
+                self._channel_axis = self.map["channel_axis"].get_object(dataset=dataset,
+                                                                         scale_name=self.channel_scale_name,
+                                                                         file=self.file)
 
             if self.sample_scale_name in self._dataset.dims[self.t_axis]:
                 dataset = self._dataset.dims[self.t_axis][self.sample_scale_name]
-                self._sample_axis = self.map["sample_axis"].require_object(
-                    dataset=dataset,
-                    s_name=self.sample_scale_name,
-                    file=self.file
-                )
+                self._sample_axis = self.map["sample_axis"].get_object(dataset=dataset,
+                                                                       scale_name=self.sample_scale_name,
+                                                                       file=self.file)
 
             if self.time_scale_name in self._dataset.dims[self.t_axis]:
                 dataset = self._dataset.dims[self.t_axis][self.time_scale_name]
-                self._time_axis = self.map["time_axis"].require_object(
-                    dataset=dataset,
-                    s_name=self.time_scale_name,
-                    file=self.file
-                )
+                self._time_axis = self.map["time_axis"].get_object(dataset=dataset, scale_name=self.time_scale_name,
+                                                                   file=self.file)
 
     # Find Data
-    def find_data(self, timestamp: datetime.datetime | float, approx: bool = False,
-                  tails: bool = False, ) -> FoundData:
+    def find_data(self, timestamp: datetime.datetime | float, approx: bool = False, tails: bool = False,) -> FoundData:
         """Find the data at a specific time.
 
         Args:
@@ -865,7 +889,7 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
         Returns:
             The found data at the timestamp.
         """
-        index, dt, timestamp = self.time_axis.find_time_index(timestamp=timestamp, approx=approx, tails=tails)
+        index, dt = self.time_axis.find_time_index(timestamp=timestamp, approx=approx, tails=tails)
         slices = (slice(None),) * self.t_axis + (index,)
         data = self._dataset[slices]
 
@@ -888,3 +912,6 @@ class TimeSeriesComponent(Component, TimeSeriesContainer):
             axis = getattr(self, name)
             axis.append(data=axis_data)
 
+
+# Assign Cyclic Definitions
+TimeSeriesMap.default_type = TimeSeriesDataset

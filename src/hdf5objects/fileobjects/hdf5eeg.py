@@ -13,6 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
+from collections.abc import Mapping
 import pathlib
 import datetime
 from typing import Any
@@ -23,13 +24,24 @@ import h5py
 import numpy as np
 
 # Local Packages #
-from ..hdf5bases import HDF5Map
+from ..hdf5bases import HDF5Map, HDF5Dataset
+from ..dataset import TimeSeriesComponent, SampleAxisMap, TimeAxisMap, ChannelAxisMap, BaseTimeSeriesMap
 from .basehdf5 import BaseHDF5Map, BaseHDF5
-from ..datasets import TimeSeriesDataset, TimeSeriesMap, ChannelAxis, SampleAxis, TimeAxis
 
 
 # Definitions #
 # Classes #
+class EEGDataMap(BaseTimeSeriesMap):
+    """Implementation of a TimeSeriesMap."""
+    default_attribute_names: Mapping[str, str] = {"t_axis": "t_axis"}
+    default_attributes: Mapping[str, Any] = {"t_axis": 0}
+    default_axis_maps = [
+        {"sample_axis": SampleAxisMap(), "time_axis": TimeAxisMap()},
+        {"channel_axis": ChannelAxisMap()}
+    ]
+    default_component_types = {"timeseries": (TimeSeriesComponent, {"scale_name": "time_axis"})}
+
+
 class HDF5EEGMap(BaseHDF5Map):
     """A map for HDF5EEG files."""
     default_attribute_names = {"file_type": "FileType",
@@ -38,7 +50,7 @@ class HDF5EEGMap(BaseHDF5Map):
                                "start": "start",
                                "end": "end"}
     default_map_names = {"data": "EEG Array"}
-    default_maps = {"data": TimeSeriesMap()}
+    default_maps = {"data": EEGDataMap()}
 
 
 class HDF5EEG(BaseHDF5):
@@ -156,22 +168,22 @@ class HDF5EEG(BaseHDF5):
         return self["data"].n_samples
 
     @property
-    def channel_axis(self) -> ChannelAxis:
+    def channel_axis(self) -> HDF5Dataset:
         """The channel axis of the data."""
-        return self["data"].channel_axis
+        return self["data"].axes[1]["channel_axis"]
 
     @property
-    def sample_axis(self) -> SampleAxis:
+    def sample_axis(self) -> HDF5Dataset:
         """The sample axis of the data."""
-        return self["data"].sample_axis
+        return self["data"].axes[0]["sample_axis"]
 
     @property
-    def time_axis(self) -> TimeAxis:
+    def time_axis(self) -> HDF5Dataset:
         """The time axis of the data."""
-        return self["data"].time_axis
+        return self["data"].axes[0]["time_axis"]
 
     @property
-    def data(self) -> TimeSeriesDataset:
+    def data(self) -> HDF5Dataset:
         return self["data"]
 
     # Representation
@@ -304,7 +316,7 @@ class HDF5EEG(BaseHDF5):
             require: Determines if this object will create and fill the dataset.
             **kwargs: The keyword arguments for creating the dataset.
         """
-        return self._group.require_member(name="data", load=load, require=require, **kwargs)
+        return self._group.construct_member(name="data", load=load, require=require, **kwargs)
 
     # File
     def generate_file_name(self, s_id: str | None = None, start: datetime.datetime | float | None = None) -> str:

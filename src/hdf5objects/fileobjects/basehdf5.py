@@ -263,7 +263,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @classmethod
     def get_version_from_file(cls, file: pathlib.Path | str) -> Version:
-        """An optional abstract method that must return a version from an object.
+        """Return a version from a file.
 
         Args:
             file: The path to file to get the version from.
@@ -280,6 +280,18 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
             file = h5py.File(file)
 
         return TriNumberVersion(file.attrs[v_name])
+
+    @classmethod
+    def get_version_from_object(cls, obj: Any) -> Version:
+        """Returns a version from an object.
+
+        Args:
+            obj: The path to file to get the version from.
+
+        Returns:
+            The version from the file.
+        """
+        return cls.get_version_from_file(obj)
 
     # Magic Methods #
     # Construction/Destruction
@@ -373,7 +385,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     #     # Construct Structure Report Dictionary
     #     report = {"file_type": {"valid": False, "differences": {"object": self.FILE_TYPE, "file": None}},
     #               "attrs": {"valid": False, "differences": {"object": None, "file": None}},
-    #               "datasets": {"valid": False, "differences": {"object": None, "file": None}}}
+    #               "dataset": {"valid": False, "differences": {"object": None, "file": None}}}
     #
     #     # Check H5 File Type
     #     if "FileType" in self._file.attrs:
@@ -398,8 +410,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     #     else:
     #         f_attr_set = set(self._file.keys())
     #         o_attr_set = self._datasets
-    #         report["datasets"]["differences"]["object"] = o_attr_set - f_attr_set
-    #         report["datasets"]["differences"]["file"] = f_attr_set - o_attr_set
+    #         report["dataset"]["differences"]["object"] = o_attr_set - f_attr_set
+    #         report["dataset"]["differences"]["file"] = f_attr_set - o_attr_set
     #
     #     if not op:
     #         self.close()
@@ -417,8 +429,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     #         if f_attrs and report["attrs"]["differences"]["file"] is not None:
     #             warn(self.path.as_posix() + " has extra attributes", stacklevel=2)
     #     # Validate Datasets
-    #     if not report["datasets"]["valid"]:
-    #         if o_datasets and report["datasets"]["differences"]["object"] is not None:
-    #             warn(self.path.as_posix() + " is missing datasets", stacklevel=2)
-    #         if f_datasets and report["datasets"]["differences"]["file"] is not None:
-    #             warn(self.path.as_posix() + " has extra datasets", stacklevel=2)
+    #     if not report["dataset"]["valid"]:
+    #         if o_datasets and report["dataset"]["differences"]["object"] is not None:
+    #             warn(self.path.as_posix() + " is missing dataset", stacklevel=2)
+    #         if f_datasets and report["dataset"]["differences"]["file"] is not None:
+    #             warn(self.path.as_posix() + " has extra dataset", stacklevel=2)

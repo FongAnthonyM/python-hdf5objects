@@ -47,6 +47,11 @@ class HDF5Map(BaseObject):
         default_kwargs: The default keyword arguments for the object this map represents.
         default_map_names: The default name map of python name vs hdf5 name of the maps contained within this map.
         default_maps: The default nested maps within this map.
+        default_attribute_component_types: The defualt attributes' components and their keyword arguments to add to when
+            created.
+        default_component_types: The components and their keyword arguments to add to the HDF5Object when created.
+        caster: The caster object used to cast types from an HDF5 object to a python type.
+        map_registry: A registry of map subclasses to be used when determining a map type to use.
 
     Attributes:
         _name: The name of this map.
@@ -59,6 +64,8 @@ class HDF5Map(BaseObject):
         weak_object: A weak reference to the object that this map represents.
         map_names: The name map of python name vs hdf5 name of the maps contained within this map.
         maps: The nested maps.
+        attribute_component_types: The attributes' components and their keyword arguments to add to when created.
+        component_types: The components and their keyword arguments to add to the HDF5Object when created.
         
     Args:
         name: The name of this map.
@@ -68,6 +75,8 @@ class HDF5Map(BaseObject):
         map_names: The name map of python name vs hdf5 name of the maps contained within this map.
         maps: The nested maps.
         parent: The parent of this map.
+        component_types: The components to add to the HDF5Object when created.
+        component_kwargs: The keyword arguments for the components.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the object this map represents.
     """
@@ -93,7 +102,21 @@ class HDF5Map(BaseObject):
     default_kwargs: dict[str, Any] = {}
     default_map_names: Mapping[str, str] = {}
     default_maps: Mapping[str, "HDF5Map"] = {}
-    caster = HDF5Caster
+    default_attribute_component_types: dict[str, list[Any, dict[str, Any]]] = {}
+    default_component_types: dict[str, list[Any, dict[str, Any]]] = {}
+    caster: type = HDF5Caster
+    map_registry: dict[str, type] = {}
+
+    # Class Methods
+    # Construction/Destruction
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """The init when creating a subclass.
+
+        Args:
+            **kwargs: The keyword arguments for creating a subclass.
+        """
+        super().__init_subclass__(**kwargs)
+        cls.map_registry[cls.__name__] = cls
 
     # Magic Methods
     # Construction/Destruction
@@ -105,7 +128,9 @@ class HDF5Map(BaseObject):
         attributes: Mapping[str, Any] | None = None,
         map_names: Mapping[str, str] | None = None, 
         maps: Mapping[str, "HDF5Map"] | None = None, 
-        parent: str | None = None, 
+        parent: str | None = None,
+        component_types: dict[str, type] | None = None,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
         init: bool = True,
         *args: Any,
         **kwargs: Any,
@@ -125,6 +150,9 @@ class HDF5Map(BaseObject):
         self.map_names: bidict = bidict(self.default_map_names)
         self.maps: Mapping[str, "HDF5Map"] = copy.deepcopy(self.default_maps)
 
+        self.attribute_component_types: dict[str, list[Any, dict[str, Any]]] = self.default_attribute_component_types.copy()
+        self.component_types: dict[str, list[Any, dict[str, Any]]] = self.default_component_types.copy()
+
         # Parent Attributes #
         super().__init__(*args, init=False, **kwargs)
 
@@ -140,6 +168,8 @@ class HDF5Map(BaseObject):
                 map_names=map_names,
                 maps=maps,
                 parent=parent,
+                component_types=component_types,
+                component_kwargs=component_kwargs,
                 **kwargs,
             )
 
@@ -180,6 +210,10 @@ class HDF5Map(BaseObject):
         """The object that this map represents"""
         return self.weak_object()
 
+    @object.setter
+    def object(self, value: Any) -> None:
+        self.weak_object = weakref.ref(value)
+
     # Container Methods
     def __getitem__(self, key: str) -> "HDF5Map":
         """Gets a map within this object."""
@@ -210,8 +244,10 @@ class HDF5Map(BaseObject):
         attribute_names: Mapping[str, str] | None = None, 
         attributes: Mapping[str, Any] | None = None,
         map_names: Mapping[str, str] | None = None, 
-        maps: Mapping[str, "HDF5Map"] | None = None, 
+        maps: Mapping[str, "HDF5Map"] | None = None,
         parent: str | None = None,
+        component_types: dict[str, type] | None = None,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> None:
         """Constructs this object, setting attributes and sets nested maps' parents.
@@ -224,6 +260,8 @@ class HDF5Map(BaseObject):
             map_names: The name map of python name vs hdf5 name of the maps contained within this map.
             maps: The nested maps.
             parent: The parent of this map.
+            component_types: The components to add to the HDF5Object when created.
+            component_kwargs: The keyword arguments for the components.
             **kwargs: The keyword arguments for the object this map represents.
         """
         if parent is not None:
@@ -247,6 +285,15 @@ class HDF5Map(BaseObject):
         if maps is not None:
             self.maps = maps
 
+        if component_types is not None:
+            for name, type_ in component_types.items():
+                self.component_types[name] = (type_, self.component_types.get(name, (None, {}))[1])
+
+        if component_kwargs is not None:
+            for name, c_kwargs in component_kwargs.items():
+                type_, old_kwargs = self.component_types.get(name, (None, {}))
+                self.component_types[name] = (type_, old_kwargs | c_kwargs)
+
         if kwargs is not None:
             self.kwargs.update(kwargs)
 
@@ -269,7 +316,7 @@ class HDF5Map(BaseObject):
 
         return object_
 
-    def require_object(self, **kwargs: Any) -> Any:
+    def get_object(self, **kwargs: Any) -> Any:
         """Get the object that this map is for or constructs it if it has not been created.
 
         Args:
@@ -384,14 +431,17 @@ class HDF5Map(BaseObject):
                     return self.maps.get(key)
         return map_
 
-    def set_item(self, name: str, map_: "HDF5Map", python_name: str = None) -> None:
+    def set_item(self, map_: "HDF5Map", name: str | None = None, python_name: str | None = None) -> None:
         """Sets a nested map in this map.
 
         Args:
-            name: The hdf5 name of the map to set.
             map_: The value to set the map to.
+            name: The hdf5 name of the map to set.
             python_name: The python name of the map.
         """
+        if name is None:
+            name = map_.name
+
         if python_name is None:
             new_name = self.map_names.get(name, self.sentinel)
             python_name = name

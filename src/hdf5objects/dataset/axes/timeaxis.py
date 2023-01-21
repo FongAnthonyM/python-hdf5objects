@@ -29,28 +29,13 @@ import h5py
 import numpy as np
 
 # Local Packages #
-from ...hdf5bases import HDF5Map
-from .axis import AxisMap, Axis
+from ...hdf5bases import HDF5Map, HDF5Dataset
+from .axis import AxisMap, AxisComponent
 
 
 # Definitions #
 # Classes #
-class TimeAxisMap(AxisMap):
-    """A map for the TimeAxis object."""
-    default_attribute_names: Mapping[str, str] = {
-        "sample_rate": "sample_rate",
-        "time_zone": "time_zone",
-        "time_zone_offset": "time_zone_offset",
-    }
-    default_attributes: Mapping[str, Any] = {
-        "sample_rate": h5py.Empty('f8'),
-        "time_zone": "",
-        "time_zone_offset": h5py.Empty('f8'),
-    }
-    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "f8"}
-
-
-class TimeAxis(Axis, TimeAxisContainer):
+class TimeAxisComponent(AxisComponent, TimeAxisContainer):
     """An Axis that represents the time at each sample of a signal.
 
     Class Attributes:
@@ -68,31 +53,26 @@ class TimeAxis(Axis, TimeAxisContainer):
         rate: The frequency of the data of the axis.
         size: The number of datum in the axis.
         datetimes: The datetimes to populate this axis.
-        s_name: The name of the axis (scale).
-        build: Determines if the axis should be created and filled.
+        require: Determines if the axis should be created and filled.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the HDF5Dataset.
     """
-    default_map: HDF5Map = TimeAxisMap()
-    default_scale_name: str | None = "time axis"
-
     # Magic Methods
     # Construction/Destruction
     def __init__(
         self,
+        composite: Any = None,
         start: datetime.datetime | float | None = None,
         stop: datetime.datetime | float | None = None,
         step: int | float | datetime.timedelta | None = None,
         rate: int | float | None = None,
         size: int | None = None,
         datetimes: Iterable[datetime.datetime | float] | np.ndarray | None = None,
-        s_name: str | None = None,
         require: bool = False,
         init: bool = True,
         **kwargs: Any,
     ) -> None:
         # New Attributes #
-        self._precise: bool = False
         self._time_zone_mask: datetime.tzinfo | None = None
 
         # Parent Attributes #
@@ -101,13 +81,13 @@ class TimeAxis(Axis, TimeAxisContainer):
         # Object Construction #
         if init:
             self.construct(
+                composite=composite,
                 start=start,
                 stop=stop,
                 step=step,
                 rate=rate,
                 size=size,
                 datetimes=datetimes,
-                s_name=s_name,
                 require=require,
                 **kwargs,
             )
@@ -115,10 +95,13 @@ class TimeAxis(Axis, TimeAxisContainer):
     @property
     def precise(self) -> bool:
         """Determines if this frame returns nanostamps (True) or timestamps (False)."""
-        return self._precise
+        if self._precise is None:
+            return self.get_original_precision()
+        else:
+            return self._precise
 
     @precise.setter
-    def precise(self, value: bool) -> None:
+    def precise(self, value: bool | None) -> None:
         self.set_precision(nano=value)
 
     @property
@@ -173,14 +156,14 @@ class TimeAxis(Axis, TimeAxisContainer):
     def _sample_rate(self) -> Decimal | None:
         """The sample rate of this timeseries."""
         try:
-            return Decimal(self.attributes["sample_rate"])
+            return Decimal(self.composite.attributes["sample_rate"])
         except TypeError:
             return None
 
     @_sample_rate.setter
     def _sample_rate(self, value: Decimal) -> None:
-        if self.attributes is not None:
-            self.attributes.set_attribute("sample_rate", float(value))
+        if self.composite is not None:
+            self.composite.attributes.set_attribute("sample_rate", float(value))
 
     @property
     def time_zone(self) -> zoneinfo.ZoneInfo | None:
@@ -204,7 +187,7 @@ class TimeAxis(Axis, TimeAxisContainer):
 
     @tzinfo.setter
     def tzinfo(self, value: str | datetime.datetime | None) -> None:
-        if self.attributes is not None:
+        if self.composite is not None:
             self.set_time_zone(value)
 
     @property
@@ -219,41 +202,38 @@ class TimeAxis(Axis, TimeAxisContainer):
     # Constructors/Destructors
     def construct(
         self,
+        composite: Any = None,
         start: datetime.datetime | float | None = None,
         stop: datetime.datetime | float | None = None,
         step: int | float | datetime.timedelta | None = None,
         rate: float | None = None,
         size: int | None = None,
         datetimes: Iterable[datetime.datetime | float] | np.ndarray | None = None,
-        s_name: str | None = None,
         require: bool = False,
         **kwargs: Any,
     ) -> None:
         """Constructs this object.
 
         Args:
+            composite: The object which this object is a component of.
             start: The start of the axis.
             stop: The end of the axis.
             step: The interval between each datum of the axis.
             rate: The frequency of the data of the axis.
             size: The number of datum in the axis.
             datetimes: The datetimes to populate this axis.
-            s_name: The name of the axis (scale).
             require: Determines if the axis should be created and filled.
-            **kwargs: The keyword arguments for the HDF5Dataset.
+            **kwargs: Keyword arguments for inheritance.
         """
-        # Construct the dataset and handle creation here unless data is present.
-        Axis.construct(self, s_name=s_name, require=False, **kwargs)
+        super().construct(composite=composite, sample_rate=rate, **kwargs)
 
-        if require and "data" not in kwargs:
+        if require:
             if datetimes is not None:
                 self.from_datetimes(datetimes=datetimes)
             elif start is not None:
                 self.from_range(start=start, stop=stop, step=step, rate=rate, size=size)
             else:
                 self.require(shape=(0,), maxshape=(None,), dtype="f8")
-
-        TimeAxisContainer.construct(self, sample_rate=rate)
 
     def from_range(
         self,
@@ -272,7 +252,7 @@ class TimeAxis(Axis, TimeAxisContainer):
             step: The interval between each datum of the axis.
             rate: The frequency of the data of the axis.
             size: The number of datum in the axis.
-            **kwargs: The keyword arguments for the HDF5Dataset.
+            **kwargs: Keyword arguments for inheritance.
         """
         d_kwargs = self.default_kwargs.copy()
         d_kwargs.update(kwargs)
@@ -340,46 +320,10 @@ class TimeAxis(Axis, TimeAxisContainer):
         self.set_data(data=datetimes, **d_kwargs)
 
     # File
-    def create(self, name: str = None, **kwargs: Any) -> "TimeAxis":
-        """Creates this TimeAxis in the HDF5File.
-
-        Args:
-            name: The name of this axis.
-            **kwargs: The keyword arguments for creating this HDF5
-        """
-        super().create(name=name, **kwargs)
-        if "time_zone" not in self.attributes:
-            tz = self.map.attributes.get("time_zone", None)
-            self.set_time_zone(tz)
-        return self
-
-    def require(self, name: str = None, **kwargs: Any) -> "TimeAxis":
-        """Creates this TimeAxis in the HDF5File if it does not exist.
-
-        Args:
-            name: The name of this axis.
-            **kwargs: The keyword arguments for creating this HDF5
-        """
-        super().require(name=name, **kwargs)
-        if "time_zone" not in self.attributes:
-            tz = self.map.attributes.get("time_zone", None)
-            self.set_time_zone(tz)
-        return self
-
     def refresh(self) -> None:
         """Reloads the time axis and attributes."""
         super().refresh()
         self.get_datetimes.clear_cache()
-
-    # Masking
-    def mask_time_zone(self, tz: datetime.tzinfo | None) -> None:
-        """Masks the time zone of this another timezone.
-
-        Args:
-            tz: The time zone to use instead or None to use the original time zone.
-        """
-        self._time_zone_mask = tz
-        self.get_datetimes.cache_clear()
 
     # Getters/Setter
     @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
@@ -390,8 +334,7 @@ class TimeAxis(Axis, TimeAxisContainer):
             All the data in the dataset.
         """
         self.get_datetimes.clear_cache()
-        with self:
-            return self._dataset[...]
+        return self.composite[...]
 
     def get_original_precision(self) -> bool:
         """Gets the presision of the timestamps from the orignial file.
@@ -399,8 +342,21 @@ class TimeAxis(Axis, TimeAxisContainer):
         Args:
             nano: Determines if this frame returns nanostamps (True) or timestamps (False).
         """
-        with self:
-            return self._dataset.dtype == np.uint64
+        return self.composite.dataset.dtype == np.uint64
+
+    def set_precision(self, nano: bool | None) -> None:
+        """Sets if this frame returns nanostamps (True) or timestamps (False).
+
+        Args:
+            nano: Determines if this frame returns nanostamps (True) or timestamps (False).
+        """
+        if nano is None:
+            pass
+        elif nano:
+            self._data_method = self._get_nanostamps.__func__
+        else:
+            self._data_method = self._get_timestamps.__func__
+        self._precise = nano
 
     def get_time_zone(self, refresh: bool = True) -> datetime.tzinfo | None:
         """Get the timezone of this axis.
@@ -409,19 +365,19 @@ class TimeAxis(Axis, TimeAxisContainer):
             refresh: Determines if the attributes will refresh before checking the timezone.
         """
         if refresh:
-            self.attributes.refresh()
+            self.composite.attributes.refresh()
 
-        tz_name = self.attributes.get("time_zone", self.sentinel)
-        tz_offset = self.attributes.get("time_zone_offset", self.sentinel)
-        if tz_name is not self.sentinel and not isinstance(tz_name, h5py.Empty) and tz_name != "":
+        tz_name = self.composite.attributes.get("time_zone", None)
+        tz_offset = self.composite.attributes.get("time_zone_offset", None)
+        if tz_name is not None and not isinstance(tz_name, h5py.Empty) and tz_name != "":
             try:
                 return zoneinfo.ZoneInfo(tz_name)
             except zoneinfo.ZoneInfoNotFoundError as e:
-                if tz_offset is not self.sentinel and not isinstance(tz_offset, h5py.Empty):
+                if tz_offset is not None and not isinstance(tz_offset, h5py.Empty):
                     return datetime.timezone(datetime.timedelta(seconds=tz_offset))
                 else:
                     raise e
-        elif tz_offset is not self.sentinel and not isinstance(tz_offset, h5py.Empty):
+        elif tz_offset is not None and not isinstance(tz_offset, h5py.Empty):
             return datetime.timezone(datetime.timedelta(seconds=tz_offset))
         else:
             return None
@@ -444,11 +400,68 @@ class TimeAxis(Axis, TimeAxisContainer):
             offset = local_time.tm_gmtoff
             value = local_time.tm_zone
         else:
-             zoneinfo.ZoneInfo(value)  # Raises an error if the given string is not a time zone.
+            zoneinfo.ZoneInfo(value)  # Raises an error if the given string is not a time zone.
 
-        self.attributes["time_zone"] = value
-        self.attributes["time_zone_offset"] = offset
+        self.composite.attributes["time_zone"] = value
+        self.composite.attributes["time_zone_offset"] = offset
+
+    # Masking
+    def mask_time_zone(self, tz: datetime.tzinfo | None) -> None:
+        """Masks the time zone of this another timezone.
+
+        Args:
+            tz: The time zone to use instead or None to use the original time zone.
+        """
+        self._time_zone_mask = tz
+        self.get_datetimes.cache_clear()
+
+    # Data
+    def create_component(self) -> None:
+        """Creates all the required parts of the dataset for this component, errors if a part already exists."""
+        if "time_zone" not in self.attributes:
+            tz = self.map.attributes.get("time_zone", None)
+            self.set_time_zone(tz)
+
+    def create(self, **kwargs: Any) -> HDF5Dataset:
+        """Creates both the data and this component, errors if a part already exists.
+
+        Args:
+            **kwargs: The keyword arguments for the HDF5Dataset.
+        """
+        self.composite.create_data(**kwargs)
+        self.create_component()
+        return self.composite
+
+    def require_component(self) -> None:
+        """Creates all the required parts of the dataset for this component if it does not exists."""
+        if "time_zone" not in self.composite.attributes:
+            tz = self.map.attributes.get("time_zone", None)
+            self.set_time_zone(tz)
+
+    def require(self, **kwargs: Any) -> HDF5Dataset:
+        """Creates both the data and this component if it does not exists.
+
+        Args:
+            **kwargs: The keyword arguments for the HDF5Dataset.
+        """
+        self.composite.require_data(**kwargs)
+        self.require_component()
+        return self.composite
 
 
-# Assign Cyclic Definitions
-TimeAxisMap.default_type = TimeAxis
+class TimeAxisMap(AxisMap):
+    """A map for the TimeAxis object."""
+    default_attribute_names: Mapping[str, str] = {
+        "sample_rate": "sample_rate",
+        "time_zone": "time_zone",
+        "time_zone_offset": "time_zone_offset",
+    }
+    default_attributes: Mapping[str, Any] = {
+        "sample_rate": h5py.Empty('f8'),
+        "time_zone": "",
+        "time_zone_offset": h5py.Empty('f8'),
+    }
+    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "u8"}
+    default_component_types = {
+        "axis": (TimeAxisComponent, {}),
+    }
