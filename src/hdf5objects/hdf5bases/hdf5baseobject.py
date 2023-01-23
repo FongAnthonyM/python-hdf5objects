@@ -49,6 +49,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         _parents: The parents of this object as a list.
         _mode_: The edit mode of this object.
         map: The map of this HDF5 object.
+        components: The components of this composite object.
 
     Args:
         name: The HDF5 name of this object.
@@ -115,7 +116,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         file: str | pathlib.Path | h5py.File | None = None,
         parent: str | None = None,
         init: bool = True,
-        *args,
+        *args: Any,
         **kwargs: Any,
     ) -> None:
         # New Attributes #

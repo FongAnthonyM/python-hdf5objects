@@ -13,8 +13,8 @@ __email__ = __email__
 
 # Imports #
 # Local Packages #
-from .axis import AxisComponent, AxisMap
-from .channelaxis import ChannelAxisComponent, ChannelAxisMap
-from .sampleaxis import SampleAxisComponent, SampleAxisMap
-from .timeaxis import TimeAxisComponent, TimeAxisMap
-from .idaxis import IDAxisComponent, IDAxisMap
+from .axiscomponent import AxisComponent, AxisMap
+from .channelaxiscomponent import ChannelAxisComponent, ChannelAxisMap
+from .sampleaxiscomponent import SampleAxisComponent, SampleAxisMap
+from .timeaxiscomponent import TimeAxisComponent, TimeAxisMap
+from .idaxiscomponent import IDAxisComponent, IDAxisMap

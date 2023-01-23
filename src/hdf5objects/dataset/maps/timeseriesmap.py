@@ -1,5 +1,5 @@
 """ timeseriesmap.py
-
+A base outline which defines a time series and its methods.
 """
 # Package Header #
 from ...header import *
@@ -27,7 +27,7 @@ from ..components import TimeSeriesComponent
 # Definitions #
 # Classes #
 class BaseTimeSeriesMap(DatasetMap):
-    """Implementation of a TimeSeriesMap."""
+    """A base outline which defines a time series and its methods."""
     default_attribute_names: Mapping[str, str] = {"t_axis": "t_axis"}
     default_attributes: Mapping[str, Any] = {"t_axis": 0}
     default_axis_maps = [{"time_axis": TimeAxisMap()}]

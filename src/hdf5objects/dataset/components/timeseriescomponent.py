@@ -149,7 +149,6 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
 
         super().construct(composite=composite, precise=precise, tzinfo=tzinfo, **kwargs)
 
-
     def get_t_axis(self) -> int:
         """Gets the dim number of the time axis.
 
@@ -441,22 +440,3 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
         axis = self.t_axis if axis is None else axis
         self.composite.append_data(data=data, axis=axis)
         self.append_component(data=time_axis, **kwargs)
-
-    # Find Data
-    # def find_data(self, timestamp: datetime.datetime | float, approx: bool = False, tails: bool = False, ) -> FoundData:
-    #     """Find the data at a specific time.
-    #
-    #     Args:
-    #         timestamp: The time to find the data at.
-    #         approx: Determines if an approximate indices will be given if the time is not present.
-    #         tails: Determines if the first or last times will be give the requested item is outside the axis.
-    #
-    #     Returns:
-    #         The found data at the timestamp.
-    #     """
-    #     index, dt, timestamp = self.time_axis.find_time_index(timestamp=timestamp, approx=approx, tails=tails)
-    #     slices = (slice(None),) * self.t_axis + (index,)
-    #     data = self.composite[slices]
-    #
-    #     return FoundData(data, index, dt)
-

@@ -1,5 +1,5 @@
-""" axis.py
-An HDF5 Dataset subclass whose purpose is to be an Axis.
+""" axiscomponent.py
+A component and map for a HDF5Dataset which gives axis (scale) functionality.
 """
 # Package Header #
 from ...header import *
@@ -29,14 +29,7 @@ from ..basedatasetcomponent import BaseDatasetComponent
 # Definitions #
 # Classes #
 class AxisComponent(BaseDatasetComponent):
-    """A HDF5Dataset whose primary role is to be an axis (scale).
-
-    Class_Attributes:
-        default_scale_name: The default name of this axis.
-
-    Attributes:
-        default_kwargs: The default keyword arguments to use when creating the dataset.
-        _scale_name: The scale name of this axis.
+    """A component for a HDF5Dataset which gives axis (scale) functionality.
 
     Args:
         composite: The object which this object is a component of.
@@ -284,7 +277,7 @@ class AxisComponent(BaseDatasetComponent):
         self.refresh()
 
 class AxisMap(DatasetMap):
-    """A map for the Axis Datset."""
+    """An outline which defines an HDF5Dataset as an Axis."""
     default_kwargs: dict[str, Any] = {}
     default_component_types = {
         "axis": (AxisComponent, {}),

@@ -97,7 +97,7 @@ class IDComponent(BaseDatasetComponent):
         Args:
             composite: The object which this object is a component of.
             id_fields: The fields of the dtype that store string IDs.
-            uuid_fields:  The fields of the dtype that store UUIDs.
+            uuid_fields: The fields of the dtype that store UUIDs.
             **kwargs: Keyword arguments for inheritance.
         """
         if id_fields is not None:

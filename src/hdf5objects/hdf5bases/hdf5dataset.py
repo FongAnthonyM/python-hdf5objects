@@ -42,19 +42,20 @@ class DatasetMap(HDF5Map):
         default_attributes_type: The default type for attribute objects in this map.
         default_dtype: The default dtype of the dataset this class will map.
         default_casting_kwargs: The default keyword arguments for the dtype casting.
+        default_axis_maps: The default maps for the axis of the dataset.
 
     Attributes:
         _dtypes: The dtypes of this dataset if it has multiple data types.
         dtypes_dict: A mapping of the data type names to their type index.
         casting_kwargs: The keyword arguments for the dtype casting.
+        axis_maps: The maps for the axis of the dataset.
 
     Args:
         name: The name of this map.
         type_: The type of the hdf5 object this map represents.
         attribute_names: The name map of python name vs hdf5 name of the attribute.
         attributes: The default values of the attributes of the represented hdf5 object.
-        map_names: The name map of python name vs hdf5 name of the maps contained within this map.
-        maps: The nested maps.
+        axis_maps: The maps for the axis of the dataset.
         parent: The parent of this map.
         component_types: The components to add to the HDF5Object when created.
         component_kwargs: The keyword arguments for the components.
@@ -77,8 +78,7 @@ class DatasetMap(HDF5Map):
         type_: type | None = None,
         attribute_names: Mapping[str, str] | None = None,
         attributes: Mapping[str, Any] | None = None,
-        map_names: Mapping[str, str] | None = None,
-        maps: Mapping[str, HDF5Map] | None = None,
+        axis_maps: list[dict[str, Any]] | None = None,
         parent: str | None = None,
         component_types: dict[str, type] | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
@@ -106,8 +106,7 @@ class DatasetMap(HDF5Map):
                 type_=type_,
                 attribute_names=attribute_names,
                 attributes=attributes,
-                map_names=map_names,
-                maps=maps,
+                axis_maps=maps,
                 parent=parent,
                 component_types=component_types,
                 component_kwargs=component_kwargs,
@@ -142,8 +141,7 @@ class DatasetMap(HDF5Map):
         type_: type | None = None,
         attribute_names: Mapping[str, str] | None = None,
         attributes: Mapping[str, Any] | None = None,
-        map_names: Mapping[str, str] | None = None,
-        maps: Mapping[str, HDF5Map] | None = None,
+        axis_maps: list[dict[str, Any]] | None = None,
         parent: str | None = None,
         component_types: dict[str, type] | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
@@ -158,8 +156,7 @@ class DatasetMap(HDF5Map):
             type_: The type of the hdf5 object this map represents.
             attribute_names: The name map of python name vs hdf5 name of the attribute.
             attributes: The default values of the attributes of the represented hdf5 object.
-            map_names: The name map of python name vs hdf5 name of the maps contained within this map.
-            maps: The nested maps.
+            axis_maps: The maps for the axis of the dataset.
             parent: The parent of this map.
             component_types: The components to add to the HDF5Object when created.
             component_kwargs: The keyword arguments for the components.
@@ -172,8 +169,6 @@ class DatasetMap(HDF5Map):
             type_=type_,
             attribute_names=attribute_names,
             attributes=attributes,
-            map_names=map_names,
-            maps=maps,
             parent=parent,
             component_types=component_types,
             component_kwargs=component_kwargs,
@@ -185,6 +180,16 @@ class DatasetMap(HDF5Map):
 
         if dtype is not None:
             self.set_dtype(dtype)
+
+        if axis_maps is not None:
+            if len(axis_maps) > len(self.axis_maps):
+                self.axis_maps.extend([{}] * (len(axis_maps) - len(self.axis_maps)))
+
+            for i, new_axes in enumerate(axis_maps):
+                if new_axes is not None and self.axis_maps[i] is not None:
+                    self.axis_maps[i].update(new_axes)
+                elif new_axes is not None:
+                    self.axis_maps[i] = new_axes.copy()
 
         if casting_kwargs is not None:
             self.casting_kwargs = casting_kwargs
@@ -285,6 +290,8 @@ class HDF5Dataset(HDF5BaseObject):
         _dataset: The HDF5 dataset to wrap.
         _scale_name: The name of this dataset if it is a scale.
         attributes: The attributes of this dataset.
+        axes: The axes of this dataset.
+        axes_kwargs: The keyword arguments used for creating the axes.
 
     Args:
         data: The data to fill in this dataset.

@@ -32,7 +32,7 @@ from .basehdf5 import BaseHDF5Map, BaseHDF5
 # Definitions #
 # Classes #
 class EEGDataMap(BaseTimeSeriesMap):
-    """Implementation of a TimeSeriesMap."""
+    """A dataset map which contains data for EEG data."""
     default_attribute_names: Mapping[str, str] = {"t_axis": "t_axis"}
     default_attributes: Mapping[str, Any] = {"t_axis": 0}
     default_axis_maps = [

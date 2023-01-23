@@ -1,5 +1,5 @@
 """ __init__.py
-Description:
+Complentary objects for the HDF5Dataset.
 """
 # Package Header #
 from ..header import *

@@ -1,5 +1,5 @@
-""" regionreferencedataset.py
-A component for a HDF5Dataset which implement methods for object and region references.
+""" objectreferencedataset.py
+A component for a HDF5Dataset which implement methods for object references.
 """
 # Package Header #
 from ...header import *

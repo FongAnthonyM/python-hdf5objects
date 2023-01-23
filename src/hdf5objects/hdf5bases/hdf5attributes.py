@@ -458,4 +458,3 @@ class HDF5Attributes(HDF5BaseObject):
     def refresh(self) -> None:
         """Reloads the attributes from the file."""
         self.get_attributes()
-

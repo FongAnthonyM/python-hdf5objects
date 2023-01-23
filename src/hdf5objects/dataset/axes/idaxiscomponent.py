@@ -1,5 +1,5 @@
-""" idaxis.py
-
+""" idaxiscomponent.py
+A component and map for a HDF5Dataset which defines it as an axis with IDs for each datum.
 """
 # Package Header #
 from ...header import *
@@ -25,13 +25,13 @@ import numpy as np
 
 # Local Packages #
 from ...hdf5bases import HDF5Dataset
-from .axis import AxisMap, AxisComponent
+from .axiscomponent import AxisMap, AxisComponent
 
 
 # Definitions #
 # Classes #
 class IDAxisComponent(AxisComponent):
-    """An Axis that has an ID for each datum.
+    """A component for a HDF5Dataset which defines it as an axis with IDs for each datum.
 
     Args:
         composite: The object which this object is a component of.
@@ -258,7 +258,7 @@ class IDAxisComponent(AxisComponent):
 
 
 class IDAxisMap(AxisMap):
-    """A map for the SampleAxis object."""
+    """An outline which defines an HDF5Dataset as an Axis with IDs for each datum."""
     default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,)}
     default_dtype = (("ID", str),)
     default_component_types = {

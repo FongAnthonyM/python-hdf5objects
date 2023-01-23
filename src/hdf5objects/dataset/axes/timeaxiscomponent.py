@@ -1,5 +1,5 @@
-""" timeaxis.py
-An Axis that represents the time at each sample of a signal.
+""" timeaxiscomponent.py
+A component and map for a HDF5Dataset which defines it as an axis that represents time.
 """
 # Package Header #
 from ...header import *
@@ -30,13 +30,13 @@ import numpy as np
 
 # Local Packages #
 from ...hdf5bases import HDF5Map, HDF5Dataset
-from .axis import AxisMap, AxisComponent
+from .axiscomponent import AxisMap, AxisComponent
 
 
 # Definitions #
 # Classes #
 class TimeAxisComponent(AxisComponent, TimeAxisContainer):
-    """An Axis that represents the time at each sample of a signal.
+    """A component for a HDF5Dataset which defines it as an axis that represents time.
 
     Class Attributes:
         local_timezone: The name of the timezone this program is running in.
@@ -450,7 +450,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 
 
 class TimeAxisMap(AxisMap):
-    """A map for the TimeAxis object."""
+    """An outline which defines an HDF5Dataset as an Axis that represents time."""
     default_attribute_names: Mapping[str, str] = {
         "sample_rate": "sample_rate",
         "time_zone": "time_zone",

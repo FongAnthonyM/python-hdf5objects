@@ -1,5 +1,5 @@
 """ __init__.py
-
+Genreric maps for HDF5Datasets
 """
 # Package Header #
 from ...header import *

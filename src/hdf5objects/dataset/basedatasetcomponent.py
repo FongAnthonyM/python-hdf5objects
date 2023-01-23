@@ -1,5 +1,5 @@
 """ basedatasetcomponent.py
-
+The base implemenation for a component of a HDF5Dataset.
 """
 # Package Header #
 from ..header import *

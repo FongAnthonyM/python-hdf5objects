@@ -116,6 +116,7 @@ class HDF5Map(BaseObject):
             **kwargs: The keyword arguments for creating a subclass.
         """
         super().__init_subclass__(**kwargs)
+        # Add subclass (maps) to the registry.
         cls.map_registry[cls.__name__] = cls
 
     # Magic Methods
