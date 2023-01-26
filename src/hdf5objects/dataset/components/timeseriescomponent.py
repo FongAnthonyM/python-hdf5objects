@@ -89,7 +89,7 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
     @property
     def _sample_rate(self) -> Decimal | h5py.Empty:
         """The sample rate of this timeseries."""
-        return self._time_axis.sample_rate if self.time_axis is not None else self._sample_rate_
+        return self.time_axis.sample_rate if self.time_axis is not None else self._sample_rate_
 
     @_sample_rate.setter
     def _sample_rate(self, value: Decimal | int | float | None) -> None:
@@ -97,7 +97,7 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
             value = Decimal(value)
         self._sample_rate_ = value
         if self.time_axis is not None:
-            self._time_axis.sample_rate = value
+            self.time_axis.sample_rate = value
 
     @property
     def t_axis(self) -> int:

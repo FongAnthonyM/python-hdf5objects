@@ -106,7 +106,7 @@ class DatasetMap(HDF5Map):
                 type_=type_,
                 attribute_names=attribute_names,
                 attributes=attributes,
-                axis_maps=maps,
+                axis_maps=axis_maps,
                 parent=parent,
                 component_types=component_types,
                 component_kwargs=component_kwargs,
@@ -284,13 +284,13 @@ class HDF5Dataset(HDF5BaseObject):
         _wrap_attributes: Attribute names that will contain the objects to wrap where the resolution order is descending
             inheritance.
         default_map: The map of this dataset.
-        default_axis_type: The default axis type when making an axis.
+        default_axis_map_type: The default axis type when making an axis.
 
     Attributes:
         _dataset: The HDF5 dataset to wrap.
         _scale_name: The name of this dataset if it is a scale.
         attributes: The attributes of this dataset.
-        axes: The axes of this dataset.
+        _axes: The axes of this dataset.
         axes_kwargs: The keyword arguments used for creating the axes.
 
     Args:
@@ -312,7 +312,7 @@ class HDF5Dataset(HDF5BaseObject):
     _wrapped_types: list[type | object] = [h5py.Dataset]
     _wrap_attributes: list[str] = ["dataset"]
     default_map: HDF5Map = DatasetMap()
-    default_axis_type: Any = None
+    default_axis_map_type: Any = None
 
     # Magic Methods
     # Constructors/Destructors
@@ -338,7 +338,7 @@ class HDF5Dataset(HDF5BaseObject):
         self._scale_name: str | None = None
         self.attributes: HDF5Attributes | None = None
 
-        self.axes: list[dict[str, Any]] = []
+        self._axes: list[dict[str, Any]] = []
         self.axes_kwargs: Iterable[dict[str, dict[str, Any]]] = []
 
         # Parent Attributes #
@@ -401,6 +401,13 @@ class HDF5Dataset(HDF5BaseObject):
             return self.get_shape.caching_call()
         except AttributeError:
             return self.get_shape()
+
+    @property
+    def axes(self) -> list[dict[str, Any]]:
+        """The axes of this dataset."""
+        if not self._axes:
+            self.load_axes()
+        return self._axes
 
     @property
     def all_data(self) -> np.ndarray:
@@ -532,28 +539,22 @@ class HDF5Dataset(HDF5BaseObject):
     # File
     def load_axes(self) -> None:
         """Loads the axes from file."""
-        mapped_dims = len(self.map.axis_maps)
-
         with self:
-            self.axes.extend([{}] * (len(self._dataset.dims) - len(self.axes)))
+            if len(self._dataset.dims) > len(self._axes):
+                self._axes.extend([{}] * (len(self._dataset.dims) - len(self._axes)))
+
+            mapped_dims = len(self.map.axis_maps)
             for i, dim in enumerate(self._dataset.dims):
-                raw_axes = dict(dim.items())
+                mapped_axes = self.map.axis_maps[i] if i < mapped_dims else {}
+                all_names = set(dim.keys())
+                missing_names = all_names - set(self._axes[i].keys())
+                missing_maps = set(mapped_axes.keys()) - all_names
+                if missing_maps and False:  # Todo: Set verbose because this does not need to always warn.
+                    warnings.warn(f"A dataset's axis {missing_maps} is missing.")
 
-                if i < mapped_dims:
-                    mapped_axes = self.map.axis_maps[i]
-                else:
-                    mapped_axes = {}
-
-                for name, axis_map in mapped_axes.items():
-                    dataset = raw_axes.get(name, None)
-                    if dataset is not None:
-                        self.axes[i][name] = axis_map.get_object(dataset=dataset, scale_name=name, file=self.file)
-                        del raw_axes[name]
-                    elif False:  # Todo: Set verbose because this does not need to always warn.
-                        warnings.warn("A dataset's axis is missing.")
-
-                for name, dataset in raw_axes.items():
-                    self.axes[i][name] = self.default_axis_type(dataset=dataset, scale_name=name, file=self.file)
+                for name in missing_names:
+                    axis_map = mapped_axes.get(name, self.default_axis_map_type())
+                    self._axes[i][name] = axis_map.get_object(dataset=dim[name], scale_name=name, file=self.file)
 
     def load(self) -> None:
         """Loads this dataset which is just loading the attributes."""
@@ -726,7 +727,7 @@ class HDF5Dataset(HDF5BaseObject):
         if casting_kwargs is None:
             casting_kwargs = self.casting_kwargs
 
-        types = zip(self.dtypes, casting_kwargs)
+        types = tuple(zip(self.dtypes, casting_kwargs))
         return ({name: self.caster.cast_to(type_, item[i], **kwargs) for i, ((name, type_), kwargs) in enumerate(types)}
                 for item in self[...])
 

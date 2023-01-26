@@ -342,7 +342,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
         Args:
             nano: Determines if this frame returns nanostamps (True) or timestamps (False).
         """
-        return self.composite.dataset.dtype == np.uint64
+        return self.composite.dtype == np.uint64
 
     def set_precision(self, nano: bool | None) -> None:
         """Sets if this frame returns nanostamps (True) or timestamps (False).
@@ -452,11 +452,13 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 class TimeAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents time."""
     default_attribute_names: Mapping[str, str] = {
+        "map_type": "map_type",
         "sample_rate": "sample_rate",
         "time_zone": "time_zone",
         "time_zone_offset": "time_zone_offset",
     }
     default_attributes: Mapping[str, Any] = {
+        "map_type": "TimeAxisMap",
         "sample_rate": h5py.Empty('f8'),
         "time_zone": "",
         "time_zone_offset": h5py.Empty('f8'),

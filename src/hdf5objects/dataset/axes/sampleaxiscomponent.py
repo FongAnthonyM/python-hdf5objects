@@ -50,6 +50,8 @@ class SampleAxisComponent(AxisComponent):
 
 class SampleAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents samples of a signal."""
+    default_attribute_names = {"map_type": "map_type"}
+    default_attributes = {"map_type": "SampleAxisMap"}
     default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "i"}
     default_component_types = {
         "axis": (SampleAxisComponent, {}),

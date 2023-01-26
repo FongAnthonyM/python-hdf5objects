@@ -20,6 +20,7 @@ from typing import Any
 
 # Third-Party Packages #
 from classversioning import VersionType, TriNumberVersion, Version
+from dspobjects.time import Timestamp, nanostamp
 import h5py
 import numpy as np
 
@@ -31,26 +32,18 @@ from .basehdf5 import BaseHDF5Map, BaseHDF5
 
 # Definitions #
 # Classes #
-class EEGDataMap(BaseTimeSeriesMap):
-    """A dataset map which contains data for EEG data."""
-    default_attribute_names: Mapping[str, str] = {"t_axis": "t_axis"}
-    default_attributes: Mapping[str, Any] = {"t_axis": 0}
-    default_axis_maps = [
-        {"sample_axis": SampleAxisMap(), "time_axis": TimeAxisMap()},
-        {"channel_axis": ChannelAxisMap()}
-    ]
-    default_component_types = {"timeseries": (TimeSeriesComponent, {"scale_name": "time_axis"})}
-
-
 class HDF5EEGMap(BaseHDF5Map):
     """A map for HDF5EEG files."""
     default_attribute_names = {"file_type": "FileType",
                                "file_version": "FileVersion",
                                "subject_id": "subject_id",
+                               "age": "age",
+                               "sex": "sex",
+                               "species": "species",
                                "start": "start",
                                "end": "end"}
     default_map_names = {"data": "EEG Array"}
-    default_maps = {"data": EEGDataMap()}
+    default_maps = {"data": BaseTimeSeriesMap()}
 
 
 class HDF5EEG(BaseHDF5):
@@ -87,21 +80,19 @@ class HDF5EEG(BaseHDF5):
         self,
         file: str | pathlib.Path | h5py.File | None = None,
         s_id: str | None = None,
-        s_dir: str | pathlib.Path | None = None,
         start: datetime.datetime | float | None = None,
         init: bool = True,
         **kwargs: Any,
     ) -> None:
         # New Attributes #
         self._subject_id: str = ""
-        self._subject_dir: pathlib.Path | None = None
 
         # Parent Attributes #
         super().__init__(init=False)
 
         # Object Construction #
         if init:
-            self.construct(file=file, s_id=s_id, s_dir=s_dir, start=start, **kwargs)
+            self.construct(file=file, s_id=s_id, start=start, **kwargs)
 
     @property
     def subject_id(self) -> str:
@@ -114,68 +105,47 @@ class HDF5EEG(BaseHDF5):
         self._subject_id = value
 
     @property
-    def start_timestamp(self) -> float:
-        """The start time of the data as a unix timestamp from the file attributes."""
-        return self.attributes["start"]
-
-    @start_timestamp.setter
-    def start_timestamp(self, value: float) -> None:
-        self.attributes.set_attribute("start", value)
+    def start_datetime(self) -> Timestamp | None:
+        """The start datetime of this file."""
+        ns = self.attributes.get("start", None)
+        return None if ns is None else Timestamp.fromnanostamp(ns)
 
     @property
-    def start_datetime(self) -> datetime.datetime:
-        """The start time of the data as a datetime from the file attributes."""
-        return datetime.datetime.fromtimestamp(self.start_timestamp)
+    def start_nanostamp(self) -> float | None:
+        """The start timestamp of this file."""
+        return self.attributes.get("start", None)
 
     @property
-    def end_timestamp(self) -> float:
-        """The end time of the data as a unix timestamp from the file attributes."""
-        return self.attributes["end"]
-
-    @end_timestamp.setter
-    def end_timestamp(self, value: float) -> None:
-        self.attributes.set_attribute("end", value)
+    def start_timestamp(self) -> float | None:
+        """The start timestamp of this file."""
+        ns = self.attributes.get("start", None)
+        return None if ns is None else ns * 10 ** 9
 
     @property
-    def end_datetime(self) -> datetime:
-        """The end time of the data as a datetime from the file attributes."""
-        return datetime.datetime.fromtimestamp(self.end_timestamp)
+    def end_datetime(self) -> Timestamp | None:
+        """The end datetime of this file."""
+        ns = self.attributes.get("end", None)
+        return None if ns is None else Timestamp.fromnanostamp(ns)
 
     @property
-    def subject_dir(self) -> pathlib.Path | None:
-        """The directory where subjects data are stored."""
-        return self._subject_dir
+    def end_nanostamp(self) -> float | None:
+        """The end timestamp of this file."""
+        return self.attributes.get("end", None)
 
-    @subject_dir.setter
-    def subject_dir(self, value: pathlib.Path | str) -> None:
-        if isinstance(value, pathlib.Path) or value is None:
-            self._subject_dir = value
-        else:
-            self._subject_dir = pathlib.Path(value)
+    @property
+    def end_timestamp(self) -> float | None:
+        """The end timestamp of this file."""
+        ns = self.attributes.get("end", None)
+        return None if ns is None else ns * 10 ** 9
 
     @property
     def sample_rate(self) -> float | int:
         """The sample rate of the data."""
-        return self["data"].sample_rate
+        return self["data"].components["timeseries"].sample_rate
 
     @sample_rate.setter
     def sample_rate(self, value: int | float) -> None:
-        self["data"].sample_rate = value
-
-    @property
-    def n_samples(self) -> int:
-        """The number of samples in the data."""
-        return self["data"].n_samples
-
-    @property
-    def channel_axis(self) -> HDF5Dataset:
-        """The channel axis of the data."""
-        return self["data"].axes[1]["channel_axis"]
-
-    @property
-    def sample_axis(self) -> HDF5Dataset:
-        """The sample axis of the data."""
-        return self["data"].axes[0]["sample_axis"]
+        self["data"].components["timeseries"].sample_rate = value
 
     @property
     def time_axis(self) -> HDF5Dataset:
@@ -244,7 +214,6 @@ class HDF5EEG(BaseHDF5):
         self,
         file: str | pathlib.Path | h5py.File | None = None,
         s_id: str | None = None,
-        s_dir: str | pathlib.Path | None = None,
         start: datetime.datetime | float | None = None,
         **kwargs: Any,
     ) -> "HDF5EEG":
@@ -260,19 +229,10 @@ class HDF5EEG(BaseHDF5):
         Returns:
             This object.
         """
-        if s_dir is not None:
-            self.subject_dir = s_dir
-
         if s_id is not None:
             self._subject_id = s_id
 
-        if file is None and kwargs["path"] is None and start is not None:
-            kwargs["path"] = self.subject_dir.joinpath(self.generate_file_name(s_id=s_id, start=start))
-
         super().construct(file=file, **kwargs)
-
-        if self.path is not None and self.subject_dir is None:
-            self.subject_dir = self.path.parent
 
         return self
 
@@ -292,10 +252,7 @@ class HDF5EEG(BaseHDF5):
             require: Determines if this object will create and fill the attributes in the file on construction.
         """
         super().construct_file_attributes(map_=map_, load=load, require=require)
-        if isinstance(start, datetime.datetime):
-            self.attributes["start"] = start.timestamp()
-        elif isinstance(start, float):
-            self.attributes["start"] = start
+        self.attributes["start"] = nanostamp(start)
         self.attributes["subject_id"] = self._subject_id
 
     def construct_dataset(self, load: bool = False, require: bool = False, **kwargs: Any) -> None:
@@ -319,27 +276,6 @@ class HDF5EEG(BaseHDF5):
         return self._group.construct_member(name="data", load=load, require=require, **kwargs)
 
     # File
-    def generate_file_name(self, s_id: str | None = None, start: datetime.datetime | float | None = None) -> str:
-        """Generates a file name based on the subject ID and start time.
-
-        Args:
-            s_id: The subject id.
-            start: The start time of the data, if creating.
-
-        Returns:
-            The file name.
-        """
-        if s_id is None:
-            s_id = self.subject_id
-
-        if start is None:
-            start = self.start
-
-        if isinstance(start, float):
-            start = datetime.datetime.fromtimestamp(start)
-
-        return f"{s_id}_{start.isoformat('_', 'seconds').replace(':', '~')}.h5"
-
     def create_file(
         self,
         name: str | pathlib.Path = None,
@@ -359,11 +295,6 @@ class HDF5EEG(BaseHDF5):
         """
         if s_id is not None:
             self._subject_id = s_id
-        if s_dir is not None:
-            self.subject_dir = s_dir
-
-        if name is None and self.path is None and start is not None:
-            self.path = self.subject_dir.joinpath(self.generate_file_name(s_id=s_id, start=start))
 
         super().create_file(name=name, **kwargs)
 
@@ -385,11 +316,11 @@ class HDF5EEG(BaseHDF5):
         Returns:
             If the attributes are valid.
         """
-        return self.start == self.data._time_axis.start and self.end == self.data._time_axis.end
+        return self.start == self.time_axis.start and self.end == self.data._time_axis.end
 
     def standardize_attributes(self) -> None:
         """Sets the attributes that correspond to data the actual data values."""
         if self.data.exists:
             self.data.standardize_attributes()
-            self.attributes["start"] = self.data._time_axis.get_start()
-            self.attributes["end"] = self.data._time_axis.get_end()
+            self.attributes["start"] = self.time_axis.get_start_nanostamp()
+            self.attributes["end"] = self.time_axis.get_end_nanostamp()

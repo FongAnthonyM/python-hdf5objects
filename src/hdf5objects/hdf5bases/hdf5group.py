@@ -413,7 +413,7 @@ class HDF5Group(HDF5BaseObject):
             item = self._group[name]
             map_ = self.map.get_item(name, self.sentinel)
             if map_ is self.sentinel:
-                map_type = self.map.map_registry.get(value.attrs.get("map_type", ""), None)
+                map_type = self.map.map_registry.get(item.attrs.get("map_type", ""), None)
 
                 if map_type is not None:
                     map_ = map_type(name=name)
@@ -425,7 +425,7 @@ class HDF5Group(HDF5BaseObject):
                         map_ = self.default_group_map()
 
             if map_ is not self.sentinel:
-                if isinstance(map_.type, HDF5Group):
+                if isinstance(item, h5py.Group):
                     kwargs["group"] = item
                 else:
                     kwargs["dataset"] = item
@@ -450,25 +450,25 @@ class HDF5Group(HDF5BaseObject):
             The names and members in this group.
         """
         with self:
-            for name, value in self._group.items():
+            for name, item in self._group.items():
                 map_ = self.map.get_item(name, self.sentinel)
                 if map_ is self.sentinel:
-                    map_type = self.map.map_registry.get(value.attr.get("map_type", ""), None)
+                    map_type = self.map.map_registry.get(item.attrs.get("map_type", ""), None)
 
                     if map_type is not None:
                         map_ = map_type(name=name)
                         self.map.set_item(map_)
                     elif not mapped:
-                        if isinstance(value, h5py.Dataset):
+                        if isinstance(item, h5py.Dataset):
                             map_ = self.default_dataset_map()
-                        elif isinstance(value, h5py.Group):
+                        elif isinstance(item, h5py.Group):
                             map_ = self.default_group_map()
 
                 if map_ is not self.sentinel:
-                    if isinstance(map_.type, HDF5Group):
-                        kwargs = {"group": value}
+                    if isinstance(item, h5py.Group):
+                        kwargs = {"group": item}
                     else:
-                        kwargs = {"dataset": value}
+                        kwargs = {"dataset": item}
                     self.members[name] = map_.get_object(
                         map_=map_,
                         file=self.file,

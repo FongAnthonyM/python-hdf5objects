@@ -68,6 +68,7 @@ class HDF5File(HDF5BaseObject):
     # Todo: Rethink about how Errors and Warnings are handled in this object.
     _wrapped_types: list[type | object] = [HDF5Group, h5py.File]
     _wrap_attributes: list[str] = ["group", "_file"]
+    default_component_types: dict[str, tuple[type, dict[str, Any]]] = {}
     attribute_type: type = HDF5Attributes
     group_type: type = HDF5Group
     dataset_type: type = HDF5Dataset
@@ -355,12 +356,24 @@ class HDF5File(HDF5BaseObject):
         if construct or require:
             self.construct_file_attributes(require=require)
 
-        if not open_:
-            self.close()
-        elif self._file.swmr_mode:
-            self._group.enable_caching()
+        if self.is_open:
+            if not open_:
+                self.close()
+            elif self._file.swmr_mode:
+                self._group.enable_caching()
 
         return self
+
+    def construct_components(self, **component_kwargs: Any) -> None:
+        """Constructs the components of this dataset.
+
+        Args:
+            component_kwargs: The keyword arguments for the components.
+        """
+        for name, (component, kwargs)  in self.default_component_types.items():
+            new_kwargs = component_kwargs.get(name, {})
+            temp_kwargs = kwargs | new_kwargs
+            self.components[name] = component(composite=self, **temp_kwargs)
 
     def construct_file_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
         """Creates the attributes for this group.

@@ -15,3 +15,7 @@ __email__ = __email__
 # Local Packages #
 from .hdf5bases import *
 from .fileobjects import *
+from .dataset import AxisMap
+
+# Assign Cyclic Definitions
+HDF5Dataset.default_axis_map_type = AxisMap

@@ -15,6 +15,7 @@ __email__ = __email__
 # Standard Libraries #
 from abc import abstractmethod
 from collections.abc import Iterable
+from contextlib import contextmanager
 import datetime
 import pathlib
 from typing import Any, Union
@@ -101,18 +102,20 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         self,
         file: str | pathlib.Path | h5py.File | HDF5EEG | None = None,
         s_id: str | None = None,
-        s_dir: str | pathlib.Path | None = None,
         start: datetime.datetime | float | None = None,
         mode: str = 'r',
         init: bool = True,
         **kwargs: Any,
     ) -> None:
+        # New Attributes #
+        self.manual_close: bool = True
+
         # Parent Attributes #
         super().__init__(init=False)
 
         # Object Construction #
         if init:
-            self.construct(file=file, s_id=s_id, s_dir=s_dir, start=start, mode=mode, **kwargs)
+            self.construct(file=file, s_id=s_id, start=start, mode=mode, **kwargs)
 
     @property
     def subject_id(self) -> str:
@@ -123,8 +126,39 @@ class HDF5EEGFrame(FileTimeContainerInterface):
     def subject_id(self, value: str) -> None:
         self.file.subject_id = value
 
+    # Context Managers
+    def __enter__(self) -> "HDF5EEGFrame":
+        """The context enter which opens the HDF5 file.
+
+        Returns:
+            This object.
+        """
+        return self.open()
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        """The context exit which closes the file."""
+        return self.close()
+
     # Instance Methods #
     # File
+    @contextmanager
+    def temp_open(self, **kwargs: Any) -> "HDF5EEGFrame":
+        """Temporarily opens the file if it is not already open.
+
+        Args:
+            **kwargs: The keyword arguments for opening the HDF5 file.
+
+        Returns:
+            This object.
+        """
+        if not self.file.is_open:
+            self.file.open(**kwargs)
+        try:
+            yield self
+        finally:
+            if not self.manual_close:
+                self.file.close()
+
     def require(
         self,
         name: str | pathlib.Path = None,
@@ -157,7 +191,8 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         Returns:
             The data.
         """
-        return self.file.data
+        with self.temp_open():
+            return self.file.data
 
     def set_data(self, value: np.ndarray) -> None:
         """Sets the data in the file.
@@ -175,7 +210,8 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         Returns:
             The timestamps of the data.
         """
-        return self.data.time_axis
+        with self.temp_open():
+            return self.data.components["timeseries"].time_axis
 
     def set_time_axis(self, value: Any) -> None:
         """Sets the time axis
@@ -193,23 +229,8 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         Returns:
             The shape of the data.
         """
-        return self.data.shape
-
-    def get_start_timestamp(self) -> float | None:
-        """Gets the start_timestamp timestamp of this frame.
-
-        Returns:
-            The start_timestamp timestamp of this frame.
-        """
-        return self.file.start_timestamp
-
-    def get_end_timestamp(self) -> float | None:
-        """Gets the end_timestamp timestamp of this frame.
-
-        Returns:
-            The end_timestamp timestamp of this frame.
-        """
-        return self.file.end_timestamp
+        with self.temp_open():
+            return self.data.shape
 
     def get_sample_rate(self) -> int | float:
         """Gets the sampling rate of the data.
@@ -228,298 +249,4 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         if self.mode == 'r':
             raise IOError("not writable")
         self.data.sample_rate = value
-
-    # Shape
-    def resize(self, shape: tuple[int] | None = None, dtype: np.dtype | None = None, **kwargs: Any) -> None:
-        """Changes the size of the data to a new size filling empty areas with NaN.
-
-        Args:
-            shape: The new shape to change the data to.
-            dtype: The type the data will be.
-            **kwargs: The keyword arguments for generating new blank data.
-        """
-        if self.mode == 'r':
-            raise IOError("not writable")
-
-        if shape is None:
-            shape = self.target_shape
-
-        if dtype is None:
-            dtype = self.data.dtype
-
-        new_slices = [0] * len(shape)
-        old_slices = [0] * len(self.shape)
-        for index, (n, o) in enumerate(zip(shape, self.shape)):
-            slice_ = slice(None, n if n > o else o)
-            new_slices[index] = slice_
-            old_slices[index] = slice_
-
-        new_ndarray = self.blank_generator(shape, dtype, **kwargs)
-        new_ndarray[tuple(new_slices)] = self.data[tuple(old_slices)]
-
-        self.data.set_data(new_ndarray)
-
-    # Sample Rate
-    def resample(self, sample_rate: int | float, **kwargs):
-        """Resamples the data.
-
-        Args:
-            sample_rate: The new sample rate to change the data to.
-            **kwargs: The keyword arguments for the resampler.
-        """
-        if self.mode == 'r':
-            raise IOError("not writable")
-
-        if not self.validate_sample_rate():
-            raise ValueError("the data needs to have a uniform sample rate before resampling")
-
-        if sample_rate is not None:
-            self.sample_rate = sample_rate
-
-        self.data.replace_data(self.resampler(new_fs=self.sample_rate, **kwargs))
-        self.time_axis.replace_data(np.arange(self.time_axis[0], self.time_axis[-1], self.sample_period, dtype="f8"))
-
-        # Time Correction
-
-    def fill_time_correction(self, axis: int | None = None, tolerance: float | None = None, **kwargs: Any) -> None:
-        """Corrects the data's discontinuities in time.
-
-        Args:
-            axis: The axis to do the correction.
-            tolerance: The tolerance for samples to be misaligned.
-            **kwargs: The keyword arguments
-        """
-        if self.mode == 'r':
-            raise IOError("not writable")
-
-        if axis is None:
-            axis = self.axis
-
-        discontinuities = self.where_discontinuous(tolerance=tolerance)
-
-        if discontinuities:
-            offsets = np.empty((0, 2), dtype="i")
-            gap_discontinuities = []
-            previous_discontinuity = 0
-            for discontinuity in discontinuities:
-                timestamp = self.time_axis[discontinuity]
-                previous = discontinuity - 1
-                previous_timestamp = self.time_axis[previous]
-                if (timestamp - previous_timestamp) >= (2 * self.sample_period):
-                    real = discontinuity - previous_discontinuity
-                    blank = round((timestamp - previous_timestamp) * self.sample_rate) - 1
-                    offsets = np.append(offsets, [[real, blank]], axis=0)
-                    gap_discontinuities.append(discontinuities)
-                    previous_discontinuity = discontinuity
-            offsets = np.append(offsets, [[self.time_axis - discontinuities[-1], 0]], axis=0)
-
-            new_size = np.sum(offsets)
-            new_shape = list(self.data.shape)
-            new_shape[axis] = new_size
-            old_data = self.data
-            old_times = self.time_axis
-            self.data.set_data(self.blank_generator(shape=new_shape, **kwargs))
-            self.time_axis.replace_data(np.empty((new_size,), dtype="f8"))
-            old_start = 0
-            new_start = 0
-            for discontinuity, offset in zip(gap_discontinuities, offsets):
-                previous = discontinuity - 1
-                new_mid = new_start + offset[0]
-                new_end = new_mid + offset[1]
-                mid_timestamp = old_times[previous] + self.sample_period
-                end_timestamp = offset[1] * self.sample_period
-
-                slice_ = slice(start=old_start, stop=old_start + offset[0])
-                slices = [slice(None, None)] * len(old_data.shape)
-                slices[axis] = slice_
-
-                self.set_range(old_data[tuple(slices)], start=new_start)
-
-                self.time_axis[new_start:new_mid] = old_times[slice_]
-                self.time_axis[new_mid:new_end] = np.arange(mid_timestamp, end_timestamp, self.sample_period)
-
-                old_start = discontinuity
-                new_start += sum(offset)
-
-    # Get Timestamps
-    def get_timestamps(self) -> np.ndarray:
-        """Gets all the timestamps of this frame.
-
-        Returns:
-            A numpy array of the timestamps of this frame.
-        """
-        return self.time_axis.get_timestamps()
-
-    def get_datetimes(self) -> tuple[datetime.datetime]:
-        """Gets all the datetimes of this frame.
-
-        Returns:
-            All the times as a tuple of datetimes.
-        """
-        return self.time_axis.get_datetimes()
-
-    # Data
-    def append(
-        self,
-        data: np.ndarray,
-        time_axis: np.ndarray | None = None,
-        axis: int | None = None,
-        tolerance: float | None = None,
-        correction: str | bool | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Appends data and timestamps onto the contained data and timestamps
-
-        Args:
-            data: The data to append.
-            time_axis: The timestamps of the data.
-            axis: The axis to append the data to.
-            tolerance: The allowed deviation a sample can be away from the sample period.
-            correction: Determines if time correction will be run on the data and the type if a str.
-            **kwargs: The keyword arguments for the time correction.
-        """
-        if self.mode == 'r':
-            raise IOError("not writable")
-
-        if axis is None:
-            axis = self.axis
-
-        if tolerance is None:
-            tolerance = self.time_tolerance
-
-        if correction is None or (isinstance(correction, bool) and correction):
-            correction = self.tail_correction
-        elif isinstance(correction, str):
-            correction = self.get_correction(correction)
-
-        if correction:
-            data, time_axis = correction(data, time_axis, axis=axis, tolerance=tolerance, **kwargs)
-
-        self.data.append(data, axis)
-        self.time_axis.append(time_axis)
-
-    def add_frames(
-        self,
-        frames: Iterable[TimeSeriesFrameInterface],
-        axis: int | None = None,
-        truncate: bool | None = None,
-    ) -> None:
-        """Appends data and timestamps from other frames to this frame.
-
-        Args:
-            frames: The frames to append data from.
-            axis: The axis to append the data along.
-            truncate: Determines if the other frames' data will be truncated to fit this frame's shape.
-        """
-        if self.mode == 'r':
-            raise IOError("not writable")
-
-        frames = list(frames)
-
-        if self.data is None:
-            frame = frames.pop(0)
-            if not frame.validate_sample_rate():
-                raise ValueError("the frame's sample rate must be valid")
-            self.data.set_data(frame[...])
-            self.time_axis.replace_data(frame.get_time_axis())
-
-        for frame in frames:
-            self.append_frame(frame, axis=axis, truncate=truncate)
-
-    def get_intervals(self, start: int | None = None, stop: int | None = None, step: int | None = None) -> np.ndarray:
-        """Get the intervals between each time in the axis.
-
-        Args:
-            start: The start index to get the intervals.
-            stop: The last index to get the intervals.
-            step: The step of the indices to the intervals.
-
-        Returns:
-            The intervals between each time in the axis.
-        """
-        return self.time_axis.get_intervals(start=start, stop=stop, step=step)
-
-    def fill_timestamps_array(
-        self,
-        data_array: np.ndarray,
-        array_slice: slice | None = None,
-        slice_: slice | None = None,
-    ) -> np.ndarray:
-        """Fills a given array with timestamps from the contained frames/objects.
-
-        Args:
-            data_array: The numpy array to fill.
-            array_slice: The slices to fill within the data_array.
-            slice_: The slices to get the data from.
-
-        Returns:
-            The original array but filled.
-        """
-        data_array[array_slice] = self.time_axis.timestamps[slice_]
-        return data_array
-
-    # Find Index
-    def find_time_index(
-        self,
-        timestamp: datetime.datetime | float,
-        approx: bool = False,
-        tails: bool = False,
-    ) -> IndexDateTime:
-        """Finds the index with given time, can give approximate values.
-
-        Args:
-            timestamp:
-            approx: Determines if an approximate index will be given if the time is not present.
-            tails: Determines if the first or last index will be give the requested time is outside the axis.
-
-        Returns:
-            The requested closest index and the value at that index.
-        """
-        return self.time_axis.find_time_index(timestamp=timestamp, approx=approx, tails=tails)
-
-    # Find Data
-    def find_timestamp_range(
-        self,
-        start: datetime.datetime | float | None = None,
-        stop: datetime.datetime | float | None = None,
-        step: int | float | datetime.timedelta | None = None,
-        approx: bool = False,
-        tails: bool = False,
-    ) -> FoundTimeRange:
-        """Finds the timestamp range on the axis inbetween two times, can give approximate values.
-
-        Args:
-            start: The first time to find for the range.
-            stop: The last time to find for the range.
-            step: The step between elements in the range.
-            approx: Determines if an approximate indices will be given if the time is not present.
-            tails: Determines if the first or last times will be give the requested item is outside the axis.
-
-        Returns:
-            The timestamp range on the axis and the start and stop indices.
-        """
-        return self.time_axis.find_timestamp_range(start=start, stop=stop, step=step, approx=approx, tails=tails)
-
-    def find_data_range(
-        self,
-        start: datetime.datetime | float | None = None,
-        stop: datetime.datetime | float | None = None,
-        step: int | float | datetime.timedelta | None = None,
-        approx: bool = False,
-        tails: bool = False,
-    ) -> FoundData:
-        """Finds the data range on the axis inbetween two times, can give approximate values.
-
-        Args:
-            start: The first time to find for the range.
-            stop: The last time to find for the range.
-            step: The step between elements in the range.
-            approx: Determines if an approximate indices will be given if the time is not present.
-            tails: Determines if the first or last times will be give the requested item is outside the axis.
-
-        Returns:
-            The data range on the axis and the time axis as timestamps.
-        """
-        return self.data.find_data_range_timestamp(start=start, stop=stop, step=step, approx=approx, tails=tails)
-
 

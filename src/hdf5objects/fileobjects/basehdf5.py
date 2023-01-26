@@ -81,7 +81,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @validate_file_type.register
     @classmethod
-    def _(cls, file: pathlib.Path) -> bool:
+    def _validate_file_type(cls, file: pathlib.Path) -> bool:
         """Checks if the given path is a valid type.
 
         Args:
@@ -103,7 +103,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @validate_file_type.register
     @classmethod
-    def _(cls, file: str) -> bool:
+    def _validate_file_type(cls, file: str) -> bool:
         """Checks if the given path is a valid type.
 
         Args:
@@ -127,7 +127,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @validate_file_type.register
     @classmethod
-    def _(cls, file: HDF5File) -> bool:
+    def _validate_file_type(cls, file: HDF5File) -> bool:
         """Checks if the given file is a valid type.
 
         Args:
@@ -142,7 +142,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @validate_file_type.register
     @classmethod
-    def _(cls, file: h5py.File) -> bool:
+    def _validate_file_type(cls, file: h5py.File) -> bool:
         """Checks if the given file is a valid type.
 
         Args:
@@ -181,7 +181,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @new_validated.register
     @classmethod
-    def _(cls, file: pathlib.Path, **kwargs: Any) -> Any:
+    def _new_validated(cls, file: pathlib.Path, **kwargs: Any) -> Any:
         """Checks if the given path is a valid type and returns the file if valid.
 
         Args:
@@ -204,7 +204,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @new_validated.register
     @classmethod
-    def _(cls, file: str, **kwargs: Any) -> Any:
+    def _new_validated(cls, file: str, **kwargs: Any) -> Any:
         """Checks if the given path is a valid type and returns the file if valid.
 
         Args:
@@ -228,7 +228,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @new_validated.register
     @classmethod
-    def _(cls, file: HDF5File, **kwargs: Any) -> Any:
+    def _new_validated(cls, file: HDF5File, **kwargs: Any) -> Any:
         """Checks if the given file is a valid type and returns the file if valid.
 
         Args:
@@ -246,7 +246,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @new_validated.register
     @classmethod
-    def _(cls, file: h5py.File, **kwargs: Any) -> Any:
+    def _new_validated(cls, file: h5py.File, **kwargs: Any) -> Any:
         """Checks if the given file is a valid type and returns the file if valid.
 
         Args:
@@ -298,11 +298,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     def __new__(cls, *args: Any, **kwargs: Any) -> Union["BaseHDF5", None]:
         """With given input, will return the correct subclass."""
         if id(cls) == id(BaseHDF5) and (kwargs or args):
-            if args:
-                obj = args[0]
-            else:
-                obj = kwargs["obj"]
-            class_ = cls.get_version_class(obj)
+            class_ = cls.get_version_class(args[0] if args else kwargs["file"])
             return class_(*args, **kwargs)
         else:
             return super().__new__(cls)
