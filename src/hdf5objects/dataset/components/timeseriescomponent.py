@@ -277,15 +277,17 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
         self._time_axis = self.composite.require_axis(
             dim=self.t_axis,
             name=self.scale_name,
-            start=start,
-            stop=stop,
-            step=step,
-            rate=self._sample_rate_ if rate is None else rate,
-            size=size,
-            datetimes=datetimes,
             scale_name=self.scale_name,
             require=True,
             file=self.composite.file,
+            component_kwargs={"axis":{
+                "start": start,
+                "stop": stop,
+                "step": step,
+                "rate": self._sample_rate_ if rate is None else rate,
+                "size": size,
+                "datetimes": datetimes,
+            }},
             **kwargs,
         )
 

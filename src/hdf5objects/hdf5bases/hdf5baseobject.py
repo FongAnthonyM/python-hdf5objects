@@ -495,7 +495,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
             component.create_component(**kwargs)
 
     def require_components(self, **component_kwargs: dict[str, Any]) -> None:
-        """Requires the components of thisHDF5 object.
+        """Requires the components of this HDF5 object.
 
         Args:
             **component_kwargs: The keyword arguments for the components' require methods as keywords.
@@ -504,4 +504,6 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
             kwargs = component_kwargs.get(name, {})
             component.require_component(**kwargs)
 
-
+    def standardize_attributes(self) -> None:
+        """Sets attributes that correspond to values somewhere else to current value."""
+        pass

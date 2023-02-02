@@ -304,15 +304,15 @@ class HDF5Attributes(HDF5BaseObject):
             value: The object to set the file attribute to.
         """
         name = self._parse_name(name)
-        with self:
-            if self.exists:
+        if self.exists:
+            with self:
                 if name in self._attribute_manager:
                     self._attribute_manager[name] = value
                 else:
                     self._attribute_manager.create(name, value)
                 self._attributes_dict[name] = self._attribute_manager[name]
-            else:
-                self.map.attributes[name] = value
+        else:
+            self.map.attributes[name] = value
 
     def del_attribute(self, name: str) -> None:
         """Deletes an attribute from the HDF5 file.

@@ -252,8 +252,9 @@ class HDF5EEG(BaseHDF5):
             require: Determines if this object will create and fill the attributes in the file on construction.
         """
         super().construct_file_attributes(map_=map_, load=load, require=require)
-        self.attributes["start"] = nanostamp(start)
         self.attributes["subject_id"] = self._subject_id
+        if start is not None:
+            self.attributes["start"] = nanostamp(start)
 
     def construct_dataset(self, load: bool = False, require: bool = False, **kwargs: Any) -> None:
         """Constructs the main EEG dataset.
@@ -319,8 +320,10 @@ class HDF5EEG(BaseHDF5):
         return self.start == self.time_axis.start and self.end == self.data._time_axis.end
 
     def standardize_attributes(self) -> None:
-        """Sets the attributes that correspond to data the actual data values."""
+        """Sets attributes that correspond to values somewhere else to their current values."""
         if self.data.exists:
             self.data.standardize_attributes()
-            self.attributes["start"] = self.time_axis.get_start_nanostamp()
-            self.attributes["end"] = self.time_axis.get_end_nanostamp()
+
+        if self.time_axis.exists:
+            self.attributes["start"] = self.time_axis.components["axis"].start_nanostamp
+            self.attributes["end"] = self.time_axis.components["axis"].end_nanostamp

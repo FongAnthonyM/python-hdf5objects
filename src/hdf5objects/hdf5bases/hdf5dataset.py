@@ -509,11 +509,12 @@ class HDF5Dataset(HDF5BaseObject):
         if scale_name is not None:
             self._scale_name = scale_name
 
+        self.construct_attributes()
+
         if component_kwargs is None:
             self.construct_components()
         else:
             self.construct_components(**component_kwargs)
-        self.construct_attributes()
 
         if load and self.exists:
             self.load()
@@ -1036,7 +1037,8 @@ class HDF5Dataset(HDF5BaseObject):
         """
         with self:
             # Assign Data
-            self._dataset.resize(data.shape)  # resize for new data
+            if data.shape != self._dataset.shape:
+                self._dataset.resize(data.shape)  # resize for new data
             self._dataset[...] = data
             self.clear_all_caches()
 
