@@ -301,6 +301,8 @@ class HDF5File(HDF5BaseObject):
         require: bool = False,
         path: str | pathlib.Path | h5py.File | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> "HDF5File":
         """Constructs this object.
@@ -315,7 +317,9 @@ class HDF5File(HDF5BaseObject):
             construct: Determines if this object will create members int the file on construction.
             require: Determines if this object fill the file on construction.
             path: The path to the file.
-            component_kwargs: The keyword arguments for the components.
+            component_kwargs: Keyword arguments for creating the components.
+            component_types: Component classes and their keyword arguments to instantiate.
+            components: Components to add.
             **kwargs: The keyword arguments for the open method.
 
         Returns:
@@ -346,10 +350,11 @@ class HDF5File(HDF5BaseObject):
         elif open_ or load or require:
             self.open(**kwargs)
 
-        if component_kwargs is None:
-            self.construct_components()
-        else:
-            self.construct_components(**component_kwargs)
+        self.construct_components(
+            component_kwargs=component_kwargs,
+            component_types=component_types,
+            components=components,
+        )
 
         self.construct_group(load=load, construct=construct, require=require)
 
@@ -364,16 +369,23 @@ class HDF5File(HDF5BaseObject):
 
         return self
 
-    def construct_components(self, **component_kwargs: Any) -> None:
-        """Constructs the components of this dataset.
+    def construct_components(
+        self,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
+    ) -> None:
+        """Constructs or adds components.
 
         Args:
-            component_kwargs: The keyword arguments for the components.
+            component_kwargs: The keyword arguments for creating the components.
+            component_types: Component class and their keyword arguments to instantiate.
+            components: Components to add.
         """
-        for name, (component, kwargs)  in self.default_component_types.items():
-            new_kwargs = component_kwargs.get(name, {})
-            temp_kwargs = kwargs | new_kwargs
-            self.components[name] = component(composite=self, **temp_kwargs)
+        temp_types = self.default_component_types | component_types
+        new_kwargs = {} if component_kwargs is None else component_kwargs
+        default_components = {n: c(composite=self, **(k | new_kwargs.get(n, {}))) for n, (c, k) in temp_types.items()}
+        self.components.update(default_components | self.components | {} if components is None else components)
 
     def construct_file_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
         """Creates the attributes for this group.

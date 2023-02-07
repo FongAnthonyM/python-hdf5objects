@@ -57,7 +57,9 @@ class HDF5Group(HDF5BaseObject):
         construct: Determines if this object will create members in the file on construction.
         require: Determines if this object will create and fill the group in the file on construction.
         parent: The HDF5 name of the parent of this HDF5 object.
-        component_kwargs: The keyword arguments for the components.
+        component_kwargs: The keyword arguments for creating the components.
+        component_types: Component class and their keyword arguments to instantiate.
+        components: Components to add.
         init: Determines if this object will construct.
     """
     _wrapped_types: list[type | object] = [h5py.Group]
@@ -78,6 +80,8 @@ class HDF5Group(HDF5BaseObject):
         require: bool = False,
         parent: str | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
         init: bool = True,
     ) -> None:
         # New Attributes #
@@ -100,6 +104,8 @@ class HDF5Group(HDF5BaseObject):
                 require=require,
                 parent=parent,
                 component_kwargs=component_kwargs,
+                component_types=component_types,
+                components=components,
             )
 
     # Pickling
@@ -141,6 +147,8 @@ class HDF5Group(HDF5BaseObject):
         require: bool = False,
         parent: str | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
     ) -> None:
         """Constructs this object from the provided arguments.
 
@@ -153,9 +161,36 @@ class HDF5Group(HDF5BaseObject):
             construct: Determines if this object will create members in the file on construction.
             require: Determines if this object will create and fill the group in the file on construction.
             parent: The HDF5 name of the parent of this HDF5 object.
-            component_kwargs: The keyword arguments for the components.
+            component_kwargs: The keyword arguments for creating the components.
+            component_types: Component class and their keyword arguments to instantiate.
+            components: Components to add.
         """
-        super().construct(name=name, map_=map_, file=file, parent=parent)
+        if map_ is not None:
+            self.map = map_
+
+        if self.map.name is None:
+            self.map.name = "/"
+
+        if self.map.type is None:
+            self.map.type = self.default_group_map
+
+        if parent is not None:
+            self.set_parent(parent=parent)
+        elif map_ is not None:
+            self._parents = self.map.parents
+
+        if name is not None:
+            self.set_name(name=name)
+        elif map_ is not None:
+            self._name_ = self.map.name
+
+        if mode is not None:
+            self.set_mode(mode, timed=False)
+
+        if file is not None:
+            self.set_file(file)
+            if mode is None and self._mode_ is None:
+                self.set_mode(self.file._mode, timed=False)
 
         if self.map.name is None:
             self.map.name = "/"
@@ -166,11 +201,13 @@ class HDF5Group(HDF5BaseObject):
         if group is not None:
             self.set_group(group)
 
-        if component_kwargs is None:
-            self.construct_components()
-        else:
-            self.construct_components(**component_kwargs)
         self.construct_attributes()
+
+        super().construct(
+            component_kwargs=component_kwargs,
+            component_types=component_types,
+            components=components,
+        )
 
         if load and self.exists:
             self.load(load=load)
@@ -413,7 +450,9 @@ class HDF5Group(HDF5BaseObject):
             item = self._group[name]
             map_ = self.map.get_item(name, self.sentinel)
             if map_ is self.sentinel:
-                map_type = self.map.map_registry.get(item.attrs.get("map_type", ""), None)
+                map_namespace = item.attrs.get("map_namespace", "")
+                map_name= item.attrs.get("map_type", "")
+                map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
 
                 if map_type is not None:
                     map_ = map_type(name=name)
@@ -453,7 +492,9 @@ class HDF5Group(HDF5BaseObject):
             for name, item in self._group.items():
                 map_ = self.map.get_item(name, self.sentinel)
                 if map_ is self.sentinel:
-                    map_type = self.map.map_registry.get(item.attrs.get("map_type", ""), None)
+                    map_namespace = item.attrs.get("map_namespace", "")
+                    map_name = item.attrs.get("map_type", "")
+                    map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
 
                     if map_type is not None:
                         map_ = map_type(name=name)

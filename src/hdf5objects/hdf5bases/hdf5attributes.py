@@ -53,6 +53,7 @@ class HDF5Attributes(HDF5BaseObject):
         parent: The HDF5 name of the parent of this HDF5 object.
         component_kwargs: The keyword arguments for the components.
         init: Determines if this object will construct.
+        **kwargs: Keyword arguments for inheritance.
     """
     _wrapped_types: list[type | object] = [h5py.AttributeManager]
     _wrap_attributes: list[str] = ["attribute_manager"]
@@ -70,6 +71,7 @@ class HDF5Attributes(HDF5BaseObject):
         parent: str | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
         init: bool = True,
+        **kwargs: Any,
     ) -> None:
         # New Attributes #
         self._attribute_manager: h5py.AttributeManager | None = None
@@ -88,7 +90,7 @@ class HDF5Attributes(HDF5BaseObject):
                 load=load,
                 require=require,
                 parent=parent,
-                component_kwargs=component_kwargs,
+                **kwargs,
             )
 
     # Pickling
@@ -146,7 +148,7 @@ class HDF5Attributes(HDF5BaseObject):
         load: bool = False,
         require: bool = False,
         parent: str | None = None,
-        component_kwargs: dict[str, dict[str, Any]] | None = None,
+        **kwargs: Any
     ) -> None:
         """Constructs this object.
 
@@ -158,14 +160,9 @@ class HDF5Attributes(HDF5BaseObject):
             load: Determines if this object will load the attribute values from the file on construction.
             require: Determines if this object will create and fill the attributes in the file on construction.
             parent: The HDF5 name of the parent of this HDF5 object.
-            component_kwargs: The keyword arguments for the components.
+            **kwargs: Keyword arguments for inheritance.
         """
-        super().construct(name=name, map_=map_, file=file, parent=parent)
-
-        if component_kwargs is None:
-            self.construct_components()
-        else:
-            self.construct_components(**component_kwargs)
+        super().construct(name=name, map_=map_, file=file, parent=parent, **kwargs)
 
         if attributes is not None:
             self.set_attribute_manager(attributes)
@@ -194,16 +191,23 @@ class HDF5Attributes(HDF5BaseObject):
                 elif override:
                     self._attribute_manager[name] = value
 
-    def construct_components(self, **component_kwargs: Any) -> None:
-        """Constructs the components of this dataset.
+    def construct_components(
+        self,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
+    ) -> None:
+        """Constructs or adds components.
 
         Args:
-            component_kwargs: The keyword arguments for the components.
+            component_kwargs: The keyword arguments for creating the components.
+            component_types: Component class and their keyword arguments to instantiate.
+            components: Components to add.
         """
-        for name, (component, kwargs)  in self.map.attribute_component_types.items():
-            new_kwargs = component_kwargs.get(name, {})
-            temp_kwargs = kwargs | new_kwargs
-            self.components[name] = component(composite=self, **temp_kwargs)
+        temp_types =  self.default_component_types | self.map.attribute_component_types | component_types
+        new_kwargs = {} if component_kwargs is None else component_kwargs
+        default_components = {n: c(composite=self, **(k | new_kwargs.get(n, {}))) for n, (c, k) in temp_types.items()}
+        self.components.update(default_components | self.components | {} if components is None else components)
 
     # Parsers
     def _parse_name(self, name: str) -> str:

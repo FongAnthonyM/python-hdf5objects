@@ -37,6 +37,9 @@ class HDF5Map(BaseObject):
     outline the full hierarchy.
     
     Class Attributes:
+        register: Determines if this class/subclass will be added to the registry.
+        map_namespace: The name of the namespace to use when deteriming map type.
+        map_registry: A registry of map subclasses to be used when determining a map type to use.
         sentinel: An object that helps with mapping searches.
         default_name: The default name of the map which represents its relation in the hdf5 file.
         default_parent: The default parent of the map.
@@ -51,7 +54,6 @@ class HDF5Map(BaseObject):
             created.
         default_component_types: The components and their keyword arguments to add to the HDF5Object when created.
         caster: The caster object used to cast types from an HDF5 object to a python type.
-        map_registry: A registry of map subclasses to be used when determining a map type to use.
 
     Attributes:
         _name: The name of this map.
@@ -92,6 +94,9 @@ class HDF5Map(BaseObject):
         "map_names",
         "maps",
     }
+    register: bool = True
+    map_namespace: str | None = None
+    map_registry: dict[str, type] = {}
     sentinel: Any = search_sentinel
     default_name: str | None = None
     default_parent: str | None = None
@@ -105,7 +110,6 @@ class HDF5Map(BaseObject):
     default_attribute_component_types: dict[str, list[Any, dict[str, Any]]] = {}
     default_component_types: dict[str, list[Any, dict[str, Any]]] = {}
     caster: type = HDF5Caster
-    map_registry: dict[str, type] = {}
 
     # Class Methods
     # Construction/Destruction
@@ -116,8 +120,20 @@ class HDF5Map(BaseObject):
             **kwargs: The keyword arguments for creating a subclass.
         """
         super().__init_subclass__(**kwargs)
+
         # Add subclass (maps) to the registry.
-        cls.map_registry[cls.__name__] = cls
+        if cls.register:
+            map_namspace = cls.__module__ if cls.map_namespace is None else cls.map_namespace
+            namespace = cls.map_registry.get(map_namespace, None)
+            if namespace is not None:
+                namespace[cls.__name__] = cls
+            else:
+                cls.map_registry[map_namespace] = {cls.__name__: cls}
+
+            map_attribute_names = {"map_namespace": "map_namespace", "map_type": "map_type"}
+            map_attributes = {"map_namespace": map_namespace, "map_type": cls.__name__}
+            cls.default_attribute_names = map_attribute_names | cls.default_attributes
+            cls.default_attributes = map_attributes | cls.default_attributes
 
     # Magic Methods
     # Construction/Destruction

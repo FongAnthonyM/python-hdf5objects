@@ -20,7 +20,7 @@ from typing import Any
 import weakref
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod, search_sentinel
+from baseobjects import BaseComposite, singlekwargdispatchmethod, search_sentinel
 from baseobjects.cachingtools import CachingInitMeta, CachingObject
 from baseobjects.wrappers import StaticWrapper
 from baseobjects.typing import AnyCallable
@@ -34,7 +34,7 @@ from .hdf5map import HDF5Map
 
 # Definitions #
 # Classes #
-class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
+class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=CachingInitMeta):
     """An abstract wrapper which wraps object from an HDF5 file and gives more functionality.
 
     Class Attributes:
@@ -132,14 +132,13 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         self._mode_: str | None = None
 
         self.map: HDF5Map = self.default_map.deepcopy()
-        self.components: dict[str, HDF5BaseComponent] = {}
 
         # Parent Attributes #
-        super().__init__(*args, init=init, **kwargs)
+        super().__init__(init=init)
 
         # Object Construction #
         if init:
-            self.construct(name=name, map_=map_, mode=mode, file=file, parent=parent)
+            self.construct(name=name, map_=map_, mode=mode, file=file, parent=parent, **kwargs)
 
     @property
     def _name(self) -> str:
@@ -305,6 +304,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         mode: str | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         parent: str | None = None,
+        **kwargs: Any,
     ) -> None:
         """Constructs this object.
 
@@ -335,17 +335,26 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
             self.set_file(file)
             if mode is None and self._mode_ is None:
                 self.set_mode(self.file._mode, timed=False)
+                
+        super().construct(**kwargs)
 
-    def construct_components(self, **component_kwargs: Any) -> None:
-        """Constructs the components of this dataset.
+    def construct_components(
+        self,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
+    ) -> None:
+        """Constructs or adds components.
 
         Args:
-            component_kwargs: The keyword arguments for the components.
+            component_kwargs: The keyword arguments for creating the components.
+            component_types: Component class and their keyword arguments to instantiate.
+            components: Components to add.
         """
-        for name, (component, kwargs)  in self.map.component_types.items():
-            new_kwargs = component_kwargs.get(name, {})
-            temp_kwargs = kwargs | new_kwargs
-            self.components[name] = component(composite=self, **temp_kwargs)
+        temp_types = self.default_component_types | self.map.component_types | component_types
+        new_kwargs = {} if component_kwargs is None else component_kwargs
+        default_components = {n: c(composite=self, **(k | new_kwargs.get(n, {}))) for n, (c, k) in temp_types.items()}
+        self.components.update(default_components | self.components | {} if components is None else components)
 
     def is_exist(self) -> bool:
         """Determine if this object exists in the HDF5 file."""

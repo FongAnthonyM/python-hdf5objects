@@ -305,7 +305,9 @@ class HDF5Dataset(HDF5BaseObject):
         dtype: The dtype of this dataset.
         scale_name: Makes this data an axis with this name.
         casting_kwargs: The keyword arguments for casting HDF5 dtypes to python types.
-        component_kwargs: The keyword arguments for the components.
+        component_kwargs: The keyword arguments for creating the components.
+        component_types: Component class and their keyword arguments to instantiate.
+        components: Components to add.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments to construct the base HDF5 dataset.
     """
@@ -330,6 +332,8 @@ class HDF5Dataset(HDF5BaseObject):
         scale_name: str | None = None,
         casting_kwargs: tuple[dict[str, Any]] | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
         init: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -359,6 +363,8 @@ class HDF5Dataset(HDF5BaseObject):
                 scale_name=scale_name,
                 casting_kwargs=casting_kwargs,
                 component_kwargs=component_kwargs,
+                component_types=component_types,
+                components=components,
                 **kwargs,
             )
 
@@ -470,6 +476,8 @@ class HDF5Dataset(HDF5BaseObject):
         scale_name: str | None = None,
         casting_kwargs: tuple[dict[str, Any]] | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """Constructs this object.
@@ -486,16 +494,37 @@ class HDF5Dataset(HDF5BaseObject):
             dtype: The dtype of this dataset.
             scale_name: Makes this data an axis with this name.
             casting_kwargs: The keyword arguments for casting HDF5 dtypes to python types.
-            component_kwargs: The keyword arguments for the components.
+            component_kwargs: The keyword arguments for creating the components.
+            component_types: Component class and their keyword arguments to instantiate.
+            components: Components to add.
             **kwargs: The keyword arguments to construct the base HDF5 dataset.
         """
         if file is None and isinstance(dataset, str):
             raise ValueError("A file must be given if giving dataset name")
 
-        super().construct(name=name, map_=map_, file=file, parent=parent)
+        if map_ is not None:
+            self.map = map_
 
         if self.map.type is None:
             self.map.type = self.__class__
+
+        if parent is not None:
+            self.set_parent(parent=parent)
+        elif map_ is not None:
+            self._parents = self.map.parents
+
+        if name is not None:
+            self.set_name(name=name)
+        elif map_ is not None:
+            self._name_ = self.map.name
+
+        if mode is not None:
+            self.set_mode(mode, timed=False)
+
+        if file is not None:
+            self.set_file(file)
+            if mode is None and self._mode_ is None:
+                self.set_mode(self.file._mode, timed=False)
 
         if dtype is not None:
             self.map.set_dtype(dtype)
@@ -511,10 +540,11 @@ class HDF5Dataset(HDF5BaseObject):
 
         self.construct_attributes()
 
-        if component_kwargs is None:
-            self.construct_components()
-        else:
-            self.construct_components(**component_kwargs)
+        super().construct(
+            component_kwargs=component_kwargs,
+            component_types=component_types,
+            components=components,
+        )
 
         if load and self.exists:
             self.load()
