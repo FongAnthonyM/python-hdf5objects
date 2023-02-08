@@ -207,7 +207,7 @@ class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
             require: Determines if this object will create and fill the timeseries in the file on construction.
             **kwargs: The keyword arguments to construct the base HDF5 dataset.
         """
-        super().construct(self, **kwargs)
+        super().construct(**kwargs)
 
         if load and self.exists:
             self.load()
