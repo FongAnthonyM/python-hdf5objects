@@ -50,6 +50,7 @@ class NodeGroupComponent(HDF5BaseComponent):
         child_component_name: The name of the component in the child node which adds node methods.
         map_dataset_name: The name of the dataset which maps all of the child nodes within this node.
         node_component_name: The name of the component in the dataset which adds node methods.
+        init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
     """
     default_child_map_type: type | None = None
@@ -93,7 +94,7 @@ class NodeGroupComponent(HDF5BaseComponent):
     @property
     def map_dataset(self) -> HDF5Dataset | None:
         "The dataset which maps all of the child nodes within this node."
-        if self.map_dataset is None:
+        if self._map_dataset is None:
             self._map_dataset = self.composite[self.map_dataset_name]
         return self._map_dataset
 

@@ -16,14 +16,14 @@ __email__ = __email__
 from typing import Any
 
 # Third-Party Packages #
-from baseobjects.composition import Component
+from baseobjects.composition import BaseComponent
 
 # Local Packages #
 
 
 # Definitions #
 # Classes #
-class HDF5BaseComponent(Component):
+class HDF5BaseComponent(BaseComponent):
     """The base implemenation for a component for an HDF5 Object."""
     # Instance Methods #
     # Data

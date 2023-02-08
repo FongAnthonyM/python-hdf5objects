@@ -351,6 +351,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
             component_types: Component class and their keyword arguments to instantiate.
             components: Components to add.
         """
+        component_types = {} if component_types is None else component_types
         temp_types = self.default_component_types | self.map.component_types | component_types
         new_kwargs = {} if component_kwargs is None else component_kwargs
         default_components = {n: c(composite=self, **(k | new_kwargs.get(n, {}))) for n, (c, k) in temp_types.items()}

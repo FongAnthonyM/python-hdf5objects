@@ -298,6 +298,7 @@ class HDF5Dataset(HDF5BaseObject):
         dataset: The HDF5 dataset to build this dataset around.
         name: The HDF5 name of this object.
         map_: The map for this HDF5 object.
+        mode: The edit mode of this object.
         file: The file object that this dataset object originates from.
         load: Determines if this object will load the dataset from the file on construction.
         require: Determines if this object will create and fill the dataset in the file on construction.
@@ -324,6 +325,7 @@ class HDF5Dataset(HDF5BaseObject):
         dataset: h5py.Dataset | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
+        mode: str | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         require: bool = False,
@@ -355,6 +357,7 @@ class HDF5Dataset(HDF5BaseObject):
                 dataset=dataset,
                 name=name,
                 map_=map_,
+                mode=mode,
                 file=file,
                 load=load,
                 parent=parent,
@@ -468,6 +471,7 @@ class HDF5Dataset(HDF5BaseObject):
         dataset: h5py.Dataset | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
+        mode: str | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         require: bool = False,
@@ -487,6 +491,7 @@ class HDF5Dataset(HDF5BaseObject):
             dataset: The HDF5 dataset to build this dataset around.
             name: The HDF5 name of this object.
             map_: The map for this HDF5 object.
+            mode: The edit mode of this object.
             file: The file object that this dataset object originates from.
             load: Determines if this object will load the dataset from the file on construction.
             require: Determines if this object will create and fill the dataset in the file on construction.
@@ -1186,12 +1191,12 @@ class HDF5Dataset(HDF5BaseObject):
         """
         self.append_data(np.fromiter((self.dict_to_item(item) for item in iter_), dtype=list(self._dtype)), axis=axis)
 
-    def insert_data(self, data: np.ndarray, index: int | slice | Iterable[int], axis: int = 0) -> None:
+    def insert_data(self, index: int | slice | Iterable[int], data: np.ndarray, axis: int = 0) -> None:
         """Insert data to the dataset along a specified axis.
 
         Args:
-            data: The data to append.
             index: The index or slice to insert the data into.
+            data: The data to append.
             axis: The axis to append the data along.
         """
         with self:
@@ -1218,15 +1223,15 @@ class HDF5Dataset(HDF5BaseObject):
             self._dataset[...] = np.insert(old_data, index, data, axis)    # Assign data to the new location
             self.clear_all_caches()
 
-    def insert_data_item_dict(self, dict_: dict, index: int | slice | Iterable[int], axis: int = 0) -> None:
+    def insert_data_item_dict(self, index: int | slice | Iterable[int], dict_: dict, axis: int = 0) -> None:
         """Inserts a dictionary which would represent a single item to the dataset.
 
         Args:
-            dict_: The dictionary to add as an item to the dataset.
             index: The index or slice to insert the data into.
+            dict_: The dictionary to add as an item to the dataset.
             axis: The axis to add the dictionary along.
         """
-        self.insert_data(np.array(self.dict_to_item(dict_), dtype=self.dtype), axis=axis, index=index)
+        self.insert_data(index=index, data=np.array(self.dict_to_item(dict_), dtype=self.dtype), axis=axis)
 
     def insert_components(self, index: int | slice | Iterable[int], **component_kwargs: dict[str, Any]) -> None:
         """Appends data to the components of this dataset.
@@ -1240,20 +1245,20 @@ class HDF5Dataset(HDF5BaseObject):
 
     def insert(
         self,
-        data: np.ndarray,
         index: int | slice | Iterable[int],
+        data: np.ndarray,
         axis: int = 0,
         component_kwargs: dict[str, Any] = {},
     ) -> None:
         """Append data to the dataset along a specified axis.
 
         Args:
-            data: The data to append.
             index: The index or slice to insert the data into.
+            data: The data to append.
             axis: The axis to append the data along.
             component_kwargs: The keyword arguments for the components' append methods as keywords.
         """
-        self.insert_data(data=data, index=index, axis=axis)
+        self.insert_data(index=index, data=data, axis=axis)
         self.insert_components(index=index, **component_kwargs)
 
     # Axes and Scales

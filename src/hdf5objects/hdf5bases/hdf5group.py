@@ -52,6 +52,7 @@ class HDF5Group(HDF5BaseObject):
         group: The HDF5 group to build this dataset around.
         name: The HDF5 name of this object.
         map_: The map for this HDF5 object.
+        mode: The edit mode of this object.
         file: The file object that this group object originates from.
         load: Determines if this object will load the group from the file on construction.
         construct: Determines if this object will create members in the file on construction.
@@ -74,6 +75,7 @@ class HDF5Group(HDF5BaseObject):
         group: h5py.Group | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
+        mode: str | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         construct: bool = False,
@@ -99,6 +101,7 @@ class HDF5Group(HDF5BaseObject):
                 group=group,
                 name=name,
                 map_=map_,
+                mode=mode,
                 file=file,
                 load=load,
                 require=require,
@@ -141,6 +144,7 @@ class HDF5Group(HDF5BaseObject):
         group: h5py.Group | HDF5BaseObject | None = None,
         name: str | None = None,
         map_: HDF5Map | None = None,
+        mode: str | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         construct: bool = False,
@@ -156,6 +160,7 @@ class HDF5Group(HDF5BaseObject):
             group: The HDF5 group to build this dataset around.
             name: The HDF5 name of this object.
             map_: The map for this HDF5 object.
+            mode: The edit mode of this object.
             file: The file object that this group object originates from.
             load: Determines if this object will load the group from the file on construction.
             construct: Determines if this object will create members in the file on construction.

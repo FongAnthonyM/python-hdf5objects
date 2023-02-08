@@ -15,6 +15,7 @@ __email__ = __email__
 # Standard Libraries #
 
 # Third-Party Packages #
+import h5py
 
 # Local Packages #
 from ...hdf5bases import HDF5Map, DatasetMap

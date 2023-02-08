@@ -21,7 +21,7 @@ import h5py
 import numpy as np
 
 # Local Packages #
-from ...hdf5bases import HDF5Dataset
+from ...hdf5bases import HDF5Map, HDF5Dataset
 from ...dataset import BaseDatasetComponent
 
 
@@ -141,4 +141,4 @@ class NodeDatasetComponent(BaseDatasetComponent):
         elif self.default_refernce_field not in item:
             item[self.default_refernce_field] = h5py.Reference()
 
-        self.composite.insert_data_item_dict(index, item)
+        self.composite.insert_data_item_dict(index=index, dict_=item)

@@ -123,7 +123,7 @@ class HDF5Map(BaseObject):
 
         # Add subclass (maps) to the registry.
         if cls.register:
-            map_namspace = cls.__module__ if cls.map_namespace is None else cls.map_namespace
+            map_namespace = cls.__module__ if cls.map_namespace is None else cls.map_namespace
             namespace = cls.map_registry.get(map_namespace, None)
             if namespace is not None:
                 namespace[cls.__name__] = cls
@@ -132,7 +132,7 @@ class HDF5Map(BaseObject):
 
             map_attribute_names = {"map_namespace": "map_namespace", "map_type": "map_type"}
             map_attributes = {"map_namespace": map_namespace, "map_type": cls.__name__}
-            cls.default_attribute_names = map_attribute_names | cls.default_attributes
+            cls.default_attribute_names = map_attribute_names | cls.default_attribute_names
             cls.default_attributes = map_attributes | cls.default_attributes
 
     # Magic Methods
