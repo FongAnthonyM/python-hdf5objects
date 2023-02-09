@@ -291,16 +291,16 @@ class HDF5Map(BaseObject):
             self.type = type_
 
         if attribute_names is not None:
-            self.attribute_names = attribute_names
+            self.attribute_names.update(attribute_names)
 
         if attributes is not None:
-            self.attributes = attributes
+            self.attributes.update(attributes)
 
         if map_names is not None:
-            self.map_names = map_names
+            self.map_names.update(map_names)
 
         if maps is not None:
-            self.maps = maps
+            self.maps.update(maps)
 
         if component_types is not None:
             for name, type_ in component_types.items():

@@ -1,5 +1,5 @@
 """ __init__.py
-Genreric maps for HDF5Datasets
+General components which give it tree hierarchy methods.
 """
 # Package Header #
 from ...header import *
@@ -13,5 +13,4 @@ __email__ = __email__
 
 # Imports #
 # Local Packages #
-from .timeseriesmap import BaseTimeSeriesMap
-from .electricalseriesmap import ElectricalSeriesMap
+from .rootnodecomponent import RootNodeComponent

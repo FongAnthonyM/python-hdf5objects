@@ -1,5 +1,5 @@
 """ __init__.py
-HDF5Maps for creating tree heirarchies in an HDF5 file.
+HDF5Maps for creating tree hierarchies in an HDF5 file.
 """
 # Package Header #
 from ...header import *

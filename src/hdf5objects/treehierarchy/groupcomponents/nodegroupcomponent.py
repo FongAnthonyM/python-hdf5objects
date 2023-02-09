@@ -48,7 +48,7 @@ class NodeGroupComponent(HDF5BaseComponent):
         composite: The object which this object is a component of.
         child_map_type: The type of map to create when creating a child node.
         child_component_name: The name of the component in the child node which adds node methods.
-        map_dataset_name: The name of the dataset which maps all of the child nodes within this node.
+        map_dataset_name: The name of the dataset which maps all the child nodes within this node.
         node_component_name: The name of the component in the dataset which adds node methods.
         init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
@@ -66,7 +66,7 @@ class NodeGroupComponent(HDF5BaseComponent):
         child_map_type: type | None = None,
         child_component_name: str | None = None,
         map_dataset_name: str | None = None,
-        node_component_name: str| None = None,
+        node_component_name: str | None = None,
         init: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -86,8 +86,9 @@ class NodeGroupComponent(HDF5BaseComponent):
             self.construct(
                 composite=composite,
                 child_map_type=child_map_type,
+                child_component_name=child_component_name,
                 map_dataset_name=map_dataset_name,
-                node_component_name=node_component_name
+                node_component_name=node_component_name,
                 **kwargs,
             )
 
