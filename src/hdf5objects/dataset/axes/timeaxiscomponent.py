@@ -452,18 +452,16 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 class TimeAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents time."""
     default_attribute_names: Mapping[str, str] = {
-        "map_type": "map_type",
         "sample_rate": "sample_rate",
         "time_zone": "time_zone",
         "time_zone_offset": "time_zone_offset",
     }
     default_attributes: Mapping[str, Any] = {
-        "map_type": "TimeAxisMap",
         "sample_rate": h5py.Empty('f8'),
         "time_zone": "",
         "time_zone_offset": h5py.Empty('f8'),
     }
-    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "u8"}
+    default_kwargs: dict[str, Any] = {"shape": (0, 0), "maxshape": (None, 1), "dtype": "u8"}
     default_component_types = {
         "axis": (TimeAxisComponent, {}),
     }

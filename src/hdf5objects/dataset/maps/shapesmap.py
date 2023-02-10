@@ -20,11 +20,12 @@ from typing import Any
 
 # Local Packages #
 from ...hdf5bases import DatasetMap
-from .basetimeseriesmap import BaseTimeSeriesMap
+from ..components import ShapesCompnent
 
 
 # Definitions #
 # Classes #
-class ElectricalSeriesMap(BaseTimeSeriesMap):
-    """A base outline which defines a time series and its methods."""
-    default_attributes: Mapping[str, Any] = BaseTimeSeriesMap.default_attributes | {"units": "volts"}
+class ShapesMap(DatasetMap):
+    """An outline which contains shapes shapes and its methods."""
+    default_kwargs: dict[str, Any] = {"shape": (0, 0), "maxshape": (None, None), "dtype": "u8"}
+    default_component_types = {"shapes": (TimeSeriesComponent, {})}

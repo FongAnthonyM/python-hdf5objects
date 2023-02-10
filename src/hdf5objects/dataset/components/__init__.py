@@ -17,3 +17,4 @@ from .timeseriescomponent import TimeSeriesComponent
 from .objectreferencecomponent import ObjectReferenceComponent
 from .regionreferencecomponent import RegionReferenceComponent
 from .idcomponent import IDComponent
+from .shapescomponent import ShapesComponent

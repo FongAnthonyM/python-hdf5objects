@@ -35,27 +35,27 @@ class NodeGroupComponent(HDF5BaseComponent):
     Class Attributes:
         default_child_map_type: The default type of map to create when creating a child node.
         default_child_component_name: The default name of the component in the child node which adds node methods.
-        default_map_dataset_name: The default name of the dataset which maps all of the child nodes within this node.
+        default_node_map_name: The default name of the dataset which maps all of the child nodes within this node.
         default_node_component_name: The default name of the component in the dataset which adds node methods.
 
     Attributes:
         child_map_type: The type of map to create when creating a child node.
         child_component_name: The name of the component in the child node which adds node methods.
-        map_dataset_name: The name of the dataset which maps all of the child nodes within this node.
+        node_map_name: The name of the dataset which maps all of the child nodes within this node.
         node_component_name: The name of the component in the dataset which adds node methods.
 
     Args:
         composite: The object which this object is a component of.
         child_map_type: The type of map to create when creating a child node.
         child_component_name: The name of the component in the child node which adds node methods.
-        map_dataset_name: The name of the dataset which maps all the child nodes within this node.
+        node_map_name: The name of the dataset which maps all the child nodes within this node.
         node_component_name: The name of the component in the dataset which adds node methods.
         init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
     """
     default_child_map_type: type | None = None
     default_child_component_name: str = "tree_node"
-    default_map_dataset_name: str = "map_dataset"
+    default_node_map_name: str = "node_map"
     default_node_component_name: str = "tree_node"
 
     # Magic Methods #
@@ -65,7 +65,7 @@ class NodeGroupComponent(HDF5BaseComponent):
         composite: Any = None,
         child_map_type: type | None = None,
         child_component_name: str | None = None,
-        map_dataset_name: str | None = None,
+        node_map_name: str | None = None,
         node_component_name: str | None = None,
         init: bool = True,
         **kwargs: Any,
@@ -73,10 +73,10 @@ class NodeGroupComponent(HDF5BaseComponent):
         # New Attributes #
         self.child_map_type: type | None = self.default_child_map_type
         self.child_component_name: str = self.default_child_component_name
-        self.map_dataset_name: str = self.default_map_dataset_name
+        self.node_map_name: str = self.default_node_map_name
         self.node_component_name: str = self.default_node_component_name
 
-        self._map_dataset: HDF5Dataset | None = None
+        self._node_map: HDF5Dataset | None = None
 
         # Parent Attributes #
         super().__init__(self, init=False)
@@ -87,21 +87,21 @@ class NodeGroupComponent(HDF5BaseComponent):
                 composite=composite,
                 child_map_type=child_map_type,
                 child_component_name=child_component_name,
-                map_dataset_name=map_dataset_name,
+                node_map_name=node_map_name,
                 node_component_name=node_component_name,
                 **kwargs,
             )
 
     @property
-    def map_dataset(self) -> HDF5Dataset | None:
+    def node_map(self) -> HDF5Dataset | None:
         "The dataset which maps all of the child nodes within this node."
-        if self._map_dataset is None:
-            self._map_dataset = self.composite[self.map_dataset_name]
-        return self._map_dataset
+        if self._node_map is None:
+            self._node_map = self.composite[self.node_map_name]
+        return self._node_map
 
-    @map_dataset.setter
-    def map_dataset(self, value: HDF5Dataset | None) -> None:
-        self._map_dataset = value
+    @node_map.setter
+    def node_map(self, value: HDF5Dataset | None) -> None:
+        self._node_map = value
 
     # Instance Methods #
     # Constructors/Destructors
@@ -110,7 +110,7 @@ class NodeGroupComponent(HDF5BaseComponent):
         composite: Any = None,
         child_map_type: type | None = None,
         child_component_name: str | None = None,
-        map_dataset_name: str | None = None,
+        node_map_name: str | None = None,
         node_component_name: str | None = None,
         **kwargs: Any,
     ) -> None:
@@ -120,7 +120,7 @@ class NodeGroupComponent(HDF5BaseComponent):
             composite: The object which this object is a component of.
             child_map_type: The type of map to create when creating a child node.
             child_component_name: The name of the component in the child node which adds node methods.
-            map_dataset_name: The name of the dataset which maps all of the child nodes within this node.
+            node_map_name: The name of the dataset which maps all of the child nodes within this node.
             node_component_name: The name of the component in the dataset which adds node methods.
             **kwargs: Keyword arguments for inheritance.
         """
@@ -130,8 +130,8 @@ class NodeGroupComponent(HDF5BaseComponent):
         if child_component_name is not None:
             self.child_component_name = child_component_name
 
-        if map_dataset_name is not None:
-            self.map_dataset_name = map_dataset_name
+        if node_map_name is not None:
+            self.node_map_name = node_map_name
 
         if node_component_name is not None:
             self.node_component_name = node_component_name
@@ -155,7 +155,7 @@ class NodeGroupComponent(HDF5BaseComponent):
             map_ = self.child_map_type(name=f"{self.composite.name}/{path}")
             self.composite.map.set_item(map_)
 
-        self.map_dataset.components[self.node_component_name].insert_entry(
+        self.node_map.components[self.node_component_name].insert_entry(
             index=index,
             item=item,
             map_=map_,

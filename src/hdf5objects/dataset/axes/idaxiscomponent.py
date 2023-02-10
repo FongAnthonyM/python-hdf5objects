@@ -259,9 +259,7 @@ class IDAxisComponent(AxisComponent):
 
 class IDAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis with IDs for each datum."""
-    default_attribute_names = {"map_type": "map_type"}
-    default_attributes = {"map_type": "IDAxisMap"}
-    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,)}
+    default_kwargs: dict[str, Any] = {"shape": (0, 0), "maxshape": (None, 1)}
     default_dtype = (("ID", str),)
     default_component_types = {
         "axis": (IDAxisComponent, {}),

@@ -278,8 +278,6 @@ class AxisComponent(BaseDatasetComponent):
 
 class AxisMap(DatasetMap):
     """An outline which defines an HDF5Dataset as an Axis."""
-    default_attribute_names = {"map_type": "map_type"}
-    default_attributes = {"map_type": "AxisMap"}
     default_kwargs: dict[str, Any] = {}
     default_component_types = {
         "axis": (AxisComponent, {}),

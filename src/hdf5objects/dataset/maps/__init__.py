@@ -13,5 +13,6 @@ __email__ = __email__
 
 # Imports #
 # Local Packages #
-from .timeseriesmap import BaseTimeSeriesMap
+from .basetimeseriesmap import BaseTimeSeriesMap
 from .electricalseriesmap import ElectricalSeriesMap
+from .shapesmap import ShapesMap

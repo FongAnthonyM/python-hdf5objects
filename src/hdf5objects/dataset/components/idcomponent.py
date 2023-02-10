@@ -75,7 +75,7 @@ class IDComponent(BaseDatasetComponent):
 
         # Object Construction #
         if init:
-            self.construct(composite=composite, id_fields=id_fields, **kwargs)
+            self.construct(composite=composite, id_fields=id_fields, uuid_fields=uuid_fields, **kwargs)
 
     @property
     def all_id_fields(self) -> set[str]:
@@ -86,8 +86,7 @@ class IDComponent(BaseDatasetComponent):
     # Constructors/Destructors
     def construct(
         self,
-        data: np.ndarray | None = None,
-        dtype: np.dtype | str | tuple[tuple[str, type]] | None = None,
+        composite: Any = None,
         id_fields: set[str] | None = None,
         uuid_fields: set[str] | None = None,
         **kwargs: Any,

@@ -18,3 +18,4 @@ from .channelaxiscomponent import ChannelAxisComponent, ChannelAxisMap
 from .sampleaxiscomponent import SampleAxisComponent, SampleAxisMap
 from .timeaxiscomponent import TimeAxisComponent, TimeAxisMap
 from .idaxiscomponent import IDAxisComponent, IDAxisMap
+from .regionreferenceaxiscomponent import RegionReferenceAxisComponent, RegionReferenceAxisMap

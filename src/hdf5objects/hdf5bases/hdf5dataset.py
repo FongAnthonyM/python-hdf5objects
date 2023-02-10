@@ -1123,20 +1123,24 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             # Get the shapes of the dataset and the new data to be added
             s_shape = np.asarray(self._dataset.shape)
-            d_shape = list(data.shape)
+            d_shape = data.shape
             if len(d_shape) == len(s_shape):
                 d_extension = d_shape[axis]
             elif len(d_shape) == len(s_shape) - 1:
                 d_extension = 1
                 d_shape.insert(axis, 1)
             else:
-                raise ValueError("Cannot append with two different rank shapes.")
+                raise ValueError("Cannot append with two different numbers of dimensions.")
 
             # Determine the new shape of the dataset
-            new_shape = list(s_shape) if s_shape.any() else d_shape.copy()
+            maxs = np.zeros((2, len(d_shape)))
+            maxs[0, :s_ndim] = s_shape
+            maxs[1, :d_ndim] = d_shape
+            new_shape = maxs.max(0)
             new_shape[axis] = s_extension = s_shape[axis] + d_extension
             # Determine the location where the new data should be assigned
-            slicing = (slice(None),) * axis + (slice(s_shape[axis], s_extension),)
+            slicing = [slice(s) for s in d_shape]
+            slicing[axis] = slice(s_shape[axis], s_extension)
 
             # Assign Data
             self._dataset.resize(new_shape)  # resize for new data
@@ -1202,25 +1206,25 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             # Get the shapes of the dataset and the new data to be added
             s_shape = np.asarray(self._dataset.shape)
-            d_shape = list(data.shape)
+            d_shape = data.shape
             if len(d_shape) == len(s_shape):
                 d_extension = d_shape[axis]
             elif len(d_shape) == len(s_shape) - 1:
                 d_extension = 1
                 d_shape.insert(axis, 1)
             else:
-                raise ValueError("Cannot insert with two different rank shapes.")
+                raise ValueError("Cannot insert with ttwo different numbers of dimensions.")
 
             # Determine the new shape of the dataset
-            new_shape = list(s_shape) if s_shape.any() else d_shape.copy()
+            maxs = np.zeros((2, len(d_shape)))
+            maxs[0, :s_ndim] = s_shape
+            maxs[1, :d_ndim] = d_shape
+            new_shape = maxs.max(0)
             new_shape[axis] = s_extension = s_shape[axis] + d_extension
-            # Determine the location where the new data should be assigned
-            slicing = (slice(None),) * axis + (slice(s_shape[axis], s_extension),)
-            old_data = self._dataset[...]
 
             # Assign Data
             self._dataset.resize(new_shape)  # resize for new data
-            self._dataset[...] = np.insert(old_data, index, data, axis)    # Assign data to the new location
+            self._dataset[...] = np.insert(self._dataset[...], index, data, axis)    # Assign data to the new location
             self.clear_all_caches()
 
     def insert_data_item_dict(self, index: int | slice | Iterable[int], dict_: dict, axis: int = 0) -> None:
