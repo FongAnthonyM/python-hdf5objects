@@ -29,7 +29,7 @@ from .axiscomponent import AxisMap, AxisComponent
 
 # Definitions #
 # Classes #
-class RegionReferenceAxisComponent(BaseDatasetComponent):
+class RegionReferenceAxisComponent(AxisComponent):
     """A component for a HDF5Dataset which defines it as an axis with region references for each datum.
 
     Class Attributes:
@@ -270,7 +270,7 @@ class RegionReferenceAxisComponent(BaseDatasetComponent):
 class RegionReferenceAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis with region references for each datum."""
     default_attribute_names: Mapping[str, str] = {"object_reference": "object_reference"}
-    default_kwargs: dict[str, Any] = {"shape": (0, 0), "maxshape": (None, 1)}
+    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,)}
     default_dtype = (("Region", h5py.ref_dtype),)
     default_component_types = {
         "axis": (RegionReferenceAxisComponent, {}),

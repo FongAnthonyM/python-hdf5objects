@@ -175,6 +175,35 @@ class RegionReferenceComponent(BaseDatasetComponent):
         else:
             return self.composite.attributes[object_ref_name]
 
+    def set_object_reference(
+        self,
+        object_: h5py.Dataset | h5py.Reference | None,
+        index: int | tuple| None = None,
+        ref_name: str | None = None,
+    ) -> Any:
+        """Sets the object reference.
+
+        Args:
+            object_: The HDF5 object to set, can be either the HDF5 object or a reference to that object.
+            index: The index in the dataset to get the reference from.
+            ref_name: The name of the type of reference to get.
+
+        Returns:
+            The object reference.
+        """
+        if ref_name is None:
+            ref_name = self.primary_reference_field
+
+        if not isinstance(object_, h5py.Reference) and not None:
+            object_ = object_.ref
+
+        object_ref_name = self.single_reference_fields.get(ref_name, [None])[0]
+        if object_ref_name is None:
+            object_ref_name = self.multiple_reference_fields[ref_name][0]
+            self.composite[index][self.composite.dtypes_dict[object_ref_name]] = object_
+        else:
+            self.composite.attributes[object_ref_name] = object_
+
     def get_object(self, index: int | tuple | None = None, ref_name: str | None = None) -> Any:
         """Gets the HDF5 object referenced.
 

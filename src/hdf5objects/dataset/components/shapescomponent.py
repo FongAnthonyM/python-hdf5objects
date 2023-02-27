@@ -74,6 +74,7 @@ class ShapesComponent(BaseDatasetComponent):
     # Constructors/Destructors
     def construct(
         self,
+        composite: Any = None,
         data: np.ndarray | None = None,
         **kwargs: Any,
     ) -> None:
@@ -85,18 +86,10 @@ class ShapesComponent(BaseDatasetComponent):
             uuid_fields: The fields of the dtype that store UUIDs.
             **kwargs: Keyword arguments for inheritance.
         """
-        if id_fields is not None:
-            self.id_fields.clear()
-            self.id_fields.update(id_fields)
-
-        if uuid_fields is not None:
-            self.uuid_fields.clear()
-            self.uuid_fields.update(uuid_fields)
-
         super().construct(composite=composite, **kwargs)
 
     def get_min_shape(self) -> np.ndarray:
-        return self.composite.min(self.composite.axis)
+        return tuple(np.amin(self.composite, 0))
 
     def get_max_shape(self) -> np.ndarray:
-        return self.composite.max(self.composite.axis)
+        return tuple(np.amax(self.composite, 0))

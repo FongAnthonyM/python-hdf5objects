@@ -20,7 +20,7 @@ from typing import Any
 
 # Local Packages #
 from ...hdf5bases import DatasetMap
-from ..components import ShapesCompnent
+from ..components import ShapesComponent
 
 
 # Definitions #
@@ -28,4 +28,4 @@ from ..components import ShapesCompnent
 class ShapesMap(DatasetMap):
     """An outline which contains shapes shapes and its methods."""
     default_kwargs: dict[str, Any] = {"shape": (0, 0), "maxshape": (None, None), "dtype": "u8"}
-    default_component_types = {"shapes": (TimeSeriesComponent, {})}
+    default_component_types = {"shapes": (ShapesComponent, {})}

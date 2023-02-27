@@ -182,17 +182,17 @@ class IDAxisComponent(AxisComponent):
 
         self.composite.append_data(np.array([id_]))
 
-    def insert_id(self, id_: str | UUID, index: int | slice | Iterable[int]) -> None:
+    def insert_id(self, index: int | slice | Iterable[int], id_: str | UUID) -> None:
         """Appends an ID to this axis.
 
         Args:
-            id_: The ID to set.
             index: The index or slice to insert the data into.
+            id_: The ID to set.
         """
         if isinstance(id_, UUID):
             id_ = str(id_)
 
-        self.composite.insert_data(np.array([id_]), index=index)
+        self.composite.insert_data(index=index, data=np.array([id_]))
         self.load_ids()
 
     def _find_id(self, id_: Any) -> Any:
@@ -259,7 +259,7 @@ class IDAxisComponent(AxisComponent):
 
 class IDAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis with IDs for each datum."""
-    default_kwargs: dict[str, Any] = {"shape": (0, 0), "maxshape": (None, 1)}
+    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,)}
     default_dtype = (("ID", str),)
     default_component_types = {
         "axis": (IDAxisComponent, {}),

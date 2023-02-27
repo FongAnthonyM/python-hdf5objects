@@ -461,7 +461,7 @@ class TimeAxisMap(AxisMap):
         "time_zone": "",
         "time_zone_offset": h5py.Empty('f8'),
     }
-    default_kwargs: dict[str, Any] = {"shape": (0, 0), "maxshape": (None, 1), "dtype": "u8"}
+    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "u8"}
     default_component_types = {
         "axis": (TimeAxisComponent, {}),
     }

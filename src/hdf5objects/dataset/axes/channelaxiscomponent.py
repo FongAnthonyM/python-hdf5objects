@@ -50,7 +50,7 @@ class ChannelAxisComponent(AxisComponent):
 
 class ChannelAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents channel number."""
-    default_kwargs: dict[str, Any] = {"shape": (0, 0), "maxshape": (None, 1), "dtype": "i"}
+    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "i"}
     default_component_types = {
         "axis": (ChannelAxisComponent, {}),
     }

@@ -218,10 +218,7 @@ class HDF5Group(HDF5BaseObject):
             self.load(load=load)
 
         if require:
-            self.require()
-
-        if construct or require:
-            self.construct_members(load=load, require=require)
+            self.require(load=load, construct=construct, require=require)
 
     def construct_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
         """Creates the attributes for this group.
@@ -620,6 +617,9 @@ class HDF5Group(HDF5BaseObject):
     def require(
         self,
         name: str | None = None,
+        load: bool = False,
+        construct: bool = False,
+        require: bool = False,
         track_order: bool | None = None,
         component_kwargs: dict[str, Any] = {},
     ) -> "HDF5Group":
@@ -627,6 +627,9 @@ class HDF5Group(HDF5BaseObject):
 
         Args:
             name: The name of this group.
+            load: Determines if this object will load the contents of the group.
+            construct: Determines if this object will create members of the group.
+            require: Determines if this object will create and fill the members of the group.
             track_order: Track dataset/group/attribute creation order under this group if True. If None use global
                 default h5.get_config().track_order.
             component_kwargs: The keyword arguments for the components' create methods.
@@ -635,5 +638,10 @@ class HDF5Group(HDF5BaseObject):
             This group.
         """
         self.require_group(name=name, track_order=track_order)
+
+        if construct or require:
+            self.construct_members(load=load, require=require)
+
         self.require_components(**component_kwargs)
+
         return self

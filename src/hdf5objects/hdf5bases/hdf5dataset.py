@@ -1123,12 +1123,15 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             # Get the shapes of the dataset and the new data to be added
             s_shape = np.asarray(self._dataset.shape)
-            d_shape = data.shape
-            if len(d_shape) == len(s_shape):
+            d_shape = list(data.shape)
+            s_ndim = len(s_shape)
+            d_ndim = len(d_shape)
+            if d_ndim == s_ndim:
                 d_extension = d_shape[axis]
-            elif len(d_shape) == len(s_shape) - 1:
+            elif d_ndim == s_ndim - 1:
                 d_extension = 1
                 d_shape.insert(axis, 1)
+                d_ndim = len(d_shape)
             else:
                 raise ValueError("Cannot append with two different numbers of dimensions.")
 
@@ -1144,7 +1147,7 @@ class HDF5Dataset(HDF5BaseObject):
 
             # Assign Data
             self._dataset.resize(new_shape)  # resize for new data
-            self._dataset[slicing] = data    # Assign data to the new location
+            self._dataset[tuple(slicing)] = data    # Assign data to the new location
             self.clear_all_caches()
 
     def append_data_item_dict(self, dict_: dict, axis: int = 0) -> None:
@@ -1204,28 +1207,35 @@ class HDF5Dataset(HDF5BaseObject):
             axis: The axis to append the data along.
         """
         with self:
-            # Get the shapes of the dataset and the new data to be added
-            s_shape = np.asarray(self._dataset.shape)
-            d_shape = data.shape
-            if len(d_shape) == len(s_shape):
-                d_extension = d_shape[axis]
-            elif len(d_shape) == len(s_shape) - 1:
-                d_extension = 1
-                d_shape.insert(axis, 1)
+            if index == 0 and len(self._dataset) == 0:
+                self.append_data(data=data, axis=axis)
             else:
-                raise ValueError("Cannot insert with ttwo different numbers of dimensions.")
+                # Get the shapes of the dataset and the new data to be added
+                s_shape = np.asarray(self._dataset.shape)
+                d_shape = list(data.shape)
+                s_ndim = len(s_shape)
+                d_ndim = len(d_shape)
+                if d_ndim == s_ndim:
+                    d_extension = d_shape[axis]
+                elif d_ndim == s_ndim - 1:
+                    d_extension = 1
+                    d_shape.insert(axis, 1)
+                    d_ndim = len(d_shape)
+                else:
+                    raise ValueError("Cannot insert with two different numbers of dimensions.")
 
-            # Determine the new shape of the dataset
-            maxs = np.zeros((2, len(d_shape)))
-            maxs[0, :s_ndim] = s_shape
-            maxs[1, :d_ndim] = d_shape
-            new_shape = maxs.max(0)
-            new_shape[axis] = s_extension = s_shape[axis] + d_extension
+                # Determine the new shape of the dataset
+                maxs = np.zeros((2, len(d_shape)))
+                maxs[0, :s_ndim] = s_shape
+                maxs[1, :d_ndim] = d_shape
+                new_shape = maxs.max(0)
+                new_shape[axis] = s_extension = s_shape[axis] + d_extension
 
-            # Assign Data
-            self._dataset.resize(new_shape)  # resize for new data
-            self._dataset[...] = np.insert(self._dataset[...], index, data, axis)    # Assign data to the new location
-            self.clear_all_caches()
+                # Assign Data
+                all_data = np.insert(self._dataset[...], index, data, axis)
+                self._dataset.resize(new_shape)  # resize for new data
+                self._dataset[...] = all_data  # Assign data to the new location
+                self.clear_all_caches()
 
     def insert_data_item_dict(self, index: int | slice | Iterable[int], dict_: dict, axis: int = 0) -> None:
         """Inserts a dictionary which would represent a single item to the dataset.
@@ -1235,7 +1245,7 @@ class HDF5Dataset(HDF5BaseObject):
             dict_: The dictionary to add as an item to the dataset.
             axis: The axis to add the dictionary along.
         """
-        self.insert_data(index=index, data=np.array(self.dict_to_item(dict_), dtype=self.dtype), axis=axis)
+        self.insert_data(index=index, data=np.array([self.dict_to_item(dict_)], dtype=self.dtype), axis=axis)
 
     def insert_components(self, index: int | slice | Iterable[int], **component_kwargs: dict[str, Any]) -> None:
         """Appends data to the components of this dataset.
