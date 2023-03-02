@@ -13,18 +13,16 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
-from collections.abc import Mapping, Iterable
+from collections.abc import Mapping
 from typing import Any
 
 # Third-Party Packages #
-from baseobjects import search_sentinel
-from bidict import bidict
 import h5py
-import numpy as np
 
 # Local Packages #
 from ...hdf5bases import HDF5BaseObject
-from .axiscomponent import AxisMap, AxisComponent
+from ..basedatasetcomponent import BaseDatasetComponent
+from .axiscomponent import AxisMap
 
 
 # Definitions #

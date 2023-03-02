@@ -1,5 +1,5 @@
 """ basedatasetcomponent.py
-The base implemenation for a component of a HDF5Dataset.
+The base implementation for a component of a HDF5Dataset.
 """
 # Package Header #
 from ..header import *
@@ -25,7 +25,7 @@ from ..hdf5bases import HDF5BaseComponent
 # Definitions #
 # Classes #
 class BaseDatasetComponent(HDF5BaseComponent):
-    """The base implemenation for a component of a HDF5Dataset."""
+    """The base implementation for a component of a HDF5Dataset."""
     # Magic Methods #
     # Construction/Destruction
     @property

@@ -19,7 +19,6 @@ from typing import Any
 import numpy as np
 
 # Local Packages #
-from ...hdf5bases import HDF5Map
 from .axiscomponent import AxisMap, AxisComponent
 
 

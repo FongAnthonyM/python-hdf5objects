@@ -16,19 +16,17 @@ __email__ = __email__
 from typing import Any
 
 # Third-Party Packages #
-from dspobjects.time import nanostamp
 import h5py
-import numpy as np
 
 # Local Packages #
-from ...hdf5bases import HDF5Map, HDF5Dataset
+from ...hdf5bases import HDF5Map
 from ...dataset import BaseDatasetComponent
 
 
 # Definitions #
 # Classes #
 class NodeDatasetComponent(BaseDatasetComponent):
-    """Adds node heieratchy methods to a dataset.
+    """Adds node hierarchy methods to a dataset.
 
     Class Attributes:
         default_reference_field: The default name of the data field that contains the object references.

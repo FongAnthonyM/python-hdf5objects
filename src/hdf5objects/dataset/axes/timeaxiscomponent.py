@@ -21,7 +21,7 @@ from typing import Any
 import zoneinfo
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod
+from baseobjects.functions import singlekwargdispatch
 from baseobjects.cachingtools import timed_keyless_cache
 from baseobjects.operations import timezone_offset
 from framestructure import TimeAxisContainer
@@ -29,7 +29,7 @@ import h5py
 import numpy as np
 
 # Local Packages #
-from ...hdf5bases import HDF5Map, HDF5Dataset
+from ...hdf5bases import HDF5Dataset
 from .axiscomponent import AxisMap, AxisComponent
 
 
@@ -277,7 +277,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
         else:
             self.set_data(data=np.arange(start, stop, step), **d_kwargs)
 
-    @singlekwargdispatchmethod("datetimes")
+    @singlekwargdispatch("datetimes")
     def from_datetimes(self, datetimes: Iterable[datetime.datetime | float] | np.ndarray, **kwargs: Any) -> None:
         """Sets the axis values to a series of datetimes.
 
@@ -326,7 +326,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
         self.get_datetimes.clear_cache()
 
     # Getters/Setter
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_all_data(self) -> np.ndarray:
         """Gets all the data in the dataset.
 

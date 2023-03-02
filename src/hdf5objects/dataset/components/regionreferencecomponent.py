@@ -13,14 +13,11 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
-from collections.abc import Mapping, Iterable
 from typing import Any
 
 # Third-Party Packages #
 from baseobjects import search_sentinel
-from bidict import bidict
 import h5py
-import numpy as np
 
 # Local Packages #
 from ..basedatasetcomponent import BaseDatasetComponent

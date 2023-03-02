@@ -20,7 +20,7 @@ from typing import Any
 from warnings import warn
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod
+from baseobjects.functions import singlekwargdispatch
 import h5py
 
 # Local Packages #
@@ -434,7 +434,7 @@ class HDF5File(HDF5BaseObject):
         if self._group is not None:
             self._group.set_map(map_)
 
-    @singlekwargdispatchmethod("file")
+    @singlekwargdispatch("file")
     def _set_path(self, file: str | pathlib.Path | h5py.File) -> None:
         """Sets the path for the file.
 

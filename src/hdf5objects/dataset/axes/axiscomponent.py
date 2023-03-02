@@ -13,7 +13,6 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
-from collections.abc import Mapping
 from typing import Any
 
 # Third-Party Packages #
@@ -22,7 +21,7 @@ from dspobjects.dataclasses import IndexValue, FoundRange
 import numpy as np
 
 # Local Packages #
-from ...hdf5bases import HDF5Map, DatasetMap, HDF5Dataset
+from ...hdf5bases import DatasetMap
 from ..basedatasetcomponent import BaseDatasetComponent
 
 
@@ -159,7 +158,7 @@ class AxisComponent(BaseDatasetComponent):
         self.get_end.clear_cache()
 
     # Getters/Setters
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_start(self) -> Any:
         """Get the first element of this axis, using caching.
 
@@ -168,7 +167,7 @@ class AxisComponent(BaseDatasetComponent):
         """
         return self.composite[0]
 
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_end(self) -> Any:
         """Get the last element of this axis, using caching.
 

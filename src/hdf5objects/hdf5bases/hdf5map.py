@@ -22,7 +22,6 @@ import weakref
 # Third-Party Packages #
 from baseobjects import BaseObject, search_sentinel
 from bidict import bidict
-import numpy as np
 
 # Local Packages #
 from .hdf5caster import HDF5Caster

@@ -1,5 +1,5 @@
 """ nodegroupcomponent.py
-A component which adds node heieratchy methods to a group.
+A component which adds node hierarchy methods to a group.
 """
 # Package Header #
 from ...header import *
@@ -13,16 +13,11 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
-from datetime import datetime, date, tzinfo
-from decimal import Decimal
 from typing import Any
-import uuid
 
 # Third-Party Packages #
-from dspobjects.time import Timestamp
 from hdf5objects import HDF5Map, HDF5Dataset
 from hdf5objects import HDF5BaseComponent
-import numpy as np
 
 # Local Packages #
 
@@ -30,7 +25,7 @@ import numpy as np
 # Definitions #
 # Classes #
 class NodeGroupComponent(HDF5BaseComponent):
-    """Adds node heieratchy methods to a group.
+    """Adds node hierarchy methods to a group.
 
     Class Attributes:
         default_child_map_type: The default type of map to create when creating a child node.

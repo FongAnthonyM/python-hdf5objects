@@ -13,17 +13,12 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
-from collections.abc import Mapping, Iterable
 from typing import Any
-from uuid import UUID
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod, search_sentinel
-from bidict import bidict
 import numpy as np
 
 # Local Packages #
-from ...hdf5bases import HDF5Dataset
 from ..basedatasetcomponent import BaseDatasetComponent
 
 

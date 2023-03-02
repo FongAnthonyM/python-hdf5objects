@@ -18,7 +18,7 @@ import pathlib
 from typing import Any
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod
+from baseobjects.functions import singlekwargdispatch
 from baseobjects.cachingtools import timed_keyless_cache
 from baseobjects.collections import TimedDict
 import h5py
@@ -90,6 +90,7 @@ class HDF5Attributes(HDF5BaseObject):
                 load=load,
                 require=require,
                 parent=parent,
+                component_kwargs=component_kwargs,
                 **kwargs,
             )
 
@@ -226,7 +227,7 @@ class HDF5Attributes(HDF5BaseObject):
         return name
 
     # Getters/Setters
-    @singlekwargdispatchmethod("attributes")
+    @singlekwargdispatch("attributes")
     def set_attribute_manager(self, attributes: h5py.AttributeManager | HDF5BaseObject) -> None:
         """Sets the wrapped attribute_manager.
 
@@ -368,7 +369,7 @@ class HDF5Attributes(HDF5BaseObject):
         """
         return self.get_attribute(key, *args)
 
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def _keys(self) -> set[str]:
         """Get the names of all the attributes as a set.
 

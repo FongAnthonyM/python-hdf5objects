@@ -15,12 +15,12 @@ __email__ = __email__
 # Standard Libraries #
 from collections.abc import Mapping
 import pathlib
-from types import MethodType
 from typing import Any
 import weakref
 
 # Third-Party Packages #
-from baseobjects import BaseComposite, singlekwargdispatchmethod, search_sentinel
+from baseobjects import BaseComposite, search_sentinel
+from baseobjects.functions import singlekwargdispatch
 from baseobjects.cachingtools import CachingInitMeta, CachingObject
 from baseobjects.wrappers import StaticWrapper
 from baseobjects.typing import AnyCallable
@@ -28,7 +28,6 @@ import h5py
 
 # Local Packages #
 from .hdf5caster import HDF5Caster
-from .hdf5basecomponent import HDF5BaseComponent
 from .hdf5map import HDF5Map
 
 
@@ -390,7 +389,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
             self.file.close()
 
     # Getters/Setters
-    @singlekwargdispatchmethod("file")
+    @singlekwargdispatch("file")
     def set_file(self, file: str | pathlib.Path | h5py.File) -> None:
         """Sets the file for this object to an HDF5File.
 

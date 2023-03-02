@@ -26,6 +26,6 @@ from ..components import ShapesComponent
 # Definitions #
 # Classes #
 class ShapesMap(DatasetMap):
-    """An outline which contains shapes shapes and its methods."""
+    """An outline which contains shapes and its methods."""
     default_kwargs: dict[str, Any] = {"shape": (0, 0), "maxshape": (None, None), "dtype": "u8"}
     default_component_types = {"shapes": (ShapesComponent, {})}

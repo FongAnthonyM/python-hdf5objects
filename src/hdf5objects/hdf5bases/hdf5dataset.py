@@ -22,7 +22,7 @@ import weakref
 
 # Third-Party Packages #
 from bidict import bidict
-from baseobjects import singlekwargdispatchmethod
+from baseobjects.functions import singlekwargdispatch
 from baseobjects.cachingtools import timed_keyless_cache
 import h5py
 import numpy as np
@@ -787,7 +787,7 @@ class HDF5Dataset(HDF5BaseObject):
         self[index] = self.dict_to_item(self.get_item_dict(index) | dict_)
         self.clear_all_caches()
 
-    @singlekwargdispatchmethod("dataset")
+    @singlekwargdispatch("dataset")
     def set_dataset(self, dataset: "HDF5Dataset") -> None:
         """Sets the wrapped dataset.
 
@@ -816,7 +816,7 @@ class HDF5Dataset(HDF5BaseObject):
         self.set_name(dataset.name)
         self._dataset = dataset
 
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_shape(self) -> tuple[int]:
         """Gets the shape of the dataset.
 
@@ -826,7 +826,7 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             return self._dataset.shape
 
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_all_data(self) -> np.ndarray:
         """Gets all the data in the dataset.
 
@@ -1077,7 +1077,7 @@ class HDF5Dataset(HDF5BaseObject):
             self._dataset[...] = data
             self.clear_all_caches()
 
-    def set_data_compontents(self, **component_kwargs: dict[str, Any]) -> None:
+    def set_data_components(self, **component_kwargs: dict[str, Any]) -> None:
         """Sets the data of the components of this dataset.
 
         Args:
@@ -1109,7 +1109,7 @@ class HDF5Dataset(HDF5BaseObject):
         """
         if self.exists:
             self.replace_data(data=data)
-            self.set_data_compontents(**component_kwargs)
+            self.set_data_components(**component_kwargs)
         else:
             self.require(data=data, **kwargs)
 
@@ -1248,9 +1248,10 @@ class HDF5Dataset(HDF5BaseObject):
         self.insert_data(index=index, data=np.array([self.dict_to_item(dict_)], dtype=self.dtype), axis=axis)
 
     def insert_components(self, index: int | slice | Iterable[int], **component_kwargs: dict[str, Any]) -> None:
-        """Appends data to the components of this dataset.
+        """Inserts data into the components of this dataset.
 
         Args:
+            index: The index to insert data at.
            **component_kwargs: The keyword arguments for the components' append methods as keywords.
         """
         for name, component in self.components.items():
