@@ -108,7 +108,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
     def _nanostamps(self) -> np.ndarray | None:
         """The nanosecond timestamps of this frame."""
         if self.get_original_precision():
-            return self.get_all_data.caching_method()
+            return self.get_all_data.caching_call()
         else:
             return None
 
@@ -120,7 +120,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
     def _timestamps(self) -> np.ndarray | None:
         """The timestamps of this frame."""
         if not self.get_original_precision():
-            return self.get_all_data.caching_method()
+            return self.get_all_data.caching_call()
         else:
             return None
 

@@ -88,3 +88,14 @@ class ShapesComponent(BaseDatasetComponent):
 
     def get_max_shape(self) -> np.ndarray:
         return tuple(np.amax(self.composite, 0))
+
+    def set_shape(self, index: int, shape: tuple):
+        # Get the shapes of the dataset and the new data to be added
+        s_shape = np.asarray(self.composite.shape)
+        d_shape = [1, len(shape)]
+
+        # Set the shape of the dataset if it needs to change
+        if shape[1] > d_shape[1]:
+            self.composite.resize((index + 1 if index == s_shape[0] else s_shape[0] , max(s_shape[1], d_shape[1])))
+
+        self.composite[index, :len(shape)] = shape

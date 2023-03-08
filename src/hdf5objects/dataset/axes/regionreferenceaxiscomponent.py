@@ -22,7 +22,7 @@ import h5py
 # Local Packages #
 from ...hdf5bases import HDF5BaseObject
 from ..basedatasetcomponent import BaseDatasetComponent
-from .axiscomponent import AxisMap
+from .axiscomponent import AxisMap, AxisComponent
 
 
 # Definitions #
