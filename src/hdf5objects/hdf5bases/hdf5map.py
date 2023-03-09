@@ -147,6 +147,7 @@ class HDF5Map(BaseObject):
         parent: str | None = None,
         component_types: dict[str, type] | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
+        object_kwargs: dict[str, Any] | None = None,
         init: bool = True,
         *args: Any,
         **kwargs: Any,
@@ -186,6 +187,7 @@ class HDF5Map(BaseObject):
                 parent=parent,
                 component_types=component_types,
                 component_kwargs=component_kwargs,
+                object_kwargs=object_kwargs,
                 **kwargs,
             )
 
@@ -264,7 +266,7 @@ class HDF5Map(BaseObject):
         parent: str | None = None,
         component_types: dict[str, type] | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
-        **kwargs: Any,
+        object_kwargs: dict[str, Any] | None = None,
     ) -> None:
         """Constructs this object, setting attributes and sets nested maps' parents.
         
@@ -278,7 +280,7 @@ class HDF5Map(BaseObject):
             parent: The parent of this map.
             component_types: The components to add to the HDF5Object when created.
             component_kwargs: The keyword arguments for the components.
-            **kwargs: The keyword arguments for the object this map represents.
+            object_kwargs: The keyword arguments for the object this map represents.
         """
         if parent is not None:
             self.set_parent(parent=parent)
@@ -310,8 +312,8 @@ class HDF5Map(BaseObject):
                 type_, old_kwargs = self.component_types.get(name, (None, {}))
                 self.component_types[name] = (type_, old_kwargs | c_kwargs)
 
-        if kwargs is not None:
-            self.kwargs.update(kwargs)
+        if object_kwargs is not None:
+            self.kwargs.update(object_kwargs)
 
         self.set_children()
 
