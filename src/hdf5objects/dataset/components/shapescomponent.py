@@ -95,7 +95,7 @@ class ShapesComponent(BaseDatasetComponent):
         d_shape = [1, len(shape)]
 
         # Set the shape of the dataset if it needs to change
-        if shape[1] > d_shape[1]:
+        if s_shape[1] > d_shape[1]:
             self.composite.resize((index + 1 if index == s_shape[0] else s_shape[0] , max(s_shape[1], d_shape[1])))
 
         self.composite[index, :len(shape)] = shape

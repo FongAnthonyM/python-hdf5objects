@@ -448,6 +448,42 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
         self.require_component()
         return self.composite
 
+    def append(
+        self,
+        data: np.ndarray,
+        axis: int | None = None,
+        tolerance: float | None = None,
+        correction: str | bool | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Appends data and timestamps onto the contained data and timestamps
+
+        Args:
+            data: The data to append.
+            axis: The axis to append the data to.
+            tolerance: The allowed deviation a sample can be away from the sample period.
+            correction: Determines if time correction will be run on the data and the type if a str.
+            **kwargs: The keyword arguments for the time correction.
+        """
+        if self.mode == 'r':
+            raise IOError("not writable")
+
+        if axis is None:
+            axis = self.axis
+
+        if tolerance is None:
+            tolerance = self.time_tolerance
+
+        if correction is None or (isinstance(correction, bool) and correction):
+            correction = self.tail_correction
+        elif isinstance(correction, str):
+            correction = self.get_correction(correction)
+
+        if correction and self.data.size != 0:
+            data = correction(data, tolerance=tolerance)
+
+        self.data.append(data, axis)
+
 
 class TimeAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents time."""
