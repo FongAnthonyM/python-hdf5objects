@@ -18,7 +18,8 @@ from typing import Any
 from uuid import UUID
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod, search_sentinel
+from baseobjects import search_sentinel
+from baseobjects.functions import singlekwargdispatch
 from bidict import bidict
 import numpy as np
 

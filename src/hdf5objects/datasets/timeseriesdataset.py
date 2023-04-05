@@ -19,7 +19,7 @@ from decimal import Decimal
 from typing import Any
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod
+from baseobjects.functions import singlekwargdispatch
 from dspobjects.dataclasses import FoundData
 from framestructure import TimeSeriesContainer
 import h5py
@@ -260,7 +260,7 @@ class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
         self.construct_sample_axis(samples=samples, **s_kwargs)
         self.construct_time_axis(timestamps=timestamps, **t_kwargs)
 
-    @singlekwargdispatchmethod("channels")
+    @singlekwargdispatch("channels")
     def construct_channel_axis(
         self,
         channels: ChannelAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None,
@@ -324,7 +324,7 @@ class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
         else:
             self._channel_axis.from_range(**kwargs)
     
-    @singlekwargdispatchmethod("samples")
+    @singlekwargdispatch("samples")
     def construct_sample_axis(
         self,
         samples: SampleAxis | np.ndarray | Iterable[int] | Mapping[str, Any] | None,
@@ -388,7 +388,7 @@ class TimeSeriesDataset(HDF5Dataset, TimeSeriesContainer):
         else:
             self._sample_axis.from_range(**kwargs)
     
-    @singlekwargdispatchmethod("timestamps")
+    @singlekwargdispatch("timestamps")
     def construct_time_axis(
         self, 
         timestamps: TimeAxis | np.ndarray | Iterable[datetime.datetime] | Mapping[str, Any] | None,

@@ -18,7 +18,8 @@ import uuid as uuid
 from typing import Any
 
 # Third-Party Packages #
-from baseobjects import BaseObject, singlekwargdispatchmethod, search_sentinel
+from baseobjects import BaseObject, search_sentinel
+from baseobjects.functions import singlekwargdispatch
 from baseobjects.operations import timezone_offset
 import numpy as np
 import h5py
@@ -93,7 +94,7 @@ class HDF5Caster(BaseObject):
         """Casts a UUID to a type that can be stored in an HDF5."""
         return item.hex
     
-    @singlekwargdispatchmethod("item")
+    @singlekwargdispatch("item")
     @classmethod
     def cast_from(cls, item: Any) -> Any:
         """Casts an item to a type that can be stored in an HDF5.

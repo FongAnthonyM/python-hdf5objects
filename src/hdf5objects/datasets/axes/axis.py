@@ -185,7 +185,7 @@ class Axis(HDF5Dataset):
         self.get_end.clear_cache()
 
     # Getters/Setters
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_start(self) -> Any:
         """Get the first element of this axis, using caching.
         
@@ -195,7 +195,7 @@ class Axis(HDF5Dataset):
         with self:
             return self._dataset[0]
 
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_end(self) -> Any:
         """Get the last element of this axis, using caching.
 

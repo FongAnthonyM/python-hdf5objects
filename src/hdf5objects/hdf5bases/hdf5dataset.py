@@ -21,7 +21,7 @@ import weakref
 
 # Third-Party Packages #
 from bidict import bidict
-from baseobjects import singlekwargdispatchmethod
+from baseobjects import singlekwargdispatch
 from baseobjects.cachingtools import timed_keyless_cache
 import h5py
 import numpy as np
@@ -613,7 +613,7 @@ class HDF5Dataset(HDF5BaseObject):
         """
         self[index] = self.dict_to_item(dict_)
 
-    @singlekwargdispatchmethod("dataset")
+    @singlekwargdispatch("dataset")
     def set_dataset(self, dataset: "HDF5Dataset") -> None:
         """Sets the wrapped dataset.
 
@@ -642,7 +642,7 @@ class HDF5Dataset(HDF5BaseObject):
         self.set_name(dataset.name)
         self._dataset = dataset
 
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_shape(self) -> tuple[int]:
         """Gets the shape of the dataset.
 
@@ -652,7 +652,7 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             return self._dataset.shape
 
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_all_data(self) -> np.ndarray:
         """Gets all the data in the dataset.
 

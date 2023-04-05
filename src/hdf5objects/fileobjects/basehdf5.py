@@ -17,7 +17,7 @@ import pathlib
 from typing import Any, Union
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod
+from baseobjects.functions import singlekwargdispatch
 from classversioning import CachingVersionedInitMeta, VersionedClass, VersionType, TriNumberVersion, Version
 import h5py
 
@@ -66,7 +66,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     # Class Methods #
     # File Validation
-    @singlekwargdispatchmethod("file")
+    @singlekwargdispatch("file")
     @classmethod
     def validate_file_type(cls, file: pathlib.Path | str | HDF5File | h5py.File) -> bool:
         """Checks if the given file or path is a valid type.
@@ -166,7 +166,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         """
         raise NotImplementedError
 
-    @singlekwargdispatchmethod("file")
+    @singlekwargdispatch("file")
     @classmethod
     def new_validated(cls, file: pathlib.Path | str | HDF5File | h5py.File, **kwargs: Any) -> Union["BaseHDF5", None]:
         """Checks if the given file or path is a valid type and returns the file if valid.

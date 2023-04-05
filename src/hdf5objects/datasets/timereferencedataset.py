@@ -19,7 +19,7 @@ from decimal import Decimal
 from typing import Any
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod
+from baseobjects.functions import singlekwargdispatch
 from dspobjects.dataclasses import FoundData
 from framestructure import TimeSeriesContainer
 import h5py

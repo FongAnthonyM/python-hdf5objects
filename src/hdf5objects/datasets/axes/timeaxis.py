@@ -21,7 +21,7 @@ from typing import Any
 import zoneinfo
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod
+from baseobjects.functions import singlekwargdispatch
 from baseobjects.cachingtools import timed_keyless_cache
 from baseobjects.operations import timezone_offset
 from framestructure import TimeAxisContainer
@@ -297,7 +297,7 @@ class TimeAxis(Axis, TimeAxisContainer):
         else:
             self.set_data(data=np.arange(start, stop, step), **d_kwargs)
 
-    @singlekwargdispatchmethod("datetimes")
+    @singlekwargdispatch("datetimes")
     def from_datetimes(self, datetimes: Iterable[datetime.datetime | float] | np.ndarray, **kwargs: Any) -> None:
         """Sets the axis values to a series of datetimes.
 
@@ -382,7 +382,7 @@ class TimeAxis(Axis, TimeAxisContainer):
         self.get_datetimes.cache_clear()
 
     # Getters/Setter
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", collective=False)
+    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_all_data(self) -> np.ndarray:
         """Gets all the data in the dataset.
 

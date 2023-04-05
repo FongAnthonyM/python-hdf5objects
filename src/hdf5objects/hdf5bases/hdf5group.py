@@ -18,7 +18,7 @@ import pathlib
 from typing import Any
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod
+from baseobjects.functions import singlekwargdispatch
 import h5py
 
 # Local Packages #
@@ -322,7 +322,7 @@ class HDF5Group(HDF5BaseObject):
             member.set_lifetimes(lifetime=lifetime, **kwargs)
     
     # Getters/Setters
-    @singlekwargdispatchmethod("group")
+    @singlekwargdispatch("group")
     def set_group(self, group: "HDF5Group") -> None:
         """Sets the wrapped group.
 

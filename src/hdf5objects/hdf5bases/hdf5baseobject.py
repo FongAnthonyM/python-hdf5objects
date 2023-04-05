@@ -20,7 +20,8 @@ from typing import Any
 import weakref
 
 # Third-Party Packages #
-from baseobjects import singlekwargdispatchmethod, search_sentinel
+from baseobjects import search_sentinel
+from baseobjects.functions import singlekwargdispatch
 from baseobjects.cachingtools import CachingInitMeta, CachingObject
 from baseobjects.wrappers import StaticWrapper
 from baseobjects.typing import AnyCallable
@@ -366,7 +367,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
             self.file.close()
 
     # Getters/Setters
-    @singlekwargdispatchmethod("file")
+    @singlekwargdispatch("file")
     def set_file(self, file: str | pathlib.Path | h5py.File) -> None:
         """Sets the file for this object to an HDF5File.
 
