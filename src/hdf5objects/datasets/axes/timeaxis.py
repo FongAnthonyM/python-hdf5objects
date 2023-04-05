@@ -137,7 +137,7 @@ class TimeAxis(Axis, TimeAxisContainer):
     def _timestamps(self) -> np.ndarray | None:
         """The timestamps of this frame."""
         if not self.get_original_precision():
-            return self.get_all_data.caching_cache()
+            return self.get_all_data.caching_call()
         else:
             return None
 
