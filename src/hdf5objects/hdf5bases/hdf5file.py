@@ -115,6 +115,23 @@ class HDF5File(HDF5BaseObject):
         with obj.temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
             delattr(getattr(obj, wrap_name), attr_name)
 
+    @classmethod
+    def _evaluate_method(cls, obj: Any, wrap_name: str, method_name: str, args: Any, kwargs: Any) -> Any:
+        """Evaluates a method from a wrapped HDF5 object.
+
+        Args:
+            obj: The target object to get the wrapped object from.
+            wrap_name: The attribute name of the wrapped object.
+            method_name: The method name of the method to get from the wrapped object.
+            args: The args of the method to evaluate.
+            kwargs: The keyword arguments of the method to evaluate.
+
+        Returns:
+            The wrapped object.
+        """
+        with obj.temp_open():  # Ensures the hdf5 dataset is open when accessing attributes
+            return getattr(getattr(obj, wrap_name), method_name)(*args, **kwargs)
+
     # Validation #
     @classmethod
     def is_openable(cls, path: str | pathlib.Path) -> bool:
