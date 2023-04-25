@@ -105,6 +105,23 @@ class HDF5BaseObject(StaticWrapper, CachingObject, metaclass=CachingInitMeta):
         with obj:  # Ensures the hdf5 dataset is open when accessing attributes
             super()._del_attribute(obj, wrap_name, attr_name)
 
+    @classmethod
+    def _evaluate_method(cls, obj: Any, wrap_name: str, method_name: str, args: Any, kwargs: Any) -> Any:
+        """Evaluates a method from a wrapped HDF5 object.
+
+        Args:
+            obj: The target object to get the wrapped object from.
+            wrap_name: The attribute name of the wrapped object.
+            method_name: The method name of the method to get from the wrapped object.
+            args: The args of the method to evaluate.
+            kwargs: The keyword arguments of the method to evaluate.
+
+        Returns:
+            The wrapped object.
+        """
+        with obj:  # Ensures the hdf5 dataset is open when accessing attributes
+            return super()._get_attribute(obj, wrap_name, method_name)(*args, **kwargs)
+
     # Magic Methods #
     # Constructors/Destructors
     def __init__(
