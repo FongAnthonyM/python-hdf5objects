@@ -211,7 +211,8 @@ class RegionReferenceComponent(BaseDatasetComponent):
         Returns:
             The requested HDF5 object.
         """
-        return self.composite.file[self.get_object_reference(index=index, ref_name=ref_name)]
+        ref = self.get_object_reference(index=index, ref_name=ref_name)
+        return self.composite.file[ref] if ref else None
 
     def get_region_reference(self, index: int | tuple, ref_name: str | None = None) -> tuple:
         """Gets the region reference at a given index in the dataset.

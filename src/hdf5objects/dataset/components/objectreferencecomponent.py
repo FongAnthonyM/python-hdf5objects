@@ -140,7 +140,8 @@ class ObjectReferenceComponent(BaseDatasetComponent):
         Returns:
             The requested HDF5 object.
         """
-        return self.composite.file[self.get_object_reference(index=index, ref_name=ref_name)]
+        ref = self.get_object_reference(index=index, ref_name=ref_name)
+        return self.composite.file[ref] if ref else None
 
     def get_objects_iter(self, ref_name: str | None = None) -> Iterable:
         """Gets the HDF5 objects referenced in the dataset as an Iterable.
@@ -154,7 +155,7 @@ class ObjectReferenceComponent(BaseDatasetComponent):
         if ref_name is None:
             ref_name = self.primary_reference_field
 
-        return (self.composite.file[ref] for ref in self.composite[self.reference_fields[ref_name]])
+        return (self.composite.file[ref] if ref else None for ref in self.composite[self.reference_fields[ref_name]])
 
     def get_objects(self, ref_name: str | None = None) -> tuple[Any]:
         """Gets the HDF5 objects referenced in the dataset.

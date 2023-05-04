@@ -23,8 +23,8 @@ from typing import Any
 # Third-Party Packages #
 from classversioning import Version, TriNumberVersion
 from hdf5objects import HDF5Map, DatasetMap
-from hdf5objects.datasets import ChannelAxisMap, SampleAxisMap, TimeAxisMap
-from hdf5objects.datasets.components import TimeSeriesComponent
+from hdf5objects.dataset import ChannelAxisMap, SampleAxisMap, TimeAxisMap
+from hdf5objects.dataset.components import TimeSeriesComponent
 from hdf5objects.fileobjects import BaseHDF5, BaseHDF5Map
 import numpy as np
 
@@ -78,9 +78,9 @@ class TensorModelsMap(BaseHDF5Map):
     # Note: For dataset the shape, maxshape, and dtype must be initialized to build the dataset on file creation.
     # If you want set the maxshape, do it at the instance level, do not redefine this map just to set it.
     default_maps: Mapping[str, HDF5Map] = {
-        "model_1": TimeTensorMap(shape=(0, 0, 0, 0), maxshape=(None, None, None, None), dtype='f8'),
-        "model_2": TimeTensorMap(shape=(0, 0, 0, 0), maxshape=(None, None, None, None), dtype='f8'),
-        "model_3": TimeTensorMap(shape=(0, 0, 0, 0), maxshape=(None, None, None, None), dtype='f8'),
+        "model_1": TimeTensorMap(dtype='f8', object_kwargs={"shape": (0, 0, 0, 0), "maxshape": (None, None, None, None)}),
+        "model_2": TimeTensorMap(dtype='f8', object_kwargs={"shape": (0, 0, 0, 0), "maxshape": (None, None, None, None)}),
+        "model_3": TimeTensorMap(dtype='f8', object_kwargs={"shape": (0, 0, 0, 0), "maxshape": (None, None, None, None)}),
     }
 
 
