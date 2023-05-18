@@ -81,18 +81,6 @@ class HDF5Map(BaseObject):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the object this map represents.
     """
-    __slots__ = {
-        "_name",
-        "parents",
-        "attributes_type",
-        "attribute_names",
-        "attributes",
-        "type",
-        "kwargs",
-        "weak_object",
-        "map_names",
-        "maps",
-    }
     register: bool = True
     map_namespace: str | None = None
     map_registry: dict[str, type] = {}
@@ -231,6 +219,18 @@ class HDF5Map(BaseObject):
     @object.setter
     def object(self, value: Any) -> None:
         self.weak_object = weakref.ref(value)
+
+    # Pickling
+    def __getstate__(self) -> dict[str, Any]:
+        """Creates a dictionary of attributes which can be used to rebuild this object
+
+        Returns:
+            dict: A dictionary of this object's attributes.
+        """
+        state = self.__dict__.copy()
+        if "weak_object" in state:
+            state["weak_object"] = None
+        return state
 
     # Container Methods
     def __getitem__(self, key: str) -> "HDF5Map":

@@ -241,6 +241,10 @@ class HDF5File(HDF5BaseObject):
         self.close()
 
     # Pickling
+    def __getnewargs__(self):
+        """Returns the values for an unpickled new object."""
+        return ()
+
     def __getstate__(self) -> dict[str, Any]:
         """Creates a dictionary of attributes which can be used to rebuild this object
 
@@ -248,8 +252,8 @@ class HDF5File(HDF5BaseObject):
             dict: A dictionary of this object's attributes.
         """
         state = super().__getstate__()
-        state["open_state"] = self.is_open
-        del state["_file"]
+        state["is_open"] = self.is_open
+        del state["__file"], state["_group"]
         return state
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
@@ -258,10 +262,9 @@ class HDF5File(HDF5BaseObject):
         Args:
             state: The attributes to build this object from.
         """
-        was_open = state.pop("open_state")
+        was_open = state.pop("is_open")
         super().__setstate__(state=state)
-        if was_open:
-            self.open()
+        self.construct(open_=was_open)
 
     # Container Methods
     def __getitem__(self, key: str | h5py.Reference) -> HDF5BaseObject:

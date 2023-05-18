@@ -241,7 +241,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
         Returns:
             dict: A dictionary of this object's attributes.
         """
-        state = self.__dict__.copy()
+        state = super().__getstate__()
         
         weak_file = state.pop("_weak_file")
         if weak_file is not None:
@@ -275,7 +275,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
         else:
             state["_weak_signal"] = None
         
-        self.__dict__.update(state)
+        super().__setstate__(state)
     
     # Container Methods
     def __getitem__(self, key: Any) -> Any:

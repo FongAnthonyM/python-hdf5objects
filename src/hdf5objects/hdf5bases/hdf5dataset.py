@@ -64,7 +64,6 @@ class DatasetMap(HDF5Map):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the object this map represents.
     """
-    __slots__ = HDF5Map.__slots__ | {"_dtypes", "dtypes_dict", "casting_kwargs"}
     default_attributes_type = HDF5Attributes
     default_dtype: np.dtype | str | tuple[tuple[str, type]] | None = None
     default_casting_kwargs: list[dict[str, Any]] | None = None
@@ -462,6 +461,7 @@ class HDF5Dataset(HDF5BaseObject):
         """Ensures HDF5 object is open for setitem"""
         with self:
             getattr(self, self._wrap_attributes[0])[key] = value
+            self.clear_all_caches()
 
     # Instance Methods
     # Constructors/Destructors
