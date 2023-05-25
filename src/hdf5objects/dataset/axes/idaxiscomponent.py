@@ -102,7 +102,7 @@ class IDAxisComponent(AxisComponent):
 
     def load_ids(self) -> None:
         """Loads the IDs from the id_arrays into dictionary of bidicts."""
-        if self.composite.all_data.size != 0:
+        if self.composite.size != 0:
             self.ids.clear()
             self.ids.update(
                 {i: UUID(id_[0].decode()) if self.is_uuid else id_[0].decode()
