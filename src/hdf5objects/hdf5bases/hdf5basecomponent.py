@@ -24,7 +24,7 @@ from baseobjects.composition import BaseComponent
 # Definitions #
 # Classes #
 class HDF5BaseComponent(BaseComponent):
-    """The base implemenation for a component for an HDF5 Object."""
+    """The base implementation for a component for an HDF5 Object."""
     # Instance Methods #
     # Data
     def create_component(self, **kwargs: Any) -> None:

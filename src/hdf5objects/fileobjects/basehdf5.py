@@ -58,6 +58,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the open method.
     """
+    _dispatch_kwarg: str = "file"
     _registration: bool = False
     _VERSION_TYPE: VersionType = VersionType(name="BaseHDF5", class_=TriNumberVersion)
     FILE_TYPE: str = "Abstract"
@@ -196,7 +197,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
             try:
                 file = h5py.File(file)
                 if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
-                    return cls(obj=file, **kwargs)
+                    return cls(file=file, **kwargs)
             except OSError:
                 return None
         else:
@@ -220,7 +221,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
             try:
                 file = h5py.File(file)
                 if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
-                    return cls(obj=file, **kwargs)
+                    return cls(file=file, **kwargs)
             except OSError:
                 return None
         else:
@@ -240,7 +241,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         t_name = cls.default_map.attribute_names["file_type"]
         file = file._file
         if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
-            return cls(obj=file, **kwargs)
+            return cls(file=file, **kwargs)
         else:
             return None
 
@@ -257,12 +258,12 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         """
         t_name = cls.default_map.attribute_names["file_type"]
         if t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]:
-            return cls(obj=file, **kwargs)
+            return cls(file=file, **kwargs)
         else:
             return None
 
     @classmethod
-    def get_version_from_file(cls, file: pathlib.Path | str) -> Version:
+    def get_version_from_file(cls, file: pathlib.Path | str | h5py.File) -> Version:
         """Return a version from a file.
 
         Args:
@@ -295,14 +296,6 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     # Magic Methods #
     # Construction/Destruction
-    def __new__(cls, *args: Any, **kwargs: Any) -> Union["BaseHDF5", None]:
-        """With given input, will return the correct subclass."""
-        if id(cls) == id(BaseHDF5) and (kwargs or args):
-            class_ = cls.get_version_class(args[0] if args else kwargs["file"])
-            return class_(*args, **kwargs)
-        else:
-            return super().__new__(cls)
-
     def __init__(
         self,
         file: str | pathlib.Path | h5py.File | None = None,

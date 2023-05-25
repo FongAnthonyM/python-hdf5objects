@@ -84,10 +84,10 @@ class ShapesComponent(BaseDatasetComponent):
         super().construct(composite=composite, **kwargs)
 
     def get_min_shape(self) -> np.ndarray:
-        return tuple(np.amin(self.composite, 0))
+        return tuple(np.amin(self.composite, 0)) if self.composite.size != 0 else (0,)
 
     def get_max_shape(self) -> np.ndarray:
-        return tuple(np.amax(self.composite, 0))
+        return tuple(np.amax(self.composite, 0)) if self.composite.size != 0 else (0,)
 
     def set_shape(self, index: int, shape: tuple):
         # Get the shapes of the dataset and the new data to be added
@@ -96,6 +96,6 @@ class ShapesComponent(BaseDatasetComponent):
 
         # Set the shape of the dataset if it needs to change
         if s_shape[1] < d_shape[1]:
-            self.composite.resize((index + 1 if index == s_shape[0] else s_shape[0] , max(s_shape[1], d_shape[1])))
+            self.composite.resize((index + 1 if index == s_shape[0] else s_shape[0], max(s_shape[1], d_shape[1])))
 
         self.composite[index, :len(shape)] = shape

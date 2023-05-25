@@ -166,6 +166,16 @@ class IDAxisComponent(AxisComponent):
 
         self.composite[index] = id_
 
+    def delete_id(self, index: int | tuple) -> None:
+        """Deletes an ID at an index.
+
+        Args:
+            index: The index of the ID in the bidict.
+        """
+        del self.ids[index]
+
+        self.composite.delete_data(index)
+
     def append_id(self, id_: str | UUID) -> None:
         """Appends an ID to this axis.
 

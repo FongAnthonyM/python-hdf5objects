@@ -60,6 +60,15 @@ class BaseDatasetComponent(HDF5BaseComponent):
 
         Args:
             index: The index or slice to insert the data into.
-            **kwargs: The keyword arguments for appending data.
+            **kwargs: The keyword arguments for inserting data.
+        """
+        pass
+    
+    def delete_component(self, index: int | slice | Iterable[int], **kwargs: Any) -> None:
+        """Deletes data from this component.
+
+        Args:
+            index: The index or slice to delete from the data.
+            **kwargs: The keyword arguments for deleting data.
         """
         pass

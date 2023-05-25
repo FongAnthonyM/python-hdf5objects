@@ -468,6 +468,9 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
         if self.mode == 'r':
             raise IOError("not writable")
 
+        if not any(data.shape):
+            return
+
         if axis is None:
             axis = self.axis
 

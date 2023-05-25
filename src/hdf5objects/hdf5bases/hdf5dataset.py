@@ -1006,13 +1006,13 @@ class HDF5Dataset(HDF5BaseObject):
             old_kwargs = self.axes_kwargs[dim].get(scale_name, {}) if dim < len(self.axes_kwargs) else {}
             temp_kwargs = {
                 "name": f"{self._full_name}_{scale_name}",
-                "scale_name": name, "require": True,
+                "scale_name": scale_name, "require": True,
                 "file": self.file,
             }
             if "data" not in kwargs and "data" not in old_kwargs and self.exists:
                 temp_kwargs["size"] = self.shape[dim]
             new_kwargs = temp_kwargs | old_kwargs | kwargs
-            self.axes[dim][name] = axis = self.map.axis_maps[dim][scale_name].get_object(**new_kwargs)
+            self.axes[dim][scale_name] = axis = self.map.axis_maps[dim][scale_name].get_object(**new_kwargs)
             self._dataset.dims[dim].attach_scale(axis._dataset)
 
         return axis
@@ -1256,7 +1256,7 @@ class HDF5Dataset(HDF5BaseObject):
         """
         for name, component in self.components.items():
             kwargs = component_kwargs.get(name, {})
-            component.append_component(index=index, **kwargs)
+            component.insert_component(index=index, **kwargs)
 
     def insert(
         self,
@@ -1275,6 +1275,47 @@ class HDF5Dataset(HDF5BaseObject):
         """
         self.insert_data(index=index, data=data, axis=axis)
         self.insert_components(index=index, **component_kwargs)
+        
+    def delete_data(self, index: int | slice | Iterable[int], axis: int = 0) -> None:
+        """Delete data from the dataset along a specified axis.
+
+        Args:
+            index: The index or slice to delete from the data.
+            axis: The axis to delete the data along.
+        """
+        with self:
+            # Assign Data
+            all_data = np.delete(self._dataset[...], index, axis)
+            self._dataset.resize(all_data.shape)  # resize for new data
+            self._dataset[...] = all_data  # Assign data to the new location
+            self.clear_all_caches()
+            
+    def delete_components(self, index: int | slice | Iterable[int], **component_kwargs: dict[str, Any]) -> None:
+        """Deletes data from the components of this dataset.
+
+        Args:
+            index: The index to delete from the data.
+           **component_kwargs: The keyword arguments for the components' delete methods as keywords.
+        """
+        for name, component in self.components.items():
+            kwargs = component_kwargs.get(name, {})
+            component.delete_component(index=index, **kwargs)
+
+    def delete(
+        self,
+        index: int | slice | Iterable[int],
+        axis: int = 0,
+        component_kwargs: dict[str, Any] = {},
+    ) -> None:
+        """Deletes data from the dataset along a specified axis.
+
+        Args:
+            index: The index or slice to delete from the data.
+            axis: The axis to delete the data along.
+            component_kwargs: The keyword arguments for the components' delete methods as keywords.
+        """
+        self.delete_components(index=index, **component_kwargs)
+        self.delete_data(index=index, axis=axis)
 
     # Axes and Scales
     def make_scale(self, name: str | None = None) -> None:
