@@ -83,8 +83,12 @@ class ShapesComponent(BaseDatasetComponent):
         """
         super().construct(composite=composite, **kwargs)
 
-    def get_min_shape(self) -> np.ndarray:
-        return tuple(np.amin(self.composite, 0)) if self.composite.size != 0 else (0,)
+    def get_min_shape(self, ignor_zeros: bool = False) -> np.ndarray:
+        if self.composite.size != 0:
+            shapes = self.composite[~np.all(self.composite[...] == 0, axis=1)] if ignor_zeros else self.composite
+            return tuple(np.amin(shapes, 0))
+        else:
+            return (0,)
 
     def get_max_shape(self) -> np.ndarray:
         return tuple(np.amax(self.composite, 0)) if self.composite.size != 0 else (0,)
