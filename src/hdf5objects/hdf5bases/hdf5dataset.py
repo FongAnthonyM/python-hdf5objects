@@ -575,7 +575,7 @@ class HDF5Dataset(HDF5BaseObject):
     def load_axes(self) -> None:
         """Loads the axes from file."""
         with self:
-            if self.swmr:
+            if self.file.swmr_mode:
                 self._dataset.refresh()
             if len(self._dataset.dims) > len(self._axes):
                 self._axes.extend([{}] * (len(self._dataset.dims) - len(self._axes)))
