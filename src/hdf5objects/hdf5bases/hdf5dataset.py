@@ -747,7 +747,7 @@ class HDF5Dataset(HDF5BaseObject):
             ds.refresh()
             return ds[key]
         else:
-            return getattr(self, self._wrap_attributes[0])
+            return getattr(self, self._wrap_attributes[0])[key]
 
     def get_item_dict(self, index: int | tuple | h5py.Reference) -> dict:
         """Gets an item from the given an index and translates a multi-type into a dictionary.
