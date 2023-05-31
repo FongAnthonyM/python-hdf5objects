@@ -460,8 +460,7 @@ class HDF5Dataset(HDF5BaseObject):
     def __setitem__(self, key: Any, value: Any) -> None:
         """Ensures HDF5 object is open for setitem"""
         with self:
-            getattr(self, self._wrap_attributes[0])[key] = value
-            self.clear_all_caches()
+            self.set_item(key, value)
 
     # Instance Methods
     # Constructors/Destructors
@@ -576,6 +575,8 @@ class HDF5Dataset(HDF5BaseObject):
     def load_axes(self) -> None:
         """Loads the axes from file."""
         with self:
+            if self.swmr:
+                self._dataset.refresh()
             if len(self._dataset.dims) > len(self._axes):
                 self._axes.extend([{}] * (len(self._dataset.dims) - len(self._axes)))
 
@@ -602,7 +603,7 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             self._dataset.refresh()
         self.attributes.refresh()
-        self.get_shape.clear_cahce()
+        self.get_shape.clear_cache()
         self.get_all_data.clear_cache()
         for dim in self.axes:
             for axis in dim.values():
@@ -741,7 +742,12 @@ class HDF5Dataset(HDF5BaseObject):
         Returns:
             The item or items requested.
         """
-        return getattr(self, self._wrap_attributes[0])[key]
+        if self.file.swmr_mode:
+            ds = getattr(self, self._wrap_attributes[0])
+            ds.refresh()
+            return ds[key]
+        else:
+            return getattr(self, self._wrap_attributes[0])
 
     def get_item_dict(self, index: int | tuple | h5py.Reference) -> dict:
         """Gets an item from the given an index and translates a multi-type into a dictionary.
@@ -824,6 +830,8 @@ class HDF5Dataset(HDF5BaseObject):
             The shape of the dataset.
         """
         with self:
+            if self.file.swmr_mode:
+                self._dataset.refresh()
             return self._dataset.shape
 
     @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
@@ -834,6 +842,8 @@ class HDF5Dataset(HDF5BaseObject):
             All the data in the dataset.
         """
         with self:
+            if self.file.swmr_mode:
+                self._dataset.refresh()
             return self._dataset[...]
 
     def get_field(self, name: str) -> np.ndarray:
@@ -843,6 +853,8 @@ class HDF5Dataset(HDF5BaseObject):
             All the data in the dtype field.
         """
         with self:
+            if self.file.swmr_mode:
+                self._dataset.refresh()
             return self._dataset[name]
 
     # Data Modification
@@ -1071,6 +1083,9 @@ class HDF5Dataset(HDF5BaseObject):
             data: A numpy array like object that can be used to replace the data.
         """
         with self:
+            if self.file.swmr_mode:
+                self._dataset.refresh()
+
             # Assign Data
             if data.shape != self._dataset.shape:
                 self._dataset.resize(data.shape)  # resize for new data
@@ -1121,6 +1136,9 @@ class HDF5Dataset(HDF5BaseObject):
             axis: The axis to append the data along.
         """
         with self:
+            if self.file.swmr_mode:
+                self._dataset.refresh()
+
             # Get the shapes of the dataset and the new data to be added
             s_shape = np.asarray(self._dataset.shape)
             d_shape = list(data.shape)
@@ -1207,6 +1225,9 @@ class HDF5Dataset(HDF5BaseObject):
             axis: The axis to append the data along.
         """
         with self:
+            if self.file.swmr_mode:
+                self._dataset.refresh()
+
             if index == 0 and len(self._dataset) == 0:
                 self.append_data(data=data, axis=axis)
             else:
@@ -1284,6 +1305,9 @@ class HDF5Dataset(HDF5BaseObject):
             axis: The axis to delete the data along.
         """
         with self:
+            if self.file.swmr_mode:
+                self._dataset.refresh()
+
             # Assign Data
             all_data = np.delete(self._dataset[...], index, axis)
             self._dataset.resize(all_data.shape)  # resize for new data
