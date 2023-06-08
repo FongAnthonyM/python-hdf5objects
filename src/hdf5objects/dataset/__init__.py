@@ -1,4 +1,4 @@
-""" __init__.py
+"""__init__.py
 Complentary objects for the HDF5Dataset.
 """
 # Package Header #

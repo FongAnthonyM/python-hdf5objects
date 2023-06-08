@@ -1,4 +1,4 @@
-""" hdf5attributes.py
+"""hdf5attributes.py
 An object for handling HDF5 attributes.
 """
 # Package Header #
@@ -55,6 +55,7 @@ class HDF5Attributes(HDF5BaseObject):
         init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
     """
+
     _wrapped_types: list[type | object] = [h5py.AttributeManager]
     _wrap_attributes: list[str] = ["attribute_manager"]
 
@@ -149,7 +150,7 @@ class HDF5Attributes(HDF5BaseObject):
         load: bool = False,
         require: bool = False,
         parent: str | None = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         """Constructs this object.
 
@@ -174,7 +175,9 @@ class HDF5Attributes(HDF5BaseObject):
         if require:
             self.construct_attributes()
 
-    def construct_attributes(self, map_: HDF5Map | None = None, override: bool = False) -> None:
+    def construct_attributes(
+        self, map_: HDF5Map | None = None, override: bool = False
+    ) -> None:
         """Creates the attributes in the HDF5.
 
         Args:
@@ -206,10 +209,21 @@ class HDF5Attributes(HDF5BaseObject):
             components: Components to add.
         """
         component_types = {} if component_types is None else component_types
-        temp_types =  self.default_component_types | self.map.attribute_component_types | component_types
+        temp_types = (
+            self.default_component_types
+            | self.map.attribute_component_types
+            | component_types
+        )
         new_kwargs = {} if component_kwargs is None else component_kwargs
-        default_components = {n: c(composite=self, **(k | new_kwargs.get(n, {}))) for n, (c, k) in temp_types.items()}
-        self.components.update(default_components | self.components | {} if components is None else components)
+        default_components = {
+            n: c(composite=self, **(k | new_kwargs.get(n, {})))
+            for n, (c, k) in temp_types.items()
+        }
+        self.components.update(
+            default_components | self.components | {}
+            if components is None
+            else components
+        )
 
     # Parsers
     def _parse_name(self, name: str) -> str:
@@ -228,13 +242,17 @@ class HDF5Attributes(HDF5BaseObject):
 
     # Getters/Setters
     @singlekwargdispatch("attributes")
-    def set_attribute_manager(self, attributes: h5py.AttributeManager | HDF5BaseObject) -> None:
+    def set_attribute_manager(
+        self, attributes: h5py.AttributeManager | HDF5BaseObject
+    ) -> None:
         """Sets the wrapped attribute_manager.
 
         Args:
             attributes: The attribute_manager this object will wrap.
         """
-        raise TypeError(f"{type(attributes)} is not a valid type for set_attribute_manager.")
+        raise TypeError(
+            f"{type(attributes)} is not a valid type for set_attribute_manager."
+        )
 
     @set_attribute_manager.register
     def _(self, attributes: h5py.AttributeManager) -> None:
@@ -332,7 +350,13 @@ class HDF5Attributes(HDF5BaseObject):
             del self._attribute_manager[name]
 
     # Attribute Modification
-    def create(self, name: str, data: Any, shape: Iterable[int] | None = None, dtype: np.dtype | None = None) -> None:
+    def create(
+        self,
+        name: str,
+        data: Any,
+        shape: Iterable[int] | None = None,
+        dtype: np.dtype | None = None,
+    ) -> None:
         """Creates an attribute in the HDF5 file.
 
         Args:
@@ -436,7 +460,7 @@ class HDF5Attributes(HDF5BaseObject):
             self._attribute_manager.clear()
 
     # File
-    def open(self, mode: str = 'a', **kwargs: Any) -> "HDF5Attributes":
+    def open(self, mode: str = "a", **kwargs: Any) -> "HDF5Attributes":
         """Opens the file to make this dataset usable.
 
         Args:

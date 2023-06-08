@@ -1,4 +1,4 @@
-""" hdf5group.py
+"""hdf5group.py
 An object that represents an HDF5 Group.
 """
 # Package Header #
@@ -63,6 +63,7 @@ class HDF5Group(HDF5BaseObject):
         components: Components to add.
         init: Determines if this object will construct.
     """
+
     _wrapped_types: list[type | object] = [h5py.Group]
     _wrap_attributes: list[str] = ["group"]
     default_group_map: type = None
@@ -220,7 +221,9 @@ class HDF5Group(HDF5BaseObject):
         if require:
             self.require(load=load, construct=construct, require=require)
 
-    def construct_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
+    def construct_attributes(
+        self, map_: HDF5Map = None, load: bool = False, require: bool = False
+    ) -> None:
         """Creates the attributes for this group.
 
         Args:
@@ -230,7 +233,9 @@ class HDF5Group(HDF5BaseObject):
         """
         if map_ is None:
             map_ = self.map
-        self.attributes = map_.attributes_type(name=self._full_name, map_=map_, file=self.file, load=load, require=require)
+        self.attributes = map_.attributes_type(
+            name=self._full_name, map_=map_, file=self.file, load=load, require=require
+        )
 
     def construct_member(
         self,
@@ -256,15 +261,21 @@ class HDF5Group(HDF5BaseObject):
         member = self.members.get(name, self.sentinel)
         if member is self.sentinel:
             value = self.map[name]
-            member = value.get_object(load=load, require=require, file=self.file, **kwargs)
+            member = value.get_object(
+                load=load, require=require, file=self.file, **kwargs
+            )
             if member is None:
-                self.members[name] = member = value.get_object(load=load, file=self.file, **kwargs)
+                self.members[name] = member = value.get_object(
+                    load=load, file=self.file, **kwargs
+                )
             else:
                 self.members[name] = member
 
         return member
 
-    def construct_members(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
+    def construct_members(
+        self, map_: HDF5Map = None, load: bool = False, require: bool = False
+    ) -> None:
         """Creates the members of this group.
 
         Args:
@@ -298,7 +309,7 @@ class HDF5Group(HDF5BaseObject):
         if new_name is not self.sentinel:
             name = new_name
         return name
-    
+
     # File
     def load(self, load: bool = False, require: bool = False) -> None:
         """Loads this group from file with the option to create and fill it.
@@ -314,7 +325,7 @@ class HDF5Group(HDF5BaseObject):
         """Reloads the attributes and members from the file."""
         self.attributes.refresh()
         self.get_members()
-    
+
     # Caching
     def clear_all_caches(self, **kwargs: Any) -> None:
         """Clears all caches in this object and all contained objects.
@@ -329,7 +340,7 @@ class HDF5Group(HDF5BaseObject):
 
     def enable_all_caching(self, **kwargs: Any) -> None:
         """Enables caching on this object and all contained objects.
-        
+
         Args:
             **kwargs: The keyword arguments for the enable caching method.
         """
@@ -382,7 +393,7 @@ class HDF5Group(HDF5BaseObject):
         self.set_lifetimes(lifetime=lifetime, **kwargs)
         for member in self.members.values():
             member.set_lifetimes(lifetime=lifetime, **kwargs)
-    
+
     # Getters/Setters
     def set_map(self, map_: HDF5Map) -> None:
         """Changes the current map with a different one.
@@ -453,8 +464,10 @@ class HDF5Group(HDF5BaseObject):
             map_ = self.map.get_item(name, self.sentinel)
             if map_ is self.sentinel:
                 map_namespace = item.attrs.get("map_namespace", "")
-                map_name= item.attrs.get("map_type", "")
-                map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
+                map_name = item.attrs.get("map_type", "")
+                map_type = self.map.map_registry.get(map_namespace, {}).get(
+                    map_name, None
+                )
 
                 if map_type is not None:
                     map_ = map_type(name=name)
@@ -479,7 +492,9 @@ class HDF5Group(HDF5BaseObject):
                 )
         return self.members[name]
 
-    def get_members(self, load: bool = False, require: bool = False, mapped: bool = False) -> dict[str, HDF5BaseObject]:
+    def get_members(
+        self, load: bool = False, require: bool = False, mapped: bool = False
+    ) -> dict[str, HDF5BaseObject]:
         """Get all the members in this group.
 
         Args:
@@ -496,7 +511,9 @@ class HDF5Group(HDF5BaseObject):
                 if map_ is self.sentinel:
                     map_namespace = item.attrs.get("map_namespace", "")
                     map_name = item.attrs.get("map_type", "")
-                    map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
+                    map_type = self.map.map_registry.get(map_namespace, {}).get(
+                        map_name, None
+                    )
 
                     if map_type is not None:
                         map_ = map_type(name=name)
@@ -522,7 +539,9 @@ class HDF5Group(HDF5BaseObject):
 
         return self.members.copy()
 
-    def get(self, key: str | Iterable[str], sentinel: Any = _SENTINEL) -> HDF5BaseObject:
+    def get(
+        self, key: str | Iterable[str], sentinel: Any = _SENTINEL
+    ) -> HDF5BaseObject:
         """Get a member of this group.
 
         Args:
@@ -532,7 +551,7 @@ class HDF5Group(HDF5BaseObject):
         Returns:
             The requested member.
         """
-        keys = key.strip('/').split('/') if isinstance(key, str) else list(key)
+        keys = key.strip("/").split("/") if isinstance(key, str) else list(key)
         key = keys.pop(0)
         key = self._parse_name(key)
 
@@ -552,7 +571,9 @@ class HDF5Group(HDF5BaseObject):
             return item
 
     # Group Modification
-    def create_group(self, name: str | None = None, track_order: bool | None = None) -> "HDF5Group":
+    def create_group(
+        self, name: str | None = None, track_order: bool | None = None
+    ) -> "HDF5Group":
         """Creates this group in the HDF5 file.
 
         Args:
@@ -567,7 +588,9 @@ class HDF5Group(HDF5BaseObject):
             self._name = name
 
         with self.file.temp_open():
-            self._group = self.file._file.create_group(name=self._full_name, track_order=track_order)
+            self._group = self.file._file.create_group(
+                name=self._full_name, track_order=track_order
+            )
             self.attributes.construct_attributes()
 
         return self
@@ -593,7 +616,9 @@ class HDF5Group(HDF5BaseObject):
         self.create_components(**component_kwargs)
         return self
 
-    def require_group(self, name: str | None = None, track_order: bool | None = None) -> "HDF5Group":
+    def require_group(
+        self, name: str | None = None, track_order: bool | None = None
+    ) -> "HDF5Group":
         """Creates this group if it does not exist.
 
         Args:
@@ -609,7 +634,9 @@ class HDF5Group(HDF5BaseObject):
 
         with self.file.temp_open():
             if not self.exists:
-                self._group = self.file._file.create_group(name=self._full_name, track_order=track_order)
+                self._group = self.file._file.create_group(
+                    name=self._full_name, track_order=track_order
+                )
                 self.attributes.construct_attributes()
 
         return self

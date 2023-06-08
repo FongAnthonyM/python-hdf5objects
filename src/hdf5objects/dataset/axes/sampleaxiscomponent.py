@@ -1,4 +1,4 @@
-""" sampleaxiscomponent.py
+"""sampleaxiscomponent.py
 A component and map for a HDF5Dataset which defines it as an axis that represents samples of a singal.
 """
 # Package Header #
@@ -26,6 +26,7 @@ from .axiscomponent import AxisMap, AxisComponent
 # Classes #
 class SampleAxisComponent(AxisComponent):
     """A component for a HDF5Dataset which defines it as an axis that represents samples of a singal."""
+
     @property
     def samples(self) -> np.ndarray:
         """Returns all the sample numbers of this axis.
@@ -49,6 +50,7 @@ class SampleAxisComponent(AxisComponent):
 
 class SampleAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents samples of a signal."""
+
     default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "i"}
     default_component_types = {
         "axis": (SampleAxisComponent, {}),

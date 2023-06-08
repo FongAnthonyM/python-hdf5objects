@@ -36,17 +36,27 @@ from src.hdf5objects import BaseHDF5, BaseHDF5Map, HDF5Dataset, DatasetMap
 # Module Implementation
 class DatasetTestMap(DatasetMap):
     """Implementation of Dataset."""
-    default_dtype: tuple[tuple[str, type]] = (("First", float), ("Second", int), ("Third", str), ("Fourth", uuid.UUID))
+
+    default_dtype: tuple[tuple[str, type]] = (
+        ("First", float),
+        ("Second", int),
+        ("Third", str),
+        ("Fourth", uuid.UUID),
+    )
 
 
 class DatasetTestFileMap(BaseHDF5Map):
     """The map for the file which implements Dataset."""
+
     default_map_names: Mapping[str, str] = {"test_dataset": "test_dataset"}
-    default_maps: Mapping[str, HDF5Map] = {"test_dataset": DatasetTestMap(shape=(1,), maxshape=(None,))}
+    default_maps: Mapping[str, HDF5Map] = {
+        "test_dataset": DatasetTestMap(shape=(1,), maxshape=(None,))
+    }
 
 
 class DatasetTestHDF5(BaseHDF5):
     """The file object that implements the Dataset."""
+
     _registration: bool = True
     FILE_TYPE: str = "TensorModels"
     VERSION: Version = TriNumberVersion(0, 0, 0)
@@ -56,6 +66,7 @@ class DatasetTestHDF5(BaseHDF5):
 # Module Test
 class ClassTest:
     """Default class tests that all classes should pass."""
+
     class_ = None
     timeit_runs = 2
     speed_tolerance = 200
@@ -73,15 +84,25 @@ class TestDataset(ClassTest):
         return DatasetMap(file=tmp_path)
 
     def test_set_item_dict(self, tmp_path):
-        with DatasetTestHDF5(file=tmp_path / "test.h5", mode='a', create=True, require=True) as test_file:
+        with DatasetTestHDF5(
+            file=tmp_path / "test.h5", mode="a", create=True, require=True
+        ) as test_file:
             multi_dataset = test_file["test_dataset"]
-            multi_dataset.set_item_dict(0, {"First": 2.0, "Second": 3, "Third": "Random"})
+            multi_dataset.set_item_dict(
+                0, {"First": 2.0, "Second": 3, "Third": "Random"}
+            )
             assert tuple(multi_dataset[0]) == (2.0, 3, "Random")
 
     def test_append_item_dict(self, tmp_path):
-
-        test_data = {"First": 2.0, "Second": 3, "Third": "Random", "Fourth": uuid.uuid4()}
-        with DatasetTestHDF5(file=tmp_path / "test.h5", mode='a', create=True, require=True) as test_file:
+        test_data = {
+            "First": 2.0,
+            "Second": 3,
+            "Third": "Random",
+            "Fourth": uuid.uuid4(),
+        }
+        with DatasetTestHDF5(
+            file=tmp_path / "test.h5", mode="a", create=True, require=True
+        ) as test_file:
             multi_dataset = test_file["test_dataset"]
             multi_dataset.append_item_dict(test_data)
             new_dict = multi_dataset.get_item_dict(-1)
@@ -92,6 +113,5 @@ class TestDataset(ClassTest):
 
 
 # Main #
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main(["-v", "-s"])
-

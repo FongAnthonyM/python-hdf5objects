@@ -1,4 +1,4 @@
-""" hdf5eeg.py
+"""hdf5eeg.py
 A HDF5 file which contains data for EEG data.
 """
 # Package Header #
@@ -32,14 +32,17 @@ from .basehdf5 import BaseHDF5Map, BaseHDF5
 # Classes #
 class HDF5EEGMap(BaseHDF5Map):
     """A map for HDF5EEG files."""
-    default_attribute_names = {"file_type": "FileType",
-                               "file_version": "FileVersion",
-                               "subject_id": "subject_id",
-                               "age": "age",
-                               "sex": "sex",
-                               "species": "species",
-                               "start": "start",
-                               "end": "end"}
+
+    default_attribute_names = {
+        "file_type": "FileType",
+        "file_version": "FileVersion",
+        "subject_id": "subject_id",
+        "age": "age",
+        "sex": "sex",
+        "species": "species",
+        "start": "start",
+        "end": "end",
+    }
     default_map_names = {"data": "EEG Array"}
     default_maps = {"data": BaseTimeSeriesMap()}
 
@@ -66,6 +69,7 @@ class HDF5EEG(BaseHDF5):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the open method.
     """
+
     _registration: bool = False
     _VERSION_TYPE: VersionType = VersionType(name="HDF5EEG", class_=TriNumberVersion)
     VERSION: Version = TriNumberVersion(0, 0, 0)
@@ -117,7 +121,7 @@ class HDF5EEG(BaseHDF5):
     def start_timestamp(self) -> float | None:
         """The start timestamp of this file."""
         ns = self.attributes.get("start", None)
-        return None if ns is None else ns * 10 ** 9
+        return None if ns is None else ns * 10**9
 
     @property
     def end_datetime(self) -> Timestamp | None:
@@ -134,7 +138,7 @@ class HDF5EEG(BaseHDF5):
     def end_timestamp(self) -> float | None:
         """The end timestamp of this file."""
         ns = self.attributes.get("end", None)
-        return None if ns is None else ns * 10 ** 9
+        return None if ns is None else ns * 10**9
 
     @property
     def sample_rate(self) -> float | int:
@@ -254,7 +258,9 @@ class HDF5EEG(BaseHDF5):
         if start is not None:
             self.attributes["start"] = nanostamp(start)
 
-    def construct_dataset(self, load: bool = False, require: bool = False, **kwargs: Any) -> None:
+    def construct_dataset(
+        self, load: bool = False, require: bool = False, **kwargs: Any
+    ) -> None:
         """Constructs the main EEG dataset.
 
         Args:
@@ -264,7 +270,9 @@ class HDF5EEG(BaseHDF5):
         """
         self._group.get_member(name="data", load=load, require=require, **kwargs)
 
-    def require_dataset(self, load: bool = False, require: bool = True, **kwargs: Any) -> Any:
+    def require_dataset(
+        self, load: bool = False, require: bool = True, **kwargs: Any
+    ) -> Any:
         """Requires the main EEG dataset.
 
         Args:
@@ -272,7 +280,9 @@ class HDF5EEG(BaseHDF5):
             require: Determines if this object will create and fill the dataset.
             **kwargs: The keyword arguments for creating the dataset.
         """
-        return self._group.construct_member(name="data", load=load, require=require, **kwargs)
+        return self._group.construct_member(
+            name="data", load=load, require=require, **kwargs
+        )
 
     # File
     def create_file(
@@ -315,7 +325,9 @@ class HDF5EEG(BaseHDF5):
         Returns:
             If the attributes are valid.
         """
-        return self.start == self.time_axis.start and self.end == self.data._time_axis.end
+        return (
+            self.start == self.time_axis.start and self.end == self.data._time_axis.end
+        )
 
     def standardize_attributes(self) -> None:
         """Sets attributes that correspond to values somewhere else to their current values."""

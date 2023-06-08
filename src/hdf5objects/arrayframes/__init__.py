@@ -1,4 +1,4 @@
-""" __init__.py
+"""__init__.py
 Implementations for HDF5 objects as frames from framestruct.
 """
 # Package Header #

@@ -1,4 +1,4 @@
-""" iddataset.py
+"""iddataset.py
 A component for a HDF5Dataset which gives it ID manipulation methods.
 """
 # Package Header #
@@ -49,6 +49,7 @@ class IDComponent(BaseDatasetComponent):
         init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
     """
+
     default_id_fields: set[str] = set()
     default_uuid_fields: set[str] = set()
 
@@ -67,14 +68,19 @@ class IDComponent(BaseDatasetComponent):
         self.uuid_fields: set[str] = self.default_uuid_fields.copy()
 
         self._id_arrays: dict = {}
-        self.ids: dict[str: bidict] = {}
+        self.ids: dict[str:bidict] = {}
 
         # Parent Attributes #
         super().__init__(init=False)
 
         # Object Construction #
         if init:
-            self.construct(composite=composite, id_fields=id_fields, uuid_fields=uuid_fields, **kwargs)
+            self.construct(
+                composite=composite,
+                id_fields=id_fields,
+                uuid_fields=uuid_fields,
+                **kwargs,
+            )
 
     @property
     def all_id_fields(self) -> set[str]:
@@ -120,9 +126,11 @@ class IDComponent(BaseDatasetComponent):
         """Loads the IDs from the id_arrays into dictionary of bidicts."""
         self.ids.clear()
         for id_field, array in self._id_arrays.items():
-            a_iter = np.nditer(array, flags=['multi_index'])
+            a_iter = np.nditer(array, flags=["multi_index"])
             if id_field in self.uuid_fields:
-                self.ids[id_field] = bidict({a_iter.multi_index: UUID(id_) for id_ in a_iter})
+                self.ids[id_field] = bidict(
+                    {a_iter.multi_index: UUID(id_) for id_ in a_iter}
+                )
             else:
                 self.ids[id_field] = bidict({a_iter.multi_index: id_ for id_ in a_iter})
 

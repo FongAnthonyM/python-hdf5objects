@@ -1,4 +1,4 @@
-""" __init__.py
+"""__init__.py
 Objects for creating a tree hierarchy in an HDF5 file.
 """
 # Package Header #

@@ -1,4 +1,4 @@
-""" hdf5baseobject.py
+"""hdf5baseobject.py
 The base object for hdf5 objects.
 """
 # Package Header #
@@ -33,7 +33,9 @@ from .hdf5map import HDF5Map
 
 # Definitions #
 # Classes #
-class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=CachingInitMeta):
+class HDF5BaseObject(
+    StaticWrapper, CachingObject, BaseComposite, metaclass=CachingInitMeta
+):
     """An abstract wrapper which wraps object from an HDF5 file and gives more functionality.
 
     Class Attributes:
@@ -58,6 +60,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
         parent: The HDF5 name of the parent of this HDF5 object.
         init: Determines if this object will construct.
     """
+
     sentinel: Any = search_sentinel
     file_type: type | None = None
     default_map: HDF5Map | None = None
@@ -81,7 +84,9 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
             return super()._get_attribute(obj, wrap_name, attr_name)
 
     @classmethod
-    def _set_attribute(cls, obj: Any, wrap_name: str, attr_name: str, value: Any) -> None:
+    def _set_attribute(
+        cls, obj: Any, wrap_name: str, attr_name: str, value: Any
+    ) -> None:
         """Sets an attribute in a wrapped HDF5 object.
 
         Args:
@@ -106,7 +111,9 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
             super()._del_attribute(obj, wrap_name, attr_name)
 
     @classmethod
-    def _evaluate_method(cls, obj: Any, wrap_name: str, method_name: str, args: Any, kwargs: Any) -> Any:
+    def _evaluate_method(
+        cls, obj: Any, wrap_name: str, method_name: str, args: Any, kwargs: Any
+    ) -> Any:
         """Evaluates a method from a wrapped HDF5 object.
 
         Args:
@@ -154,7 +161,9 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
 
         # Object Construction #
         if init:
-            self.construct(name=name, map_=map_, mode=mode, file=file, parent=parent, **kwargs)
+            self.construct(
+                name=name, map_=map_, mode=mode, file=file, parent=parent, **kwargs
+            )
 
     @property
     def _name(self) -> str:
@@ -242,7 +251,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
             dict: A dictionary of this object's attributes.
         """
         state = super().__getstate__()
-        
+
         weak_file = state.pop("_weak_file")
         if weak_file is not None:
             state["file"] = weak_file()
@@ -254,7 +263,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
             state["signal"] = weak_signal()
         else:
             state["signal"] = None
-        
+
         return state
 
     def __setstate__(self, state: Mapping[str, Any]) -> None:
@@ -274,9 +283,9 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
             state["_weak_signal"] = weakref.ref(signal)
         else:
             state["_weak_signal"] = None
-        
+
         super().__setstate__(state)
-    
+
     # Container Methods
     def __getitem__(self, key: Any) -> Any:
         """Ensures HDF5 object is open for getitem"""
@@ -351,7 +360,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
             self.set_file(file)
             if mode is None and self._mode_ is None:
                 self.set_mode(self.file._mode, timed=False)
-                
+
         super().construct(**kwargs)
 
     def construct_components(
@@ -368,10 +377,19 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
             components: Components to add.
         """
         component_types = {} if component_types is None else component_types
-        temp_types = self.default_component_types | self.map.component_types | component_types
+        temp_types = (
+            self.default_component_types | self.map.component_types | component_types
+        )
         new_kwargs = {} if component_kwargs is None else component_kwargs
-        default_components = {n: c(composite=self, **(k | new_kwargs.get(n, {}))) for n, (c, k) in temp_types.items()}
-        self.components.update(default_components | self.components | {} if components is None else components)
+        default_components = {
+            n: c(composite=self, **(k | new_kwargs.get(n, {})))
+            for n, (c, k) in temp_types.items()
+        }
+        self.components.update(
+            default_components | self.components | {}
+            if components is None
+            else components
+        )
 
     def is_exist(self) -> bool:
         """Determine if this object exists in the HDF5 file."""
@@ -383,7 +401,7 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
                 return False
 
     # File
-    def open(self, mode: str = 'a', **kwargs: Any) -> "HDF5BaseObject":
+    def open(self, mode: str = "a", **kwargs: Any) -> "HDF5BaseObject":
         """Opens the file to make this dataset usable.
 
         Args:
@@ -458,8 +476,8 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
         Args:
             parent: The str to parse and set as the parent of this map.
         """
-        parent = parent.lstrip('/')
-        parts = parent.split('/')
+        parent = parent.lstrip("/")
+        parts = parent.split("/")
         self._parents = parts
 
     def set_name(self, name: str | None) -> None:
@@ -471,8 +489,8 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
         if name is None:
             self._name_ = None
         else:
-            name = name.lstrip('/')
-            parts = name.split('/')
+            name = name.lstrip("/")
+            parts = name.split("/")
             name = parts.pop(-1)
 
             if name == "":

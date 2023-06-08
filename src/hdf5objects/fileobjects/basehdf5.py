@@ -1,4 +1,4 @@
-""" basehdf5.py
+"""basehdf5.py
 A more specific HDF5File which implements versioning and validation.
 """
 # Package Header #
@@ -18,7 +18,13 @@ from typing import Any, Union
 
 # Third-Party Packages #
 from baseobjects.functions import singlekwargdispatch
-from classversioning import CachingVersionedInitMeta, VersionedClass, VersionType, TriNumberVersion, Version
+from classversioning import (
+    CachingVersionedInitMeta,
+    VersionedClass,
+    VersionType,
+    TriNumberVersion,
+    Version,
+)
 import h5py
 
 # Local Packages #
@@ -29,6 +35,7 @@ from ..hdf5bases import HDF5Map, HDF5Group, HDF5File
 # Classes #
 class BaseHDF5Map(HDF5Map):
     """A map for BaseHDF5 files."""
+
     default_type = HDF5Group
     default_attribute_names = {"file_type": "FileType", "file_version": "FileVersion"}
     default_attributes = {"file_type": "", "file_version": ""}
@@ -58,6 +65,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the open method.
     """
+
     _dispatch_kwarg: str = "file"
     _registration: bool = False
     _VERSION_TYPE: VersionType = VersionType(name="BaseHDF5", class_=TriNumberVersion)
@@ -69,7 +77,9 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     # File Validation
     @singlekwargdispatch("file")
     @classmethod
-    def validate_file_type(cls, file: pathlib.Path | str | HDF5File | h5py.File) -> bool:
+    def validate_file_type(
+        cls, file: pathlib.Path | str | HDF5File | h5py.File
+    ) -> bool:
         """Checks if the given file or path is a valid type.
 
         Args:
@@ -169,7 +179,9 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @singlekwargdispatch("file")
     @classmethod
-    def new_validated(cls, file: pathlib.Path | str | HDF5File | h5py.File, **kwargs: Any) -> Union["BaseHDF5", None]:
+    def new_validated(
+        cls, file: pathlib.Path | str | HDF5File | h5py.File, **kwargs: Any
+    ) -> Union["BaseHDF5", None]:
         """Checks if the given file or path is a valid type and returns the file if valid.
 
         Args:
@@ -316,8 +328,16 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
         # Object Construction #
         if init:
-            self.construct(file=file, open_=open_, map_=map_, load=load, create=create, require=require, **kwargs)
-    
+            self.construct(
+                file=file,
+                open_=open_,
+                map_=map_,
+                load=load,
+                create=create,
+                require=require,
+                **kwargs,
+            )
+
     @property
     def file_type(self):
         """Gets the file type from the attributes."""
@@ -326,7 +346,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     @file_type.setter
     def file_type(self, value):
         self.attributes.set_attribute("file_type", value)
-        
+
     @property
     def file_version(self):
         """Gets the file version from the file."""
@@ -335,10 +355,12 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     @file_version.setter
     def file_version(self, value):
         self.attributes.set_attribute("file_version", value)
-    
+
     # Instance Methods #
     # Constructors/Destructors
-    def construct_file_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
+    def construct_file_attributes(
+        self, map_: HDF5Map = None, load: bool = False, require: bool = False
+    ) -> None:
         """Creates the attributes for this group.
 
         Args:

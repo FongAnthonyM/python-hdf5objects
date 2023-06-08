@@ -39,20 +39,27 @@ from src.hdf5objects.dataset.components import TimeSeriesComponent
 # Module Implementation
 class TimeSeriesTestMap(DatasetMap):
     """Implementation of Dataset."""
+
     default_attribute_names: Mapping[str, str] = {"t_axis": "t_axis"}
     default_attributes: Mapping[str, Any] = {"t_axis": 0}
-    default_component_types = {"timeseries": (TimeSeriesComponent, {"scale_name": "time_axis"})}
+    default_component_types = {
+        "timeseries": (TimeSeriesComponent, {"scale_name": "time_axis"})
+    }
     default_axis_maps = [{"time_axis": TimeAxisMap()}]
 
 
 class TimeSeriesTestFileMap(BaseHDF5Map):
     """The map for the file which implements a Dataset with a TimeSeriesComponent."""
+
     default_map_names: Mapping[str, str] = {"test_timeseries": "test_timeseries"}
-    default_maps: Mapping[str, HDF5Map] = {"test_timeseries": TimeSeriesTestMap(maxshape=(None, None))}
+    default_maps: Mapping[str, HDF5Map] = {
+        "test_timeseries": TimeSeriesTestMap(maxshape=(None, None))
+    }
 
 
 class TimeSeriesTestHDF5(BaseHDF5):
     """The file object that implements the Dataset."""
+
     _registration: bool = True
     FILE_TYPE: str = "TensorModels"
     VERSION: Version = TriNumberVersion(0, 0, 0)
@@ -62,6 +69,7 @@ class TimeSeriesTestHDF5(BaseHDF5):
 # Module Test
 class ClassTest:
     """Default class tests that all classes should pass."""
+
     class_ = None
     timeit_runs = 2
     speed_tolerance = 200
@@ -92,13 +100,25 @@ class TestDataset(ClassTest):
         return timeseries, timestamps, n_samples, n_channels, sample_rate, start, stop
 
     def test_require(self, tmp_path, generate_data):
-        timeseries_data, timestamps, n_samples, n_channels, sample_rate, start, stop = generate_data
-        with TimeSeriesTestHDF5(file=tmp_path / "test.h5", mode='a', create=True) as test_file:
+        (
+            timeseries_data,
+            timestamps,
+            n_samples,
+            n_channels,
+            sample_rate,
+            start,
+            stop,
+        ) = generate_data
+        with TimeSeriesTestHDF5(
+            file=tmp_path / "test.h5", mode="a", create=True
+        ) as test_file:
             test_file.construct_members()
             timeseries = test_file["test_timeseries"]
 
             time_axis_kwargs = {"data": timestamps, "rate": sample_rate}
-            timeseries.require(data=timeseries_data, axes_kwargs=[{"time_axis": time_axis_kwargs}])
+            timeseries.require(
+                data=timeseries_data, axes_kwargs=[{"time_axis": time_axis_kwargs}]
+            )
             existed = timeseries.exists
 
         assert existed
@@ -123,6 +143,5 @@ class TestDataset(ClassTest):
 
 
 # Main #
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main(["-v", "-s"])
-

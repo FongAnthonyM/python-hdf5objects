@@ -1,4 +1,4 @@
-""" __init__.py
+"""__init__.py
 Datasets that are designed to be Axes.
 """
 # Package Header #
@@ -18,4 +18,7 @@ from .channelaxiscomponent import ChannelAxisComponent, ChannelAxisMap
 from .sampleaxiscomponent import SampleAxisComponent, SampleAxisMap
 from .timeaxiscomponent import TimeAxisComponent, TimeAxisMap
 from .idaxiscomponent import IDAxisComponent, IDAxisMap
-from .regionreferenceaxiscomponent import RegionReferenceAxisComponent, RegionReferenceAxisMap
+from .regionreferenceaxiscomponent import (
+    RegionReferenceAxisComponent,
+    RegionReferenceAxisMap,
+)

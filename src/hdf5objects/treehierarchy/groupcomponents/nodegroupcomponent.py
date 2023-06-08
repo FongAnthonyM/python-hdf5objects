@@ -1,4 +1,4 @@
-""" nodegroupcomponent.py
+"""nodegroupcomponent.py
 A component which adds node hierarchy methods to a group.
 """
 # Package Header #
@@ -48,6 +48,7 @@ class NodeGroupComponent(HDF5BaseComponent):
         init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
     """
+
     default_child_map_type: type | None = None
     default_child_component_name: str = "tree_node"
     default_node_map_name: str = "node_map"

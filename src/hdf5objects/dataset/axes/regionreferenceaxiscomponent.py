@@ -1,4 +1,4 @@
-""" regionreferenceaxiscomponent.py
+"""regionreferenceaxiscomponent.py
 A component for a HDF5Dataset which defines it as an axis with region references for each datum.
 """
 # Package Header #
@@ -49,6 +49,7 @@ class RegionReferenceAxisComponent(AxisComponent):
         init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
     """
+
     defualt_object_attribute: str | None = "object_reference"
     default_object_field: str | None = None
     default_region_field: str = "Region"
@@ -78,7 +79,6 @@ class RegionReferenceAxisComponent(AxisComponent):
         if init:
             self.construct(
                 composite=composite,
-
                 object_field=object_field,
                 region_field=region_field,
                 **kwargs,
@@ -151,7 +151,7 @@ class RegionReferenceAxisComponent(AxisComponent):
 
         return object_ref, region
 
-    def get_object_reference(self, index: int | tuple| None = None) -> Any:
+    def get_object_reference(self, index: int | tuple | None = None) -> Any:
         """Gets the object reference.
 
         Args:
@@ -193,7 +193,10 @@ class RegionReferenceAxisComponent(AxisComponent):
         if self.object_field is None:
             return self.composite.attributes[self.object_attribute], region_ref
         else:
-            return self.composite.file[self.composite[self.object_field][index]], region_ref
+            return (
+                self.composite.file[self.composite[self.object_field][index]],
+                region_ref,
+            )
 
     def set_region_reference(
         self,
@@ -244,7 +247,9 @@ class RegionReferenceAxisComponent(AxisComponent):
         Returns:
             The item which the reference points to as a dictionary.
         """
-        return self.get_object(index=index).get_item_dict(self.composite[self.region_field][index])
+        return self.get_object(index=index).get_item_dict(
+            self.composite[self.region_field][index]
+        )
 
     def set_reference_to(self, index: int | tuple, value: Any) -> None:
         """Set the item referenced by the reference at the given index.
@@ -262,12 +267,17 @@ class RegionReferenceAxisComponent(AxisComponent):
             index: The index of the reference pointing to the item to set.
             value: The dictionary to set the item to at the reference.
         """
-        self.get_object(index=index).set_item_dict(self.composite[self.region_field][index], value)
+        self.get_object(index=index).set_item_dict(
+            self.composite[self.region_field][index], value
+        )
 
 
 class RegionReferenceAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis with region references for each datum."""
-    default_attribute_names: Mapping[str, str] = {"object_reference": "object_reference"}
+
+    default_attribute_names: Mapping[str, str] = {
+        "object_reference": "object_reference"
+    }
     default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,)}
     default_dtype = (("Region", h5py.ref_dtype),)
     default_component_types = {

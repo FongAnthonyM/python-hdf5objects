@@ -1,4 +1,4 @@
-""" idaxiscomponent.py
+"""idaxiscomponent.py
 A component and map for a HDF5Dataset which defines it as an axis with IDs for each datum.
 """
 # Package Header #
@@ -41,6 +41,7 @@ class IDAxisComponent(AxisComponent):
         init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
     """
+
     # Magic Methods
     # Construction/Destruction
     def __init__(
@@ -92,7 +93,7 @@ class IDAxisComponent(AxisComponent):
         if is_uuid is not None:
             self.is_uuid = self.is_uuid
 
-        super().construct(composite=composite,  **kwargs)
+        super().construct(composite=composite, **kwargs)
 
         if create and self.is_uuid:
             self.generate_uuids()
@@ -105,8 +106,10 @@ class IDAxisComponent(AxisComponent):
         if self.composite.size != 0:
             self.ids.clear()
             self.ids.update(
-                {i: UUID(id_[0].decode()) if self.is_uuid else id_[0].decode()
-                 for i, id_ in enumerate(self.composite.all_data)}
+                {
+                    i: UUID(id_[0].decode()) if self.is_uuid else id_[0].decode()
+                    for i, id_ in enumerate(self.composite.all_data)
+                }
             )
 
     def generate_uuids(self, size: int, **kwargs) -> None:
@@ -268,6 +271,7 @@ class IDAxisComponent(AxisComponent):
 
 class IDAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis with IDs for each datum."""
+
     default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,)}
     default_dtype = (("ID", str),)
     default_component_types = {

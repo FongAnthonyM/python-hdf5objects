@@ -1,4 +1,3 @@
-
 """ conftest.py
 Used for pytest directory-specific hook implementations and directory inclusion for imports.
 """
@@ -43,7 +42,9 @@ def pytest_runtest_makereport(item, call):
             # retrieve the name of the test function
             test_name = item.originalname or item.name
             # store in _test_failed_incremental the original name of the failed test
-            _test_failed_incremental.setdefault(cls_name, {}).setdefault(parametrize_index, test_name)
+            _test_failed_incremental.setdefault(cls_name, {}).setdefault(
+                parametrize_index, test_name
+            )
 
 
 def pytest_runtest_setup(item):

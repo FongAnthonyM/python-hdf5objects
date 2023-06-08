@@ -1,4 +1,4 @@
-""" hdf5caster.py
+"""hdf5caster.py
 A class that contains methods for casting data types to type that can be stored in an HDF5 file.
 """
 # Package Header #
@@ -28,7 +28,7 @@ import h5py
 
 
 # Definitions #
-STRING_TYPE = h5py.string_dtype(encoding='utf-8')
+STRING_TYPE = h5py.string_dtype(encoding="utf-8")
 
 
 # Classes #
@@ -41,6 +41,7 @@ class HDF5Caster(BaseObject):
         type_map: A map of python types and their HDF5 representation.
         to_registry: A map of methods to use to cast an HDF5 representation to its correct python type.
     """
+
     _pass_types = int | float | bytes | np.dtype | h5py.Reference
     pass_types = {int, float, bytes, np.dtype, h5py.Reference}
     type_map = {
@@ -93,7 +94,7 @@ class HDF5Caster(BaseObject):
     def from_uuid(cls, item: uuid.UUID) -> bytes:
         """Casts a UUID to a type that can be stored in an HDF5."""
         return item.hex
-    
+
     @singlekwargdispatch("item")
     @classmethod
     def cast_from(cls, item: Any) -> Any:
@@ -150,10 +151,12 @@ class HDF5Caster(BaseObject):
     @classmethod
     def to_str(cls, item: bytes) -> str:
         """Casts an HDF5 representation to a string."""
-        return item.decode(encoding='utf-8')
+        return item.decode(encoding="utf-8")
 
     @classmethod
-    def to_datetime(cls, item: float, tzinfo: datetime.tzinfo | None = None) -> datetime.datetime:
+    def to_datetime(
+        cls, item: float, tzinfo: datetime.tzinfo | None = None
+    ) -> datetime.datetime:
         """Casts an HDF5 representation to a datetime."""
         return datetime.datetime.fromtimestamp(item, tzinfo)
 
@@ -170,7 +173,7 @@ class HDF5Caster(BaseObject):
     @classmethod
     def to_uuid(cls, item: bytes) -> uuid.UUID:
         """Casts an HDF5 representation to an UUID."""
-        return uuid.UUID(item.decode(encoding='utf-8'))
+        return uuid.UUID(item.decode(encoding="utf-8"))
 
     @classmethod
     def cast_to(cls, type_: type, item: Any, **kwargs: Any) -> Any:

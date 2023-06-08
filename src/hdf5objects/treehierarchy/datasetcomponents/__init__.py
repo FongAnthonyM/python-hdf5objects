@@ -1,4 +1,4 @@
-""" __init__.py
+"""__init__.py
 Components for a dataset which give it tree hierarchy methods.
 """
 # Package Header #

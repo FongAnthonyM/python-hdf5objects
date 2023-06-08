@@ -1,4 +1,4 @@
-""" basedatasetcomponent.py
+"""basedatasetcomponent.py
 The base implementation for a component of a HDF5Dataset.
 """
 # Package Header #
@@ -26,6 +26,7 @@ from ..hdf5bases import HDF5BaseComponent
 # Classes #
 class BaseDatasetComponent(HDF5BaseComponent):
     """The base implementation for a component of a HDF5Dataset."""
+
     # Magic Methods #
     # Construction/Destruction
     @property
@@ -55,7 +56,9 @@ class BaseDatasetComponent(HDF5BaseComponent):
         """
         pass
 
-    def insert_component(self, index: int | slice | Iterable[int], **kwargs: Any) -> None:
+    def insert_component(
+        self, index: int | slice | Iterable[int], **kwargs: Any
+    ) -> None:
         """Inserts data to this component.
 
         Args:
@@ -63,8 +66,10 @@ class BaseDatasetComponent(HDF5BaseComponent):
             **kwargs: The keyword arguments for inserting data.
         """
         pass
-    
-    def delete_component(self, index: int | slice | Iterable[int], **kwargs: Any) -> None:
+
+    def delete_component(
+        self, index: int | slice | Iterable[int], **kwargs: Any
+    ) -> None:
         """Deletes data from this component.
 
         Args:

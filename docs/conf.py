@@ -1,4 +1,3 @@
-
 """Sphinx configuration."""
 # Package Header #
 from src.hdf5objects.header import *

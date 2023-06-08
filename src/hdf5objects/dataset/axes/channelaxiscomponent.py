@@ -1,4 +1,4 @@
-""" channelaxiscomponent.py
+"""channelaxiscomponent.py
 A component and map for a HDF5Dataset which defines it as an axis that represents channel number.
 """
 # Package Header #
@@ -26,6 +26,7 @@ from .axiscomponent import AxisMap, AxisComponent
 # Classes #
 class ChannelAxisComponent(AxisComponent):
     """A component for a HDF5Dataset which defines it as an axis that represents channel number."""
+
     @property
     def channels(self) -> np.ndarray:
         """Returns all the channels of this axis.
@@ -49,6 +50,7 @@ class ChannelAxisComponent(AxisComponent):
 
 class ChannelAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents channel number."""
+
     default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "i"}
     default_component_types = {
         "axis": (ChannelAxisComponent, {}),

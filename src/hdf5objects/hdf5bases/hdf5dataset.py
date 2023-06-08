@@ -1,4 +1,4 @@
-""" hdf5dataset.py
+"""hdf5dataset.py
 An object that represents an HDF5 Dataset.
 """
 # Package Header #
@@ -64,6 +64,7 @@ class DatasetMap(HDF5Map):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the object this map represents.
     """
+
     default_attributes_type = HDF5Attributes
     default_dtype: np.dtype | str | tuple[tuple[str, type]] | None = None
     default_casting_kwargs: list[dict[str, Any]] | None = None
@@ -84,7 +85,7 @@ class DatasetMap(HDF5Map):
         dtype: np.dtype | str | tuple[tuple[str, type]] | None = None,
         casting_kwargs: tuple[dict[str, Any]] | None = None,
         init: bool = True,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         # New Attributes #
         self._dtypes: tuple[tuple[str, type]] = tuple()
@@ -193,7 +194,7 @@ class DatasetMap(HDF5Map):
         if casting_kwargs is not None:
             self.casting_kwargs = casting_kwargs
         elif self.default_casting_kwargs is None:
-            self.casting_kwargs = ([{}] * len(self.dtypes))
+            self.casting_kwargs = [{}] * len(self.dtypes)
         else:
             self.casting_kwargs = self.default_casting_kwargs.copy()
 
@@ -209,9 +210,15 @@ class DatasetMap(HDF5Map):
         temp_kwargs = self.kwargs | kwargs
 
         require = temp_kwargs.get("require", False)
-        if require and "data" not in temp_kwargs and ("shape" not in temp_kwargs or "maxshape" not in temp_kwargs):
+        if (
+            require
+            and "data" not in temp_kwargs
+            and ("shape" not in temp_kwargs or "maxshape" not in temp_kwargs)
+        ):
             # Need to warn and skip if these components are missing.
-            warnings.warn("Cannot build dataset without data or shape and maxshape - skipping.")
+            warnings.warn(
+                "Cannot build dataset without data or shape and maxshape - skipping."
+            )
             return None
 
         if "map_" not in kwargs:
@@ -236,9 +243,13 @@ class DatasetMap(HDF5Map):
             self._dtypes = dtype
             self.dtypes_dict.update({name: i for i, (name, _) in enumerate(dtype)})
             dtype = list((name, self.caster.map_type(type_)) for name, type_ in dtype)
-            if self.casting_kwargs is None or len(self.casting_kwargs) != len(self._dtypes):
-                if self.default_casting_kwargs is None or len(self.default_casting_kwargs) != len(self._dtypes):
-                    self.casting_kwargs = ([{}] * len(self._dtypes))
+            if self.casting_kwargs is None or len(self.casting_kwargs) != len(
+                self._dtypes
+            ):
+                if self.default_casting_kwargs is None or len(
+                    self.default_casting_kwargs
+                ) != len(self._dtypes):
+                    self.casting_kwargs = [{}] * len(self._dtypes)
                 else:
                     self.casting_kwargs = self.default_casting_kwargs
 
@@ -272,7 +283,7 @@ class DatasetMap(HDF5Map):
                 print(f"{' ' * indent}    Dimension {i}:")
                 for name, map_ in dim.items():
                     print(f"{' ' * indent}    +  {name}: {map_.full_name} {map_.type}")
-                    map_.print_tree(indent=indent+5)
+                    map_.print_tree(indent=indent + 5)
 
 
 class HDF5Dataset(HDF5BaseObject):
@@ -311,6 +322,7 @@ class HDF5Dataset(HDF5BaseObject):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments to construct the base HDF5 dataset.
     """
+
     _wrapped_types: list[type | object] = [h5py.Dataset]
     _wrap_attributes: list[str] = ["dataset"]
     default_map: HDF5Map = DatasetMap()
@@ -586,12 +598,16 @@ class HDF5Dataset(HDF5BaseObject):
                 all_names = set(dim.keys())
                 missing_names = all_names - set(self._axes[i].keys())
                 missing_maps = set(mapped_axes.keys()) - all_names
-                if missing_maps and False:  # Todo: Set verbose because this does not need to always warn.
+                if (
+                    missing_maps and False
+                ):  # Todo: Set verbose because this does not need to always warn.
                     warnings.warn(f"A dataset's axis {missing_maps} is missing.")
 
                 for name in missing_names:
                     axis_map = mapped_axes.get(name, self.default_axis_map_type())
-                    self._axes[i][name] = axis_map.get_object(dataset=dim[name], scale_name=name, file=self.file)
+                    self._axes[i][name] = axis_map.get_object(
+                        dataset=dim[name], scale_name=name, file=self.file
+                    )
 
     def load(self) -> None:
         """Loads this dataset which is just loading the attributes."""
@@ -661,7 +677,7 @@ class HDF5Dataset(HDF5BaseObject):
         for dim in self.axes:
             for axis in dim.values():
                 axis.timeless_all_caching(**kwargs)
-        
+
     def timed_all_caching(self, **kwargs: Any) -> None:
         """Allows timed caching on this object and all contained objects.
 
@@ -688,7 +704,9 @@ class HDF5Dataset(HDF5BaseObject):
                 axis.set_all_lifetimes(lifetime=lifetime, **kwargs)
 
     # Item Data Types
-    def item_to_dict(self, item: Any, casting_kwargs: list[dict[str | Any]] | None = None) -> dict:
+    def item_to_dict(
+        self, item: Any, casting_kwargs: list[dict[str | Any]] | None = None
+    ) -> dict:
         """Translates an item of the dataset's type to a dictionary that multi-type.
 
         Args:
@@ -705,7 +723,10 @@ class HDF5Dataset(HDF5BaseObject):
             casting_kwargs = self.casting_kwargs
 
         types = zip(self.dtypes, casting_kwargs)
-        return {name: self.caster.cast_to(type_, item[i], **kwargs) for i, ((name, type_), kwargs) in enumerate(types)}
+        return {
+            name: self.caster.cast_to(type_, item[i], **kwargs)
+            for i, ((name, type_), kwargs) in enumerate(types)
+        }
 
     def dict_to_item(self, dict_: dict) -> Any:
         """Translates a dictionary of a multi-type to an item that can be added to the dataset.
@@ -716,7 +737,10 @@ class HDF5Dataset(HDF5BaseObject):
         Returns:
             The item representation of the dictionary.
         """
-        return tuple(self.caster.cast_from(dict_[name]) for i, (name, _) in enumerate(self.dtypes))
+        return tuple(
+            self.caster.cast_from(dict_[name])
+            for i, (name, _) in enumerate(self.dtypes)
+        )
 
     # Getters/Setters
     def set_map(self, map_: HDF5Map) -> None:
@@ -760,7 +784,9 @@ class HDF5Dataset(HDF5BaseObject):
         """
         return self.item_to_dict(self[index])
 
-    def get_item_dicts_iter(self, casting_kwargs: list[dict[str | Any]] | None = None) -> Iterable:
+    def get_item_dicts_iter(
+        self, casting_kwargs: list[dict[str | Any]] | None = None
+    ) -> Iterable:
         """Gets the item dictionaries as an iterable.
 
         Args:
@@ -770,8 +796,13 @@ class HDF5Dataset(HDF5BaseObject):
             casting_kwargs = self.casting_kwargs
 
         types = tuple(zip(self.dtypes, casting_kwargs))
-        return ({name: self.caster.cast_to(type_, item[i], **kwargs) for i, ((name, type_), kwargs) in enumerate(types)}
-                for item in self[...])
+        return (
+            {
+                name: self.caster.cast_to(type_, item[i], **kwargs)
+                for i, ((name, type_), kwargs) in enumerate(types)
+            }
+            for item in self[...]
+        )
 
     def set_item(self, key: Any, value: Any) -> None:
         """Sets an item or items from the dataset.
@@ -878,14 +909,18 @@ class HDF5Dataset(HDF5BaseObject):
                 kwargs["maxshape"] = kwargs["data"].shape
 
         with self.file.temp_open():
-            self._dataset = self.file._file.create_dataset(name=self._full_name, **kwargs)
+            self._dataset = self.file._file.create_dataset(
+                name=self._full_name, **kwargs
+            )
             if self.file._file.swmr_mode:
                 if self.file.allow_swmr_create:
                     self.file.close()
                     self.file.open()
                     self.file._file.swmr_mode = True
                 else:
-                    raise RuntimeError("Creating a new dataset with SWMR mode on causes issues")
+                    raise RuntimeError(
+                        "Creating a new dataset with SWMR mode on causes issues"
+                    )
             self.attributes.construct_attributes()
             if self._scale_name is not None:
                 self._dataset.make_scale(self._scale_name)
@@ -901,21 +936,30 @@ class HDF5Dataset(HDF5BaseObject):
         if len(self.axes) < dim + 1:
             self.axes.extend([{}] * (dim + 1 - len(self.axes)))
 
-        old_kwargs = self.axes_kwargs[dim].get(scale_name, {}) if i < len(self.axes_kwargs) else {}
+        old_kwargs = (
+            self.axes_kwargs[dim].get(scale_name, {})
+            if i < len(self.axes_kwargs)
+            else {}
+        )
         temp_kwargs = {
             "name": f"{self._full_name}_{scale_name}",
-            "scale_name": name, "require": True,
+            "scale_name": name,
+            "require": True,
             "file": self.file,
         }
         if "data" not in kwargs and "data" not in old_kwargs and self.exists:
             temp_kwargs["size"] = self.shape[dim]
         new_kwargs = temp_kwargs | old_kwargs | kwargs
 
-        self.axes[i][name] = axis = self.map.axis_maps[dim][scale_name].create_object(**new_kwargs)
+        self.axes[i][name] = axis = self.map.axis_maps[dim][scale_name].create_object(
+            **new_kwargs
+        )
         self._dataset.dims[i].attach_scale(axis._dataset)
         return axis
 
-    def create_axes(self, axes_kwargs: Iterable[dict[str, dict[str, Any]]] = ()) -> None:
+    def create_axes(
+        self, axes_kwargs: Iterable[dict[str, dict[str, Any]]] = ()
+    ) -> None:
         """Creates and fills the axes for this dataset, gives an error if any already exists.
 
         Args:
@@ -930,10 +974,16 @@ class HDF5Dataset(HDF5BaseObject):
         for i, dim in enumerate(self.map.axis_maps):
             for name, axis_map in dim.items():
                 new_kwargs = axes_kwargs[i].get(name, {}) if i < new_kwargs_len else {}
-                old_kwargs = self.axes_kwargs[i].get(name, {}) if i < old_kwargs_len else {}
+                old_kwargs = (
+                    self.axes_kwargs[i].get(name, {}) if i < old_kwargs_len else {}
+                )
                 temp_kwargs["name"] = f"{self._full_name}_{name}"
                 temp_kwargs["scale_name"] = name
-                if "data" not in new_kwargs and "data" not in old_kwargs and self.exists:
+                if (
+                    "data" not in new_kwargs
+                    and "data" not in old_kwargs
+                    and self.exists
+                ):
                     temp_kwargs["component_kwargs"] = {"axis": {"size": self.shape[i]}}
                 kwargs = temp_kwargs | old_kwargs | new_kwargs
                 self.axes[i][name] = axis = axis_map.create_object(**kwargs)
@@ -981,14 +1031,18 @@ class HDF5Dataset(HDF5BaseObject):
         with self.file.temp_open():
             if not self.exists:
                 self.kwargs.update(kwargs)
-                self._dataset = self.file._file.create_dataset(name=self._full_name, **self.kwargs)
+                self._dataset = self.file._file.create_dataset(
+                    name=self._full_name, **self.kwargs
+                )
                 if self.file._file.swmr_mode:
                     if self.file.allow_swmr_create:
                         self.file.close()
-                        self.file.open(mode='a')
+                        self.file.open(mode="a")
                         self.file._file.swmr_mode = True
                     else:
-                        raise RuntimeError("Creating a new dataset with SWMR mode on causes issues")
+                        raise RuntimeError(
+                            "Creating a new dataset with SWMR mode on causes issues"
+                        )
                 self.attributes.construct_attributes()
                 if self._scale_name is not None:
                     self._dataset.make_scale(self._scale_name)
@@ -1015,21 +1069,30 @@ class HDF5Dataset(HDF5BaseObject):
             if len(self.axes) < dim + 1:
                 self.axes.extend([{}] * (dim + 1 - len(self.axes)))
 
-            old_kwargs = self.axes_kwargs[dim].get(scale_name, {}) if dim < len(self.axes_kwargs) else {}
+            old_kwargs = (
+                self.axes_kwargs[dim].get(scale_name, {})
+                if dim < len(self.axes_kwargs)
+                else {}
+            )
             temp_kwargs = {
                 "name": f"{self._full_name}_{scale_name}",
-                "scale_name": scale_name, "require": True,
+                "scale_name": scale_name,
+                "require": True,
                 "file": self.file,
             }
             if "data" not in kwargs and "data" not in old_kwargs and self.exists:
                 temp_kwargs["size"] = self.shape[dim]
             new_kwargs = temp_kwargs | old_kwargs | kwargs
-            self.axes[dim][scale_name] = axis = self.map.axis_maps[dim][scale_name].get_object(**new_kwargs)
+            self.axes[dim][scale_name] = axis = self.map.axis_maps[dim][
+                scale_name
+            ].get_object(**new_kwargs)
             self._dataset.dims[dim].attach_scale(axis._dataset)
 
         return axis
 
-    def require_axes(self, axes_kwargs: Iterable[dict[str, dict[str, Any]]] = ()) -> None:
+    def require_axes(
+        self, axes_kwargs: Iterable[dict[str, dict[str, Any]]] = ()
+    ) -> None:
         """Creates and fills the axes for this dataset if any do not exists.
 
         Args:
@@ -1044,10 +1107,16 @@ class HDF5Dataset(HDF5BaseObject):
         for i, dim in enumerate(self.map.axis_maps):
             for name, axis_map in dim.items():
                 new_kwargs = axes_kwargs[i].get(name, {}) if i < new_kwargs_len else {}
-                old_kwargs = self.axes_kwargs[i].get(name, {}) if i < old_kwargs_len else {}
+                old_kwargs = (
+                    self.axes_kwargs[i].get(name, {}) if i < old_kwargs_len else {}
+                )
                 temp_kwargs["name"] = f"{self._full_name}_{name}"
                 temp_kwargs["scale_name"] = name
-                if "data" not in new_kwargs and "data" not in old_kwargs and self.exists:
+                if (
+                    "data" not in new_kwargs
+                    and "data" not in old_kwargs
+                    and self.exists
+                ):
                     temp_kwargs["component_kwargs"] = {"axis": {"size": self.shape[i]}}
                 kwargs = temp_kwargs | old_kwargs | new_kwargs
                 self.axes[i][name] = axis = axis_map.get_object(**kwargs)
@@ -1114,7 +1183,9 @@ class HDF5Dataset(HDF5BaseObject):
         else:
             self.require_data(data=data, **kwargs)
 
-    def set_data(self, data: np.ndarray, component_kwargs: dict[str, Any] = {}, **kwargs: Any) -> None:
+    def set_data(
+        self, data: np.ndarray, component_kwargs: dict[str, Any] = {}, **kwargs: Any
+    ) -> None:
         """Sets the data by either creating it or replacing it.
 
         Args:
@@ -1151,7 +1222,9 @@ class HDF5Dataset(HDF5BaseObject):
                 d_shape.insert(axis, 1)
                 d_ndim = len(d_shape)
             else:
-                raise ValueError("Cannot append with two different numbers of dimensions.")
+                raise ValueError(
+                    "Cannot append with two different numbers of dimensions."
+                )
 
             # Determine the new shape of the dataset
             maxs = np.zeros((2, len(d_shape)))
@@ -1165,7 +1238,7 @@ class HDF5Dataset(HDF5BaseObject):
 
             # Assign Data
             self._dataset.resize(new_shape)  # resize for new data
-            self._dataset[tuple(slicing)] = data    # Assign data to the new location
+            self._dataset[tuple(slicing)] = data  # Assign data to the new location
             self.clear_all_caches()
 
     def append_data_item_dict(self, dict_: dict, axis: int = 0) -> None:
@@ -1175,7 +1248,9 @@ class HDF5Dataset(HDF5BaseObject):
             dict_: The dictionary to add as an item to the dataset.
             axis: The axis to add the dictionary along.
         """
-        self.append_data(np.array(self.dict_to_item(dict_), dtype=self.dtype), axis=axis)
+        self.append_data(
+            np.array(self.dict_to_item(dict_), dtype=self.dtype), axis=axis
+        )
 
     def append_components(self, **component_kwargs: dict[str, Any]) -> None:
         """Appends data to the components of this dataset.
@@ -1187,7 +1262,9 @@ class HDF5Dataset(HDF5BaseObject):
             kwargs = component_kwargs.get(name, {})
             component.append_component(**kwargs)
 
-    def append(self, data: np.ndarray, axis: int = 0, component_kwargs: dict[str, Any] = {}) -> None:
+    def append(
+        self, data: np.ndarray, axis: int = 0, component_kwargs: dict[str, Any] = {}
+    ) -> None:
         """Append data to the dataset along a specified axis.
 
         Args:
@@ -1214,9 +1291,16 @@ class HDF5Dataset(HDF5BaseObject):
             iter_: An iterable of dictionaries to append to the dataset.
             axis: The axis to extend the dictionaries to.
         """
-        self.append_data(np.fromiter((self.dict_to_item(item) for item in iter_), dtype=list(self._dtype)), axis=axis)
+        self.append_data(
+            np.fromiter(
+                (self.dict_to_item(item) for item in iter_), dtype=list(self._dtype)
+            ),
+            axis=axis,
+        )
 
-    def insert_data(self, index: int | slice | Iterable[int], data: np.ndarray, axis: int = 0) -> None:
+    def insert_data(
+        self, index: int | slice | Iterable[int], data: np.ndarray, axis: int = 0
+    ) -> None:
         """Insert data to the dataset along a specified axis.
 
         Args:
@@ -1243,7 +1327,9 @@ class HDF5Dataset(HDF5BaseObject):
                     d_shape.insert(axis, 1)
                     d_ndim = len(d_shape)
                 else:
-                    raise ValueError("Cannot insert with two different numbers of dimensions.")
+                    raise ValueError(
+                        "Cannot insert with two different numbers of dimensions."
+                    )
 
                 # Determine the new shape of the dataset
                 maxs = np.zeros((2, len(d_shape)))
@@ -1258,7 +1344,9 @@ class HDF5Dataset(HDF5BaseObject):
                 self._dataset[...] = all_data  # Assign data to the new location
                 self.clear_all_caches()
 
-    def insert_data_item_dict(self, index: int | slice | Iterable[int], dict_: dict, axis: int = 0) -> None:
+    def insert_data_item_dict(
+        self, index: int | slice | Iterable[int], dict_: dict, axis: int = 0
+    ) -> None:
         """Inserts a dictionary which would represent a single item to the dataset.
 
         Args:
@@ -1266,9 +1354,15 @@ class HDF5Dataset(HDF5BaseObject):
             dict_: The dictionary to add as an item to the dataset.
             axis: The axis to add the dictionary along.
         """
-        self.insert_data(index=index, data=np.array([self.dict_to_item(dict_)], dtype=self.dtype), axis=axis)
+        self.insert_data(
+            index=index,
+            data=np.array([self.dict_to_item(dict_)], dtype=self.dtype),
+            axis=axis,
+        )
 
-    def insert_components(self, index: int | slice | Iterable[int], **component_kwargs: dict[str, Any]) -> None:
+    def insert_components(
+        self, index: int | slice | Iterable[int], **component_kwargs: dict[str, Any]
+    ) -> None:
         """Inserts data into the components of this dataset.
 
         Args:
@@ -1296,7 +1390,7 @@ class HDF5Dataset(HDF5BaseObject):
         """
         self.insert_data(index=index, data=data, axis=axis)
         self.insert_components(index=index, **component_kwargs)
-        
+
     def delete_data(self, index: int | slice | Iterable[int], axis: int = 0) -> None:
         """Delete data from the dataset along a specified axis.
 
@@ -1313,8 +1407,10 @@ class HDF5Dataset(HDF5BaseObject):
             self._dataset.resize(all_data.shape)  # resize for new data
             self._dataset[...] = all_data  # Assign data to the new location
             self.clear_all_caches()
-            
-    def delete_components(self, index: int | slice | Iterable[int], **component_kwargs: dict[str, Any]) -> None:
+
+    def delete_components(
+        self, index: int | slice | Iterable[int], **component_kwargs: dict[str, Any]
+    ) -> None:
         """Deletes data from the components of this dataset.
 
         Args:
@@ -1358,7 +1454,9 @@ class HDF5Dataset(HDF5BaseObject):
             with self:
                 self._dataset.make_scale(self._scale_name)
 
-    def attach_axis(self, dataset: "HDF5Dataset", axis: int = 0, scale_name: str | None = None) -> None:
+    def attach_axis(
+        self, dataset: "HDF5Dataset", axis: int = 0, scale_name: str | None = None
+    ) -> None:
         """Attaches an axis (scale) to this dataset.
 
         Args:

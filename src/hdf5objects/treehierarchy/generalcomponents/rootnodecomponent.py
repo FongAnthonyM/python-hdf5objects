@@ -1,4 +1,4 @@
-""" rootnodecomponent.py
+"""rootnodecomponent.py
 Adds methods for managing the root node of a tree hierarchy.
 """
 # Package Header #
@@ -38,6 +38,7 @@ class RootNodeComponent(HDF5BaseComponent):
         root_location: The location in the file where the root of the data hierarchy is.
         **kwargs: Keyword arguments for inheritance.
     """
+
     default_root_location: str = ""
     default_node_component_name: str = "tree_node"
 

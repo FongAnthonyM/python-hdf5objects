@@ -1,4 +1,4 @@
-""" shapescomponent.py
+"""shapescomponent.py
 A component for a HDF5Dataset which gives it shape manipulation methods.
 """
 # Package Header #
@@ -45,6 +45,7 @@ class ShapesComponent(BaseDatasetComponent):
         init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
     """
+
     default_id_fields: set[str] = set()
     default_uuid_fields: set[str] = set()
 
@@ -85,7 +86,11 @@ class ShapesComponent(BaseDatasetComponent):
 
     def get_min_shape(self, ignore_zeros: bool = False) -> np.ndarray:
         if self.composite.size != 0:
-            shapes = self.composite[~np.all(self.composite[...] == 0, axis=1)] if ignor_zeros else self.composite
+            shapes = (
+                self.composite[~np.all(self.composite[...] == 0, axis=1)]
+                if ignor_zeros
+                else self.composite
+            )
             return tuple(np.amin(shapes, 0))
         else:
             return (0,)
@@ -100,6 +105,11 @@ class ShapesComponent(BaseDatasetComponent):
 
         # Set the shape of the dataset if it needs to change
         if s_shape[1] < d_shape[1]:
-            self.composite.resize((index + 1 if index == s_shape[0] else s_shape[0], max(s_shape[1], d_shape[1])))
+            self.composite.resize(
+                (
+                    index + 1 if index == s_shape[0] else s_shape[0],
+                    max(s_shape[1], d_shape[1]),
+                )
+            )
 
-        self.composite[index, :len(shape)] = shape
+        self.composite[index, : len(shape)] = shape

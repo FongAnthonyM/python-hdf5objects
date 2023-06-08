@@ -1,4 +1,4 @@
-""" timeaxiscomponent.py
+"""timeaxiscomponent.py
 A component and map for a HDF5Dataset which defines it as an axis that represents time.
 """
 # Package Header #
@@ -57,6 +57,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the HDF5Dataset.
     """
+
     # Magic Methods
     # Construction/Destruction
     def __init__(
@@ -278,14 +279,18 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
             self.set_data(data=np.arange(start, stop, step), **d_kwargs)
 
     @singlekwargdispatch("datetimes")
-    def from_datetimes(self, datetimes: Iterable[datetime.datetime | float] | np.ndarray, **kwargs: Any) -> None:
+    def from_datetimes(
+        self, datetimes: Iterable[datetime.datetime | float] | np.ndarray, **kwargs: Any
+    ) -> None:
         """Sets the axis values to a series of datetimes.
 
         Args:
             datetimes: The datetimes of the axis.
             **kwargs: The keyword arguments for the HDF5Dataset.
         """
-        raise TypeError(f"A {type(datetimes)} cannot be used to construct the time axis.")
+        raise TypeError(
+            f"A {type(datetimes)} cannot be used to construct the time axis."
+        )
 
     @from_datetimes.register(Iterable)
     def _(self, datetimes: Iterable[datetime.datetime | float], **kwargs: Any) -> None:
@@ -369,7 +374,11 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 
         tz_name = self.composite.attributes.get("time_zone", None)
         tz_offset = self.composite.attributes.get("time_zone_offset", None)
-        if tz_name is not None and not isinstance(tz_name, h5py.Empty) and tz_name != "":
+        if (
+            tz_name is not None
+            and not isinstance(tz_name, h5py.Empty)
+            and tz_name != ""
+        ):
             try:
                 return zoneinfo.ZoneInfo(tz_name)
             except zoneinfo.ZoneInfoNotFoundError as e:
@@ -382,7 +391,9 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
         else:
             return None
 
-    def set_time_zone(self, value: str | datetime.tzinfo | None = None, offset: float | None = None) -> None:
+    def set_time_zone(
+        self, value: str | datetime.tzinfo | None = None, offset: float | None = None
+    ) -> None:
         """Sets the timezone of this axis.
 
         Args:
@@ -390,7 +401,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
             offset: The time zone offset from UTC.
         """
         if value is None:
-            offset = h5py.Empty('f8')
+            offset = h5py.Empty("f8")
             value = ""
         elif isinstance(value, datetime.tzinfo):
             offset = timezone_offset(value).total_seconds()
@@ -400,7 +411,9 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
             offset = local_time.tm_gmtoff
             value = local_time.tm_zone
         else:
-            zoneinfo.ZoneInfo(value)  # Raises an error if the given string is not a time zone.
+            zoneinfo.ZoneInfo(
+                value
+            )  # Raises an error if the given string is not a time zone.
 
         self.composite.attributes["time_zone"] = value
         self.composite.attributes["time_zone_offset"] = offset
@@ -465,7 +478,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
             correction: Determines if time correction will be run on the data and the type if a str.
             **kwargs: The keyword arguments for the time correction.
         """
-        if self.mode == 'r':
+        if self.mode == "r":
             raise IOError("not writable")
 
         if not any(data.shape):
@@ -490,15 +503,16 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 
 class TimeAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents time."""
+
     default_attribute_names: Mapping[str, str] = {
         "sample_rate": "sample_rate",
         "time_zone": "time_zone",
         "time_zone_offset": "time_zone_offset",
     }
     default_attributes: Mapping[str, Any] = {
-        "sample_rate": h5py.Empty('f8'),
+        "sample_rate": h5py.Empty("f8"),
         "time_zone": "",
-        "time_zone_offset": h5py.Empty('f8'),
+        "time_zone_offset": h5py.Empty("f8"),
     }
     default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": "u8"}
     default_component_types = {

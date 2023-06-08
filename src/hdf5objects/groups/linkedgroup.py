@@ -1,4 +1,4 @@
-""" linkedgroup.py
+"""linkedgroup.py
 
 """
 # Package Header #
@@ -34,6 +34,7 @@ class LinkedGroup(HDF5Group):
     Args:
 
     """
+
     # Magic Methods #
     # Construction/Destruction
     def __init__(
@@ -54,7 +55,15 @@ class LinkedGroup(HDF5Group):
 
         # Object Construction  #
         if init:
-            self.construct(group=group, name=name, map_=map_, file=file, load=load, build=build, parent=parent)
+            self.construct(
+                group=group,
+                name=name,
+                map_=map_,
+                file=file,
+                load=load,
+                build=build,
+                parent=parent,
+            )
 
     # Instance Methods #
     # Constructors/Destructors

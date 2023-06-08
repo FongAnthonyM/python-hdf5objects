@@ -1,4 +1,4 @@
-""" regionreferencedataset.py
+"""regionreferencedataset.py
 A component for a HDF5Dataset which implement methods for object and region references.
 """
 # Package Header #
@@ -57,6 +57,7 @@ class RegionReferenceComponent(BaseDatasetComponent):
         init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
     """
+
     default_single_reference_fields: dict[str, tuple[str, str]] = dict()
     default_multiple_reference_fields: dict[str, tuple[str, str]] = dict()
     default_primary_reference_field: str | None = None
@@ -73,8 +74,12 @@ class RegionReferenceComponent(BaseDatasetComponent):
         **kwargs: Any,
     ) -> None:
         # New Attributes #
-        self.single_reference_fields: dict[str, tuple[str, str]] = self.default_single_reference_fields.copy()
-        self.multiple_reference_fields: dict[str, tuple[str, str]] = self.default_multiple_reference_fields.copy()
+        self.single_reference_fields: dict[
+            str, tuple[str, str]
+        ] = self.default_single_reference_fields.copy()
+        self.multiple_reference_fields: dict[
+            str, tuple[str, str]
+        ] = self.default_multiple_reference_fields.copy()
         self.primary_reference_field: str | None = self.default_primary_reference_field
 
         # Parent Attributes #
@@ -152,7 +157,9 @@ class RegionReferenceComponent(BaseDatasetComponent):
 
         return object_, region
 
-    def get_object_reference(self, index: int | tuple| None = None, ref_name: str | None = None) -> Any:
+    def get_object_reference(
+        self, index: int | tuple | None = None, ref_name: str | None = None
+    ) -> Any:
         """Gets the object reference.
 
         Args:
@@ -175,7 +182,7 @@ class RegionReferenceComponent(BaseDatasetComponent):
     def set_object_reference(
         self,
         object_: h5py.Dataset | h5py.Reference | None,
-        index: int | tuple| None = None,
+        index: int | tuple | None = None,
         ref_name: str | None = None,
     ) -> Any:
         """Sets the object reference.
@@ -201,7 +208,9 @@ class RegionReferenceComponent(BaseDatasetComponent):
         else:
             self.composite.attributes[object_ref_name] = object_
 
-    def get_object(self, index: int | tuple | None = None, ref_name: str | None = None) -> Any:
+    def get_object(
+        self, index: int | tuple | None = None, ref_name: str | None = None
+    ) -> Any:
         """Gets the HDF5 object referenced.
 
         Args:
@@ -214,7 +223,9 @@ class RegionReferenceComponent(BaseDatasetComponent):
         ref = self.get_object_reference(index=index, ref_name=ref_name)
         return self.composite.file[ref] if ref else None
 
-    def get_region_reference(self, index: int | tuple, ref_name: str | None = None) -> tuple:
+    def get_region_reference(
+        self, index: int | tuple, ref_name: str | None = None
+    ) -> tuple:
         """Gets the region reference at a given index in the dataset.
 
         Args:
@@ -278,7 +289,9 @@ class RegionReferenceComponent(BaseDatasetComponent):
 
         self.composite[index] = item
 
-    def get_from_reference(self, index: int | tuple, ref_name: str | None = None) -> Any:
+    def get_from_reference(
+        self, index: int | tuple, ref_name: str | None = None
+    ) -> Any:
         """Get the item from the reference at the given index.
 
         Args:
@@ -288,10 +301,14 @@ class RegionReferenceComponent(BaseDatasetComponent):
         Returns:
             The item which the reference points to.
         """
-        object_ref, region_ref = self.get_region_reference(index=index, ref_name=ref_name)
+        object_ref, region_ref = self.get_region_reference(
+            index=index, ref_name=ref_name
+        )
         return self.composite.file[object_ref][region_ref]
 
-    def get_from_reference_dict(self, index: int | tuple, ref_name: str | None = None) -> dict:
+    def get_from_reference_dict(
+        self, index: int | tuple, ref_name: str | None = None
+    ) -> dict:
         """Get the item from the reference at the given index as a dictionary.
 
         Args:
@@ -301,10 +318,14 @@ class RegionReferenceComponent(BaseDatasetComponent):
         Returns:
             The item which the reference points to as a dictionary.
         """
-        object_ref, region_ref = self.get_region_reference(index=index, ref_name=ref_name)
+        object_ref, region_ref = self.get_region_reference(
+            index=index, ref_name=ref_name
+        )
         return self.composite.file[object_ref].get_item_dict(region_ref)
 
-    def set_reference_to(self, index: int | tuple, value: Any, ref_name: str | None = None) -> None:
+    def set_reference_to(
+        self, index: int | tuple, value: Any, ref_name: str | None = None
+    ) -> None:
         """Set the item referenced by the reference at the given index.
 
         Args:
@@ -312,10 +333,14 @@ class RegionReferenceComponent(BaseDatasetComponent):
             value: The value to set the item to at the reference.
             ref_name: The name of the type of reference to get the item from.
         """
-        object_ref, region_ref = self.get_region_reference(index=index, ref_name=ref_name)
+        object_ref, region_ref = self.get_region_reference(
+            index=index, ref_name=ref_name
+        )
         self.composite.file[object_ref][region_ref] = value
 
-    def set_reference_to_dict(self, index: int | tuple, value: Any, ref_name: str | None = None) -> None:
+    def set_reference_to_dict(
+        self, index: int | tuple, value: Any, ref_name: str | None = None
+    ) -> None:
         """Set the item referenced by the reference at the given index to a dictionary of data.
 
         Args:
@@ -323,5 +348,7 @@ class RegionReferenceComponent(BaseDatasetComponent):
             value: The dictionary to set the item to at the reference.
             ref_name: The name of the type of reference to get the item from.
         """
-        object_ref, region_ref = self.get_region_reference(index=index, ref_name=ref_name)
+        object_ref, region_ref = self.get_region_reference(
+            index=index, ref_name=ref_name
+        )
         self.composite.file[object_ref].set_item_dict(region_ref, value)

@@ -1,4 +1,4 @@
-""" __init__.py
+"""__init__.py
 HDF5Maps for creating tree hierarchies in an HDF5 file.
 """
 # Package Header #

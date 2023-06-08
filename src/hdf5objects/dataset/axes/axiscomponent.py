@@ -1,4 +1,4 @@
-""" axiscomponent.py
+"""axiscomponent.py
 A component and map for a HDF5Dataset which gives axis (scale) functionality.
 """
 # Package Header #
@@ -176,7 +176,9 @@ class AxisComponent(BaseDatasetComponent):
         """
         return self.composite[-1]
 
-    def get_intervals(self, start: int | None = None, stop: int | None = None, step: int | None = None) -> np.ndarray:
+    def get_intervals(
+        self, start: int | None = None, stop: int | None = None, step: int | None = None
+    ) -> np.ndarray:
         """Get the intervals between each datum of the axis.
 
         Args:
@@ -190,7 +192,9 @@ class AxisComponent(BaseDatasetComponent):
         return np.ediff1d(self.composite.all_data[slice(start, stop, step)])
 
     # Find
-    def find_index(self, item: int | float, approx: bool = False, tails: bool = False) -> IndexValue:
+    def find_index(
+        self, item: int | float, approx: bool = False, tails: bool = False
+    ) -> IndexValue:
         """Finds the index with the given value, can give an approximate index if the value is not present.
 
         Args:
@@ -248,7 +252,9 @@ class AxisComponent(BaseDatasetComponent):
         if start_index is None and stop_index is None:
             return FoundRange(None, None, None)
         else:
-            data = self.composite.all_data[slice(start=start_index, stop=stop_index, step=step)]
+            data = self.composite.all_data[
+                slice(start=start_index, stop=stop_index, step=step)
+            ]
 
             if step is not None and step != 1:
                 stop_index = int(data.shape[0] * step + start_index)
@@ -275,8 +281,10 @@ class AxisComponent(BaseDatasetComponent):
             self.composite[start:stop:step] += shift
         self.refresh()
 
+
 class AxisMap(DatasetMap):
     """An outline which defines an HDF5Dataset as an Axis."""
+
     default_kwargs: dict[str, Any] = {}
     default_component_types = {
         "axis": (AxisComponent, {}),

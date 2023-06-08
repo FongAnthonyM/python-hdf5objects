@@ -1,4 +1,4 @@
-""" hdf5file.py
+"""hdf5file.py
 Description:
 """
 # Package Header #
@@ -65,6 +65,7 @@ class HDF5File(HDF5BaseObject):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the open method.
     """
+
     # Todo: Rethink about how Errors and Warnings are handled in this object.
     _wrapped_types: list[type | object] = [HDF5Group, h5py.File]
     _wrap_attributes: list[str] = ["group", "_file"]
@@ -91,7 +92,9 @@ class HDF5File(HDF5BaseObject):
             return getattr(getattr(obj, wrap_name), attr_name)
 
     @classmethod
-    def _set_attribute(cls, obj: Any, wrap_name: str, attr_name: str, value: Any) -> None:
+    def _set_attribute(
+        cls, obj: Any, wrap_name: str, attr_name: str, value: Any
+    ) -> None:
         """Sets an attribute in a wrapped HDF5 object.
 
         Args:
@@ -116,7 +119,9 @@ class HDF5File(HDF5BaseObject):
             delattr(getattr(obj, wrap_name), attr_name)
 
     @classmethod
-    def _evaluate_method(cls, obj: Any, wrap_name: str, method_name: str, args: Any, kwargs: Any) -> Any:
+    def _evaluate_method(
+        cls, obj: Any, wrap_name: str, method_name: str, args: Any, kwargs: Any
+    ) -> Any:
         """Evaluates a method from a wrapped HDF5 object.
 
         Args:
@@ -157,7 +162,7 @@ class HDF5File(HDF5BaseObject):
     def __init__(
         self,
         file: str | pathlib.Path | h5py.File | None = None,
-        mode: str = 'r',
+        mode: str = "r",
         open_: bool = True,
         map_: HDF5Map | None = None,
         load: bool = False,
@@ -182,7 +187,7 @@ class HDF5File(HDF5BaseObject):
         super().__init__(init=False)
 
         # Override Attributes #
-        self._mode_: str = 'r'
+        self._mode_: str = "r"
 
         # Object Construction #
         if init:
@@ -402,12 +407,25 @@ class HDF5File(HDF5BaseObject):
             component_types: Component class and their keyword arguments to instantiate.
             components: Components to add.
         """
-        temp_types = self.default_component_types | {} if component_types is None else component_types
+        temp_types = (
+            self.default_component_types | {}
+            if component_types is None
+            else component_types
+        )
         new_kwargs = {} if component_kwargs is None else component_kwargs
-        default_components = {n: c(composite=self, **(k | new_kwargs.get(n, {}))) for n, (c, k) in temp_types.items()}
-        self.components.update(default_components | self.components | {} if components is None else components)
+        default_components = {
+            n: c(composite=self, **(k | new_kwargs.get(n, {})))
+            for n, (c, k) in temp_types.items()
+        }
+        self.components.update(
+            default_components | self.components | {}
+            if components is None
+            else components
+        )
 
-    def construct_file_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
+    def construct_file_attributes(
+        self, map_: HDF5Map = None, load: bool = False, require: bool = False
+    ) -> None:
         """Creates the attributes for this group.
 
         Args:
@@ -497,7 +515,7 @@ class HDF5File(HDF5BaseObject):
         open_: bool = True,
         map_: HDF5Map = None,
         require: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "HDF5File":
         """Creates the HDF5 file.
 
@@ -533,7 +551,7 @@ class HDF5File(HDF5BaseObject):
         load: bool = False,
         require: bool = False,
         component_kwargs: dict[str, Any] = {},
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "HDF5File":
         """Creates the HDF5 file.
 
@@ -549,7 +567,9 @@ class HDF5File(HDF5BaseObject):
         Returns:
             This object.
         """
-        self.create_file(name=name, open_=open_, map_=map_, load=load, require=require, **kwargs)
+        self.create_file(
+            name=name, open_=open_, map_=map_, load=load, require=require, **kwargs
+        )
         self.create_components(**component_kwargs)
         return self
 
@@ -560,7 +580,7 @@ class HDF5File(HDF5BaseObject):
         map_: HDF5Map = None,
         load: bool = False,
         require: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "HDF5File":
         """Creates the HDF5 file or loads it if it exists.
 
@@ -597,7 +617,7 @@ class HDF5File(HDF5BaseObject):
         load: bool = False,
         require: bool = False,
         component_kwargs: dict[str, Any] = {},
-        **kwargs: Any
+        **kwargs: Any,
     ) -> "HDF5File":
         """Creates the HDF5 file or loads it if it exists.
 
@@ -613,7 +633,9 @@ class HDF5File(HDF5BaseObject):
         Returns:
             This object.
         """
-        self.require_file(name=name, open_=open_, map_=map_, load=load, require=require, **kwargs)
+        self.require_file(
+            name=name, open_=open_, map_=map_, load=load, require=require, **kwargs
+        )
         self.require_components(**component_kwargs)
         return self
 
@@ -621,7 +643,9 @@ class HDF5File(HDF5BaseObject):
     #     pass
 
     # File
-    def open(self, mode: str | None = None, exc: bool = False, **kwargs: Any) -> "HDF5File":
+    def open(
+        self, mode: str | None = None, exc: bool = False, **kwargs: Any
+    ) -> "HDF5File":
         """Opens the HDF5 file.
 
         Args:
@@ -643,7 +667,13 @@ class HDF5File(HDF5BaseObject):
                 return self
             except Exception as error:
                 if exc:
-                    warn("Could not open" + self.path.as_posix() + "due to error: " + str(error), stacklevel=2)
+                    warn(
+                        "Could not open"
+                        + self.path.as_posix()
+                        + "due to error: "
+                        + str(error),
+                        stacklevel=2,
+                    )
                     self._file = None
                     return self
                 else:

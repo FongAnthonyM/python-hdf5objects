@@ -1,4 +1,4 @@
-""" hdf5eegframe.py
+"""hdf5eegframe.py
 A frame that interfaces with a HDF5EEG file.
 """
 # Package Header #
@@ -22,7 +22,11 @@ from typing import Any, Union
 
 # Third-Party Packages #
 from dspobjects.dataclasses import IndexDateTime, FoundTimeRange, FoundData
-from framestructure import TimeSeriesFrame, TimeSeriesFrameInterface, FileTimeContainerInterface
+from framestructure import (
+    TimeSeriesFrame,
+    TimeSeriesFrameInterface,
+    FileTimeContainerInterface,
+)
 import h5py
 import numpy as np
 
@@ -52,6 +56,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the open method.
     """
+
     file_type: type = HDF5EEG
     default_data_container: type | None = None
 
@@ -75,7 +80,9 @@ class HDF5EEGFrame(FileTimeContainerInterface):
             return False
 
     @classmethod
-    def new_validated(cls, path: pathlib.Path | str, mode: str = "r+", **kwargs: Any) -> Union["HDF5EEGFrame", None]:
+    def new_validated(
+        cls, path: pathlib.Path | str, mode: str = "r+", **kwargs: Any
+    ) -> Union["HDF5EEGFrame", None]:
         """Checks if the given path is a valid file and returns an instance of this object if valid.
 
         Args:
@@ -103,7 +110,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         file: str | pathlib.Path | h5py.File | HDF5EEG | None = None,
         s_id: str | None = None,
         start: datetime.datetime | float | None = None,
-        mode: str = 'r',
+        mode: str = "r",
         init: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -166,7 +173,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         map_: HDF5Map = None,
         load: bool = False,
         build: bool = False,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         """Creates the HDF5 file or loads it if it exists.
 
@@ -178,7 +185,9 @@ class HDF5EEGFrame(FileTimeContainerInterface):
             build: Determines if the values of this file will be filled.
             **kwargs: The keyword arguments for the open method.
         """
-        self.file.require_file(name=name, open_=open_, map_=map_, load=load, build=build, **kwargs)
+        self.file.require_file(
+            name=name, open_=open_, map_=map_, load=load, build=build, **kwargs
+        )
 
     def load(self) -> None:
         """Loads all data from the file into the file object."""
@@ -200,7 +209,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         Args:
             value: The data that will replace what is in the file.
         """
-        if self.mode == 'r':
+        if self.mode == "r":
             raise IOError("not writable")
         self.file.data.set_data(value)
 
@@ -219,7 +228,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         Args:
             value: A time axis object.
         """
-        if self.mode == 'r':
+        if self.mode == "r":
             raise IOError("not writable")
         self.data.time_axis.set_dataset(value)
 
@@ -246,7 +255,6 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         Args:
             value: The sample rate to set the file to.
         """
-        if self.mode == 'r':
+        if self.mode == "r":
             raise IOError("not writable")
         self.data.sample_rate = value
-

@@ -1,4 +1,4 @@
-""" __init__.py
+"""__init__.py
 General HDF5 objects for different file types.
 """
 # Package Header #
