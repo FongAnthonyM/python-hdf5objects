@@ -4,7 +4,7 @@
 Description:
 """
 # Package Header #
-from src.hdf5objects.__header__ import *
+from src.hdf5objects.header import *
 
 # Header #
 __author__ = __author__
@@ -38,6 +38,7 @@ def tmp_dir(tmpdir):
 # Classes #
 class ClassTest:
     """Default class tests that all classes should pass."""
+
     class_ = None
     timeit_runs = 2
     speed_tolerance = 200
@@ -52,20 +53,20 @@ class ClassTest:
 class TestHDF5File(ClassTest):
     class_ = HDF5File
     studies_path = pathlib.Path("/common/subjects")
-    load_path = pathlib.Path.cwd().joinpath("pytest_cache/EC228_2020-09-21_14~53~19.h5")
+    load_path = pathlib.Path.cwd().joinpath("pytest_cache/EC212_2020-01-28_00~07~37.h5")
     save_path = pathlib.Path.cwd().joinpath("pytest_cache/")
 
     @pytest.fixture
     def load_file(self):
         return self.class_(file=self.load_path)
 
-    @pytest.mark.parametrize("mode", ['r', 'r+', 'a'])
+    @pytest.mark.parametrize("mode", ["r", "r+", "a"])
     def test_new_object(self, mode):
         with self.class_(file=self.load_path, mode=mode) as f_obj:
             assert f_obj is not None
         assert True
 
-    @pytest.mark.parametrize("mode", ['r', 'r+', 'a'])
+    @pytest.mark.parametrize("mode", ["r", "r+", "a"])
     def test_load_whole_file(self, mode):
         with self.class_(file=self.load_path, mode=mode, load=True) as f_obj:
             assert f_obj is not None
@@ -118,11 +119,21 @@ class TestHDF5File(ClassTest):
         def get_data():
             x = load_file.eeg_data[:10000, :100]
 
-        mean_new = timeit.timeit(get_data, number=self.timeit_runs) / self.timeit_runs * 1000000
-        mean_old = timeit.timeit(assignment, number=self.timeit_runs) / self.timeit_runs * 1000000
+        mean_new = (
+            timeit.timeit(get_data, number=self.timeit_runs)
+            / self.timeit_runs
+            * 1000000
+        )
+        mean_old = (
+            timeit.timeit(assignment, number=self.timeit_runs)
+            / self.timeit_runs
+            * 1000000
+        )
         percent = (mean_new / mean_old) * 100
 
-        print(f"\nNew speed {mean_new:.3f} μs took {percent:.3f}% of the time of the old function.")
+        print(
+            f"\nNew speed {mean_new:.3f} μs took {percent:.3f}% of the time of the old function."
+        )
         assert percent < self.speed_tolerance
 
     def test_create_file(self):
@@ -133,6 +144,5 @@ class TestHDF5File(ClassTest):
 
 
 # Main #
-if __name__ == '__main__':
+if __name__ == "__main__":
     pytest.main(["-v", "-s"])
-

@@ -1,10 +1,8 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-""" hdf5events.py
+"""hdf5events.py
 Description:
 """
 # Package Header #
-from ..__header__ import *
+from ..header import *
 
 # Header #
 __author__ = __author__
@@ -40,11 +38,15 @@ class HDF5eventLogger(BaseHDF5):
     START_NAME = "StartTime"
     TYPE_NAME = "Type"
     LINK_NAME = "LinkID"
-    EVENT_DTYPE = np.dtype([(TIME_NAME, np.float),
-                            (DELTA_NAME, np.float),
-                            (START_NAME, np.float),
-                            (TYPE_NAME, h5py.string_dtype(encoding="utf-8")),
-                            (LINK_NAME, h5py.string_dtype(encoding="utf-8"))])
+    EVENT_DTYPE = np.dtype(
+        [
+            (TIME_NAME, np.float),
+            (DELTA_NAME, np.float),
+            (START_NAME, np.float),
+            (TYPE_NAME, h5py.string_dtype(encoding="utf-8")),
+            (LINK_NAME, h5py.string_dtype(encoding="utf-8")),
+        ]
+    )
 
     # Instantiation/Destruction
     def __init__(self, path=None, io_trigger=None, init=False):
@@ -83,8 +85,13 @@ class HDF5eventLogger(BaseHDF5):
     # Constructors
     def construct(self, open_=False, **kwargs):
         super().construct(open_=open_, **kwargs)
-        self.hierarchy = HDF5hierarchicalDatasets(h5_container=self, dataset=self.Events, name="Events",
-                                                  child_name=self.TYPE_NAME, link_name=self.LINK_NAME)
+        self.hierarchy = HDF5hierarchicalDatasets(
+            h5_container=self,
+            dataset=self.Events,
+            name="Events",
+            child_name=self.TYPE_NAME,
+            link_name=self.LINK_NAME,
+        )
 
     def create_file(self, open_=False):
         super().create_file(open_=open_)
@@ -127,10 +134,18 @@ class HDF5eventLogger(BaseHDF5):
         super().clear()
 
     # User Event Methods
-    def create_event(self,  type_, **kwargs):
-        seconds = self.start_time_offset + round(time.perf_counter() - self.start_time_counter, 6)
+    def create_event(self, type_, **kwargs):
+        seconds = self.start_time_offset + round(
+            time.perf_counter() - self.start_time_counter, 6
+        )
         now = self.start_datetime + datetime.timedelta(seconds=seconds)
-        return {"Time": now, "DeltaTime": seconds, "StartTime": self.start_datetime, self.TYPE_NAME: type_, **kwargs}
+        return {
+            "Time": now,
+            "DeltaTime": seconds,
+            "StartTime": self.start_datetime,
+            self.TYPE_NAME: type_,
+            **kwargs,
+        }
 
     def append_event(self, event, axis=0, child_kwargs=None):
         child_name = event[self.TYPE_NAME]
@@ -144,7 +159,9 @@ class HDF5eventLogger(BaseHDF5):
             child_dtype = self.event2dtype(child_event)
             if child_kwargs is None:
                 child_kwargs = self.default_child_kwargs
-            child_dataset = self.create_event_dataset(child_name, dtype=child_dtype, **child_kwargs)
+            child_dataset = self.create_event_dataset(
+                child_name, dtype=child_dtype, **child_kwargs
+            )
             self.hierarchy.add_child_dataset(child_name, child_dataset)
         self.hierarchy.append_item(event, (child_name,), axis)
 
@@ -152,7 +169,14 @@ class HDF5eventLogger(BaseHDF5):
         self.start_datetime = datetime.datetime.now()
         self.start_time_counter = time.perf_counter()
         self.start_time_offset = 0
-        self.append({"Time": self.start_datetime, "DeltaTime": 0, "StartTime": self.start_datetime, self.TYPE_NAME: "TimeSet"})
+        self.append(
+            {
+                "Time": self.start_datetime,
+                "DeltaTime": 0,
+                "StartTime": self.start_datetime,
+                self.TYPE_NAME: "TimeSet",
+            }
+        )
 
     def resume_time(self, name=None, index=None):
         now_datatime = datetime.datetime.now()
@@ -161,11 +185,19 @@ class HDF5eventLogger(BaseHDF5):
             name = "TimeSet"
         if index is None:
             index = -1
-        start_event = self.hierarchy.get_item(index, name)
-        self.start_datetime = datetime.datetime.fromtimestamp(start_event[self.TIME_NAME])
+        start_event = self.hierarchy.get(index, name)
+        self.start_datetime = datetime.datetime.fromtimestamp(
+            start_event[self.TIME_NAME]
+        )
         self.start_time_offset = (now_datatime - self.start_datetime).total_seconds()
-        self.append({"Time": now_datatime, "DeltaTime": self.start_time_offset,
-                     "StartTime": self.start_datetime, self.TYPE_NAME: "ResumeTime"})
+        self.append(
+            {
+                "Time": now_datatime,
+                "DeltaTime": self.start_time_offset,
+                "StartTime": self.start_datetime,
+                self.TYPE_NAME: "ResumeTime",
+            }
+        )
 
     def get_event_type(self, name, id_info=False):
         return self.hierarchy.get_dataset(name, id_info)
@@ -191,7 +223,7 @@ class HDF5eventLogger(BaseHDF5):
             pass
         elif bisect_ == "bisect":
             if index > 0:
-                index -= 1 - (np.abs(times[index-1:index+1]-time_)).argmin()
+                index -= 1 - (np.abs(times[index - 1 : index + 1] - time_)).argmin()
         elif bisect_ == "left":
             if index > 0:
                 index -= 1
@@ -211,7 +243,7 @@ class HDF5eventLogger(BaseHDF5):
         first, _ = self.find_event(start, type_=type_, bisect_="right")
         last, _ = self.find_event(end, type_=type_, bisect_="left")
 
-        return range(first, last+1), events[first:last+1]
+        return range(first, last + 1), events[first : last + 1]
 
     # Trigger Methods
     def trigger(self):
@@ -247,7 +279,9 @@ class SubjectEventLogger(HDF5eventLogger):
     EXPERIMENT_NUMBER = "Block"
 
     # Instantiation/Destruction
-    def __init__(self, path=None, subject="", x_name="", x_number="", io_trigger=None, init=False):
+    def __init__(
+        self, path=None, subject="", x_name="", x_number="", io_trigger=None, init=False
+    ):
         super().__init__(path, io_trigger)
         self._subject = subject
         self._experiment_name = x_name
@@ -262,5 +296,10 @@ class SubjectEventLogger(HDF5eventLogger):
 
     def create_file(self, open_=False):
         super().create_file(open_=open_)
-        self.add_file_attributes({self.SUBJECT_NAME: self._subject, self.EXPERIMENT_NAME: self._experiment_name,
-                                  self.EXPERIMENT_NUMBER: self._experiment_number})
+        self.add_file_attributes(
+            {
+                self.SUBJECT_NAME: self._subject,
+                self.EXPERIMENT_NAME: self._experiment_name,
+                self.EXPERIMENT_NUMBER: self._experiment_number,
+            }
+        )

@@ -1,5 +1,5 @@
 """__init__.py
-General HDF5 objects for different file types.
+Complentary objects for the HDF5Dataset.
 """
 # Package Header #
 from ..header import *
@@ -12,10 +12,8 @@ __email__ = __email__
 
 
 # Imports #
-# Standard Libraries #
-
-# Third-Party Packages #
-
 # Local Packages #
-from .basehdf5 import BaseHDF5, BaseHDF5Map
-from .hdf5eeg import HDF5EEG, HDF5EEGMap
+from .basedatasetcomponent import BaseDatasetComponent
+from .axes import *
+from .components import *
+from .maps import *

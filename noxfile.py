@@ -1,17 +1,6 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """ noxfile.py
 Nox sessions.
 """
-# Package Header #
-from src.hdf5objects.__header__ import *
-
-# Header #
-__author__ = __author__
-__credits__ = __credits__
-__maintainer__ = __maintainer__
-__email__ = __email__
-
 # Imports #
 # Standard Libraries #
 import shutil
@@ -19,8 +8,9 @@ import sys
 from pathlib import Path
 from textwrap import dedent
 
-# Third-Party Packages #
 import nox
+
+# Third-Party Packages #
 
 try:
     from nox_poetry import Session
@@ -38,8 +28,8 @@ except ImportError:
 
 
 # Definitions #
-package = "baseobjects"
-python_versions = ["3.10", "3.9", "3.8", "3.7"]
+package = "hdf5objects"
+python_versions = ["3.10"]
 nox.needs_version = ">= 2021.6.6"
 nox.options.sessions = (
     "pre-commit",
@@ -136,7 +126,7 @@ def safety(session: Session) -> None:
 @session(python=python_versions)
 def mypy(session: Session) -> None:
     """Type-check using mypy."""
-    args = session.posargs or ["src", "tests", "docs/conf.py"]
+    args = session.posargs or ["src", "docs/conf.py"]
     session.install(".")
     session.install("mypy", "pytest")
     session.run("mypy", *args)

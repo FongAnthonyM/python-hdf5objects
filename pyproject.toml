@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hdf5objects"
-version = "0.2.1"
+version = "0.3.0"
 description = "hdf5objects"
 authors = ["Anthony Fong <FongAnthonyM@gmail.com>"]
 license = "MIT"
@@ -16,16 +16,14 @@ classifiers = [
 Changelog = "https://github.com/FongAnthonyM/hdf5objects/releases"
 
 [tool.poetry.dependencies]
-python = "^3.7"
-baseobjects = "^1.5.2"
-classversioning = "^0.4.1"
-dspobjects = "^0.1.0"
-framestructure = "^0.3.0"
+python = "^3.10"
+baseobjects = "^1.8.0"
+classversioning = "^0.6.0"
+dspobjects = "^0.2.0"
+framestructure = "^0.4.0"
 h5py = "^3.5.0"
 numpy = "^1.21.1"
-pytz = "^2021.1"
-tzlocal = "^3.0"
-bidict = "^0.21.3"
+bidict = "^0.22.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
@@ -38,7 +36,7 @@ sphinx = "^4.2.0"
 sphinx-autobuild = "^2021.3.14"
 pre-commit = "^2.15.0"
 flake8 = "^4.0.1"
-black = "^21.10b0"
+black = "^23.3.0"
 flake8-bandit = "^2.1.2"
 flake8-bugbear = "^21.9.2"
 flake8-docstrings = "^1.6.0"
