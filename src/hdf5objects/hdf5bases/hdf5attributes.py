@@ -471,12 +471,13 @@ class HDF5Attributes(HDF5BaseObject):
             This object.
         """
         self._file_was_open = self.file.is_open
+        if not self._file_was_open:
+            self.file.open(mode=mode, **kwargs)
+
         try:
             if not self._attribute_manager:
-                self.file.open(mode=mode, **kwargs)
                 self._attribute_manager = self.file._file[self._full_name].attrs
         except ValueError:
-            self.file.open(mode=mode, **kwargs)
             self._attribute_manager = self.file._file[self._full_name].attrs
 
         return self

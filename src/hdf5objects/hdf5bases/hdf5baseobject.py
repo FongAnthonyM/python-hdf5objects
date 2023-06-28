@@ -412,8 +412,10 @@ class HDF5BaseObject(
             This object.
         """
         self._file_was_open = self.file.is_open
-        if not getattr(self, self._wrap_attributes[0]):
+        if not self._file_was_open:
             self.file.open(mode=mode, **kwargs)
+
+        if not getattr(self, self._wrap_attributes[0]):
             setattr(self, self._wrap_attributes[0], self.file._file[self._full_name])
 
         return self

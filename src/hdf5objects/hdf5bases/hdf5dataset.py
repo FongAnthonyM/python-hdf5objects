@@ -1183,9 +1183,7 @@ class HDF5Dataset(HDF5BaseObject):
         else:
             self.require_data(data=data, **kwargs)
 
-    def set_data(
-        self, data: np.ndarray, component_kwargs: dict[str, Any] = {}, **kwargs: Any
-    ) -> None:
+    def set_data(self, data: np.ndarray, component_kwargs: dict[str, Any] = {}, **kwargs: Any) -> None:
         """Sets the data by either creating it or replacing it.
 
         Args:
@@ -1248,9 +1246,7 @@ class HDF5Dataset(HDF5BaseObject):
             dict_: The dictionary to add as an item to the dataset.
             axis: The axis to add the dictionary along.
         """
-        self.append_data(
-            np.array(self.dict_to_item(dict_), dtype=self.dtype), axis=axis
-        )
+        self.append_data(np.array(self.dict_to_item(dict_), dtype=self.dtype), axis=axis)
 
     def append_components(self, **component_kwargs: dict[str, Any]) -> None:
         """Appends data to the components of this dataset.
@@ -1262,9 +1258,7 @@ class HDF5Dataset(HDF5BaseObject):
             kwargs = component_kwargs.get(name, {})
             component.append_component(**kwargs)
 
-    def append(
-        self, data: np.ndarray, axis: int = 0, component_kwargs: dict[str, Any] = {}
-    ) -> None:
+    def append(self, data: np.ndarray, axis: int = 0, component_kwargs: dict[str, Any] = {}) -> None:
         """Append data to the dataset along a specified axis.
 
         Args:
@@ -1291,12 +1285,7 @@ class HDF5Dataset(HDF5BaseObject):
             iter_: An iterable of dictionaries to append to the dataset.
             axis: The axis to extend the dictionaries to.
         """
-        self.append_data(
-            np.fromiter(
-                (self.dict_to_item(item) for item in iter_), dtype=list(self._dtype)
-            ),
-            axis=axis,
-        )
+        self.append_data(np.fromiter((self.dict_to_item(item) for item in iter_), dtype=list(self._dtype)), axis=axis)
 
     def insert_data(
         self, index: int | slice | Iterable[int], data: np.ndarray, axis: int = 0
