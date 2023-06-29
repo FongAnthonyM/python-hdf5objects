@@ -258,9 +258,7 @@ class HDF5EEG(BaseHDF5):
         if start is not None:
             self.attributes["start"] = nanostamp(start)
 
-    def construct_dataset(
-        self, load: bool = False, require: bool = False, **kwargs: Any
-    ) -> None:
+    def construct_dataset(self, load: bool = False, require: bool = False, **kwargs: Any) -> None:
         """Constructs the main EEG dataset.
 
         Args:
@@ -270,9 +268,7 @@ class HDF5EEG(BaseHDF5):
         """
         self._group.get_member(name="data", load=load, require=require, **kwargs)
 
-    def require_dataset(
-        self, load: bool = False, require: bool = True, **kwargs: Any
-    ) -> Any:
+    def require_dataset(self, load: bool = False, require: bool = True, **kwargs: Any) -> Any:
         """Requires the main EEG dataset.
 
         Args:
@@ -280,9 +276,7 @@ class HDF5EEG(BaseHDF5):
             require: Determines if this object will create and fill the dataset.
             **kwargs: The keyword arguments for creating the dataset.
         """
-        return self._group.construct_member(
-            name="data", load=load, require=require, **kwargs
-        )
+        return self._group.construct_member(name="data", load=load, require=require, **kwargs)
 
     # File
     def create_file(
@@ -325,9 +319,7 @@ class HDF5EEG(BaseHDF5):
         Returns:
             If the attributes are valid.
         """
-        return (
-            self.start == self.time_axis.start and self.end == self.data._time_axis.end
-        )
+        return self.start == self.time_axis.start and self.end == self.data._time_axis.end
 
     def standardize_attributes(self) -> None:
         """Sets attributes that correspond to values somewhere else to their current values."""

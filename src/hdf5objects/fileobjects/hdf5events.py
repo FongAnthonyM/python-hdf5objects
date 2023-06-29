@@ -135,9 +135,7 @@ class HDF5eventLogger(BaseHDF5):
 
     # User Event Methods
     def create_event(self, type_, **kwargs):
-        seconds = self.start_time_offset + round(
-            time.perf_counter() - self.start_time_counter, 6
-        )
+        seconds = self.start_time_offset + round(time.perf_counter() - self.start_time_counter, 6)
         now = self.start_datetime + datetime.timedelta(seconds=seconds)
         return {
             "Time": now,
@@ -159,9 +157,7 @@ class HDF5eventLogger(BaseHDF5):
             child_dtype = self.event2dtype(child_event)
             if child_kwargs is None:
                 child_kwargs = self.default_child_kwargs
-            child_dataset = self.create_event_dataset(
-                child_name, dtype=child_dtype, **child_kwargs
-            )
+            child_dataset = self.create_event_dataset(child_name, dtype=child_dtype, **child_kwargs)
             self.hierarchy.add_child_dataset(child_name, child_dataset)
         self.hierarchy.append_item(event, (child_name,), axis)
 
@@ -186,9 +182,7 @@ class HDF5eventLogger(BaseHDF5):
         if index is None:
             index = -1
         start_event = self.hierarchy.get(index, name)
-        self.start_datetime = datetime.datetime.fromtimestamp(
-            start_event[self.TIME_NAME]
-        )
+        self.start_datetime = datetime.datetime.fromtimestamp(start_event[self.TIME_NAME])
         self.start_time_offset = (now_datatime - self.start_datetime).total_seconds()
         self.append(
             {
@@ -279,9 +273,7 @@ class SubjectEventLogger(HDF5eventLogger):
     EXPERIMENT_NUMBER = "Block"
 
     # Instantiation/Destruction
-    def __init__(
-        self, path=None, subject="", x_name="", x_number="", io_trigger=None, init=False
-    ):
+    def __init__(self, path=None, subject="", x_name="", x_number="", io_trigger=None, init=False):
         super().__init__(path, io_trigger)
         self._subject = subject
         self._experiment_name = x_name

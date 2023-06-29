@@ -119,21 +119,11 @@ class TestHDF5File(ClassTest):
         def get_data():
             x = load_file.eeg_data[:10000, :100]
 
-        mean_new = (
-            timeit.timeit(get_data, number=self.timeit_runs)
-            / self.timeit_runs
-            * 1000000
-        )
-        mean_old = (
-            timeit.timeit(assignment, number=self.timeit_runs)
-            / self.timeit_runs
-            * 1000000
-        )
+        mean_new = timeit.timeit(get_data, number=self.timeit_runs) / self.timeit_runs * 1000000
+        mean_old = timeit.timeit(assignment, number=self.timeit_runs) / self.timeit_runs * 1000000
         percent = (mean_new / mean_old) * 100
 
-        print(
-            f"\nNew speed {mean_new:.3f} μs took {percent:.3f}% of the time of the old function."
-        )
+        print(f"\nNew speed {mean_new:.3f} μs took {percent:.3f}% of the time of the old function.")
         assert percent < self.speed_tolerance
 
     def test_create_file(self):

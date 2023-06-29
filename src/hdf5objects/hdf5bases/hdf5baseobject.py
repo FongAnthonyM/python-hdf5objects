@@ -33,9 +33,7 @@ from .hdf5map import HDF5Map
 
 # Definitions #
 # Classes #
-class HDF5BaseObject(
-    StaticWrapper, CachingObject, BaseComposite, metaclass=CachingInitMeta
-):
+class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=CachingInitMeta):
     """An abstract wrapper which wraps object from an HDF5 file and gives more functionality.
 
     Class Attributes:
@@ -84,9 +82,7 @@ class HDF5BaseObject(
             return super()._get_attribute(obj, wrap_name, attr_name)
 
     @classmethod
-    def _set_attribute(
-        cls, obj: Any, wrap_name: str, attr_name: str, value: Any
-    ) -> None:
+    def _set_attribute(cls, obj: Any, wrap_name: str, attr_name: str, value: Any) -> None:
         """Sets an attribute in a wrapped HDF5 object.
 
         Args:
@@ -111,9 +107,7 @@ class HDF5BaseObject(
             super()._del_attribute(obj, wrap_name, attr_name)
 
     @classmethod
-    def _evaluate_method(
-        cls, obj: Any, wrap_name: str, method_name: str, args: Any, kwargs: Any
-    ) -> Any:
+    def _evaluate_method(cls, obj: Any, wrap_name: str, method_name: str, args: Any, kwargs: Any) -> Any:
         """Evaluates a method from a wrapped HDF5 object.
 
         Args:
@@ -161,9 +155,7 @@ class HDF5BaseObject(
 
         # Object Construction #
         if init:
-            self.construct(
-                name=name, map_=map_, mode=mode, file=file, parent=parent, **kwargs
-            )
+            self.construct(name=name, map_=map_, mode=mode, file=file, parent=parent, **kwargs)
 
     @property
     def _name(self) -> str:
@@ -377,19 +369,10 @@ class HDF5BaseObject(
             components: Components to add.
         """
         component_types = {} if component_types is None else component_types
-        temp_types = (
-            self.default_component_types | self.map.component_types | component_types
-        )
+        temp_types = self.default_component_types | self.map.component_types | component_types
         new_kwargs = {} if component_kwargs is None else component_kwargs
-        default_components = {
-            n: c(composite=self, **(k | new_kwargs.get(n, {})))
-            for n, (c, k) in temp_types.items()
-        }
-        self.components.update(
-            default_components | self.components | {}
-            if components is None
-            else components
-        )
+        default_components = {n: c(composite=self, **(k | new_kwargs.get(n, {}))) for n, (c, k) in temp_types.items()}
+        self.components.update(default_components | self.components | {} if components is None else components)
 
     def is_exist(self) -> bool:
         """Determine if this object exists in the HDF5 file."""
@@ -503,7 +486,7 @@ class HDF5BaseObject(
             if parts:
                 self._parents = parts
 
-    def set_mode(self, mode: str, timed: bool = False, **kwargs: Any) -> None:
+    def set_mode(self, mode: str, timed: bool = True, **kwargs: Any) -> None:
         """Sets the edit mode of this object.
 
         Args:

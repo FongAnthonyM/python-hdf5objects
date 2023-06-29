@@ -88,11 +88,7 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
     @property
     def _sample_rate(self) -> Decimal | h5py.Empty:
         """The sample rate of this timeseries."""
-        return (
-            self.time_axis.sample_rate
-            if self.time_axis is not None
-            else self._sample_rate_
-        )
+        return self.time_axis.sample_rate if self.time_axis is not None else self._sample_rate_
 
     @_sample_rate.setter
     def _sample_rate(self, value: Decimal | int | float | None) -> None:
@@ -180,9 +176,7 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
         self.composite.attributes.set_attribute("t_axis", value)
         self._t_axis = None
 
-    def set_time_axis(
-        self, t_axis: int | None = None, scale_name: str | None = None
-    ) -> None:
+    def set_time_axis(self, t_axis: int | None = None, scale_name: str | None = None) -> None:
         """Sets the time axis for this component.
 
         Args:
@@ -344,9 +338,7 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
             **kwargs: The keyword arguments for the HDF5Dataset.
         """
         self.composite.create_data(**kwargs)
-        self.create_component(
-            t_axis=t_axis, scale_name=scale_name, sample_rate=sample_rate
-        )
+        self.create_component(t_axis=t_axis, scale_name=scale_name, sample_rate=sample_rate)
         return self.composite
 
     def require_component(
@@ -394,9 +386,7 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
             **kwargs: The keyword arguments for the HDF5Dataset.
         """
         self.composite.require_data(**kwargs)
-        self.require_component(
-            t_axis=t_axis, scale_name=scale_name, sample_rate=sample_rate
-        )
+        self.require_component(t_axis=t_axis, scale_name=scale_name, sample_rate=sample_rate)
         return self.composite
 
     def set_data_component(self, data: np.ndarray, **kwargs: Any) -> None:

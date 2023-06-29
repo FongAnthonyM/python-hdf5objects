@@ -86,7 +86,7 @@ class ShapesComponent(BaseDatasetComponent):
 
     def get_min_shape(self, ignore_zeros: bool = False) -> tuple[int, ...]:
         if self.composite.size != 0:
-            shapes = (self.composite[~np.all(self.composite[...] == 0, axis=1)] if ignore_zeros else self.composite)
+            shapes = self.composite[~np.all(self.composite[...] == 0, axis=1)] if ignore_zeros else self.composite
             return tuple(np.amin(shapes, 0))
         else:
             return (0,)

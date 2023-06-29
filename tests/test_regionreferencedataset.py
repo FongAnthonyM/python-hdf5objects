@@ -53,12 +53,8 @@ class RegionReferenceTestMap(DatasetMap):
         "reference": (
             RegionReferenceComponent,
             {
-                "single_reference_fields": {
-                    "test_single": ("test_attribute", "single_region")
-                },
-                "multiple_reference_fields": {
-                    "test_multiple": ("multiple_object", "multiple_region")
-                },
+                "single_reference_fields": {"test_single": ("test_attribute", "single_region")},
+                "multiple_reference_fields": {"test_multiple": ("multiple_object", "multiple_region")},
                 "primary_reference_field": "test_single",
             },
         ),
@@ -71,9 +67,7 @@ class RegionReferenceDatasetTestFileMap(BaseHDF5Map):
     default_map_names: Mapping[str, str] = {"test_dataset": "test_dataset"}
     default_maps: Mapping[str, HDF5Map] = {
         "main_dataset": RegionReferenceTestMap(shape=(1,), maxshape=(None,)),
-        "secondary_dataset": DatasetMap(
-            shape=(0, 0), maxshape=(None, None), dtype="f8"
-        ),
+        "secondary_dataset": DatasetMap(shape=(0, 0), maxshape=(None, None), dtype="f8"),
         "tertiary_dataset": DatasetTestMap(shape=(1,), maxshape=(None,)),
     }
 
@@ -133,12 +127,10 @@ class TestDataset(ClassTest):
             multi_dataset.set_item_dict(0, test_tertiary_entry)
 
             test_dataset.attributes["test_attribute"] = normal_dataset.ref
-            obj_1, region_1 = test_dataset.components[
-                "reference"
-            ].generate_object_reference(region=(slice(20, 30), slice(20, 30)))
-            obj_2, region_2 = test_dataset.components[
-                "reference"
-            ].generate_object_reference(
+            obj_1, region_1 = test_dataset.components["reference"].generate_object_reference(
+                region=(slice(20, 30), slice(20, 30))
+            )
+            obj_2, region_2 = test_dataset.components["reference"].generate_object_reference(
                 region=0, object_=multi_dataset, ref_name="test_multiple"
             )
 
@@ -148,13 +140,9 @@ class TestDataset(ClassTest):
             test_dataset.set_item_dict(0, test_ref_entry)
             grabbed_data = test_dataset.components["reference"].get_from_reference(0)
 
-            test_ref_entry.update(
-                {"multiple_region": region_2, "multiple_object": obj_2}
-            )
+            test_ref_entry.update({"multiple_region": region_2, "multiple_object": obj_2})
             test_dataset.append_item_dict(test_ref_entry)
-            grabbed_entry = test_dataset.components[
-                "reference"
-            ].get_from_reference_dict(1, ref_name="test_multiple")
+            grabbed_entry = test_dataset.components["reference"].get_from_reference_dict(1, ref_name="test_multiple")
 
         assert grabbed_data.shape == (10, 10)
         assert tuple(grabbed_entry) == tuple(test_tertiary_entry)
