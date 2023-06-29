@@ -353,7 +353,7 @@ class HDF5File(HDF5BaseObject):
             self.map.name = "/"
 
         if mode is not None:
-            self.set_mode(mode, timed=False)
+            self.set_mode(mode)
 
         if path is not None:
             self._set_path(path)

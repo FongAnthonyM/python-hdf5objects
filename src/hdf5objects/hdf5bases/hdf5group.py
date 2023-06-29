@@ -191,12 +191,12 @@ class HDF5Group(HDF5BaseObject):
             self._name_ = self.map.name
 
         if mode is not None:
-            self.set_mode(mode, timed=False)
+            self.set_mode(mode)
 
         if file is not None:
             self.set_file(file)
             if mode is None and self._mode_ is None:
-                self.set_mode(self.file._mode, timed=False)
+                self.set_mode(self.file._mode)
 
         if self.map.name is None:
             self.map.name = "/"

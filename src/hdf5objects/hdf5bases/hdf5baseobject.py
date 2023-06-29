@@ -346,12 +346,12 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
             self._name_ = self.map.name
 
         if mode is not None:
-            self.set_mode(mode, timed=False)
+            self.set_mode(mode)
 
         if file is not None:
             self.set_file(file)
             if mode is None and self._mode_ is None:
-                self.set_mode(self.file._mode, timed=False)
+                self.set_mode(self.file._mode)
 
         super().construct(**kwargs)
 
