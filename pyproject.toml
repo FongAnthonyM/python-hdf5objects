@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hdf5objects"
-version = "0.4.0"
+version = "0.3.1"
 description = "hdf5objects"
 authors = ["Anthony Fong <FongAnthonyM@gmail.com>"]
 license = "MIT"
@@ -20,7 +20,7 @@ python = "^3.10"
 baseobjects = "^1.8.0"
 classversioning = "^0.6.0"
 dspobjects = "^0.2.0"
-framestructure = "^0.4.0"
+framestructure = "^0.4.1"
 h5py = "^3.5.0"
 numpy = "^1.21.1"
 bidict = "^0.22.0"
