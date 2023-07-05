@@ -80,9 +80,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
             return False
 
     @classmethod
-    def new_validated(
-        cls, path: pathlib.Path | str, mode: str = "r+", **kwargs: Any
-    ) -> Union["HDF5EEGFrame", None]:
+    def new_validated(cls, path: pathlib.Path | str, mode: str = "r+", **kwargs: Any) -> Union["HDF5EEGFrame", None]:
         """Checks if the given path is a valid file and returns an instance of this object if valid.
 
         Args:
@@ -185,9 +183,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
             build: Determines if the values of this file will be filled.
             **kwargs: The keyword arguments for the open method.
         """
-        self.file.require_file(
-            name=name, open_=open_, map_=map_, load=load, build=build, **kwargs
-        )
+        self.file.require_file(name=name, open_=open_, map_=map_, load=load, build=build, **kwargs)
 
     def load(self) -> None:
         """Loads all data from the file into the file object."""

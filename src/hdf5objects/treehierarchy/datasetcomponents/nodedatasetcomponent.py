@@ -100,9 +100,7 @@ class NodeDatasetComponent(BaseDatasetComponent):
             map_: The map to the object that should be stored in the entry.
         """
         if map_ is not None:
-            item[self.default_refernce_field] = map_.get_object(
-                require=True, file=self.composite.file
-            ).ref
+            item[self.default_refernce_field] = map_.get_object(require=True, file=self.composite.file).ref
 
         self.composite.set_item_dict(index, item)
 
@@ -118,9 +116,7 @@ class NodeDatasetComponent(BaseDatasetComponent):
             map_: The map to the object that should be stored in the entry.
         """
         if map_ is not None:
-            item[self.default_refernce_field] = map_.get_object(
-                require=True, file=self.composite.file
-            ).ref
+            item[self.default_refernce_field] = map_.get_object(require=True, file=self.composite.file).ref
         elif self.default_refernce_field not in item:
             item[self.default_refernce_field] = h5py.Reference()
 
@@ -140,9 +136,7 @@ class NodeDatasetComponent(BaseDatasetComponent):
             map_: The map to the object that should be stored in the entry.
         """
         if map_ is not None:
-            item[self.default_refernce_field] = map_.get_object(
-                require=True, file=self.composite.file
-            ).ref
+            item[self.default_refernce_field] = map_.get_object(require=True, file=self.composite.file).ref
         elif self.default_refernce_field not in item:
             item[self.default_refernce_field] = h5py.Reference()
 

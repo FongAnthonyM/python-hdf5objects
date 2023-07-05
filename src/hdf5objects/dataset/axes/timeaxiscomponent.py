@@ -279,18 +279,14 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
             self.set_data(data=np.arange(start, stop, step), **d_kwargs)
 
     @singlekwargdispatch("datetimes")
-    def from_datetimes(
-        self, datetimes: Iterable[datetime.datetime | float] | np.ndarray, **kwargs: Any
-    ) -> None:
+    def from_datetimes(self, datetimes: Iterable[datetime.datetime | float] | np.ndarray, **kwargs: Any) -> None:
         """Sets the axis values to a series of datetimes.
 
         Args:
             datetimes: The datetimes of the axis.
             **kwargs: The keyword arguments for the HDF5Dataset.
         """
-        raise TypeError(
-            f"A {type(datetimes)} cannot be used to construct the time axis."
-        )
+        raise TypeError(f"A {type(datetimes)} cannot be used to construct the time axis.")
 
     @from_datetimes.register(Iterable)
     def _(self, datetimes: Iterable[datetime.datetime | float], **kwargs: Any) -> None:
@@ -374,11 +370,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 
         tz_name = self.composite.attributes.get("time_zone", None)
         tz_offset = self.composite.attributes.get("time_zone_offset", None)
-        if (
-            tz_name is not None
-            and not isinstance(tz_name, h5py.Empty)
-            and tz_name != ""
-        ):
+        if tz_name is not None and not isinstance(tz_name, h5py.Empty) and tz_name != "":
             try:
                 return zoneinfo.ZoneInfo(tz_name)
             except zoneinfo.ZoneInfoNotFoundError as e:
@@ -391,9 +383,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
         else:
             return None
 
-    def set_time_zone(
-        self, value: str | datetime.tzinfo | None = None, offset: float | None = None
-    ) -> None:
+    def set_time_zone(self, value: str | datetime.tzinfo | None = None, offset: float | None = None) -> None:
         """Sets the timezone of this axis.
 
         Args:
@@ -411,9 +401,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
             offset = local_time.tm_gmtoff
             value = local_time.tm_zone
         else:
-            zoneinfo.ZoneInfo(
-                value
-            )  # Raises an error if the given string is not a time zone.
+            zoneinfo.ZoneInfo(value)  # Raises an error if the given string is not a time zone.
 
         self.composite.attributes["time_zone"] = value
         self.composite.attributes["time_zone_offset"] = offset

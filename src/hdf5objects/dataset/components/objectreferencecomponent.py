@@ -116,9 +116,7 @@ class ObjectReferenceComponent(BaseDatasetComponent):
 
         return object_
 
-    def get_object_reference(
-        self, index: int | tuple, ref_name: str | None = None
-    ) -> Any:
+    def get_object_reference(self, index: int | tuple, ref_name: str | None = None) -> Any:
         """Gets the object reference.
 
         Args:
@@ -131,9 +129,7 @@ class ObjectReferenceComponent(BaseDatasetComponent):
         if ref_name is None:
             ref_name = self.primary_reference_field
 
-        return self.composite[index][
-            self.composite.dtypes_dict[self.reference_fields[ref_name]]
-        ]
+        return self.composite[index][self.composite.dtypes_dict[self.reference_fields[ref_name]]]
 
     def get_object(self, index: int | tuple, ref_name: str | None = None) -> Any:
         """Gets the HDF5 object referenced.
@@ -160,10 +156,7 @@ class ObjectReferenceComponent(BaseDatasetComponent):
         if ref_name is None:
             ref_name = self.primary_reference_field
 
-        return (
-            self.composite.file[ref] if ref else None
-            for ref in self.composite[self.reference_fields[ref_name]]
-        )
+        return (self.composite.file[ref] if ref else None for ref in self.composite[self.reference_fields[ref_name]])
 
     def get_objects(self, ref_name: str | None = None) -> tuple[Any]:
         """Gets the HDF5 objects referenced in the dataset.

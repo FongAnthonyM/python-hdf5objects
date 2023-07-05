@@ -111,9 +111,7 @@ class HDF5Map(BaseObject):
 
         # Add subclass (maps) to the registry.
         if cls.register:
-            map_namespace = (
-                cls.__module__ if cls.map_namespace is None else cls.map_namespace
-            )
+            map_namespace = cls.__module__ if cls.map_namespace is None else cls.map_namespace
             if map_namespace.split(".")[0] == "src":
                 map_namespace = map_namespace[4:]
             namespace = cls.map_registry.get(map_namespace, None)
@@ -127,9 +125,7 @@ class HDF5Map(BaseObject):
                 "map_type": "map_type",
             }
             map_attributes = {"map_namespace": map_namespace, "map_type": cls.__name__}
-            cls.default_attribute_names = (
-                map_attribute_names | cls.default_attribute_names
-            )
+            cls.default_attribute_names = map_attribute_names | cls.default_attribute_names
             cls.default_attributes = map_attributes | cls.default_attributes
 
     # Magic Methods
@@ -168,9 +164,7 @@ class HDF5Map(BaseObject):
         self.attribute_component_types: dict[
             str, list[Any, dict[str, Any]]
         ] = self.default_attribute_component_types.copy()
-        self.component_types: dict[
-            str, list[Any, dict[str, Any]]
-        ] = self.default_component_types.copy()
+        self.component_types: dict[str, list[Any, dict[str, Any]]] = self.default_component_types.copy()
 
         # Parent Attributes #
         super().__init__(*args, init=False, **kwargs)
@@ -466,9 +460,7 @@ class HDF5Map(BaseObject):
                     return self.maps.get(key)
         return map_
 
-    def set_item(
-        self, map_: "HDF5Map", name: str | None = None, python_name: str | None = None
-    ) -> None:
+    def set_item(self, map_: "HDF5Map", name: str | None = None, python_name: str | None = None) -> None:
         """Sets a nested map in this map.
 
         Args:
@@ -575,9 +567,7 @@ class HDF5Map(BaseObject):
             for name in self.attribute_names.values():
                 print(f"{' ' * indent}      {name}")
         if self.maps:
-            print(
-                f"{' ' * indent}  Contents: ({''.join(f'{name}, ' for name in self.map_names.values())})"
-            )
+            print(f"{' ' * indent}  Contents: ({''.join(f'{name}, ' for name in self.map_names.values())})")
             for name, map_ in self.maps.items():
                 print(f"{' ' * indent}  +  {name}: {map_.full_name} {map_.type}")
                 map_.print_tree(indent=indent + 5)

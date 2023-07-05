@@ -56,9 +56,7 @@ class BaseDatasetComponent(HDF5BaseComponent):
         """
         pass
 
-    def insert_component(
-        self, index: int | slice | Iterable[int], **kwargs: Any
-    ) -> None:
+    def insert_component(self, index: int | slice | Iterable[int], **kwargs: Any) -> None:
         """Inserts data to this component.
 
         Args:
@@ -67,9 +65,7 @@ class BaseDatasetComponent(HDF5BaseComponent):
         """
         pass
 
-    def delete_component(
-        self, index: int | slice | Iterable[int], **kwargs: Any
-    ) -> None:
+    def delete_component(self, index: int | slice | Iterable[int], **kwargs: Any) -> None:
         """Deletes data from this component.
 
         Args:

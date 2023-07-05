@@ -64,9 +64,7 @@ class TimeTensorMap(DatasetMap):
     # default_map_names = {"channel_axis": "channel_axis",
     #                      "sample_axis": "sample_axis",
     #                      "time_axis": "time_axis"}
-    default_component_types = {
-        "timeseries": (TimeSeriesComponent, {"scale_name": "time_axis"})
-    }
+    default_component_types = {"timeseries": (TimeSeriesComponent, {"scale_name": "time_axis"})}
     default_axis_maps = [
         {"sample_axis": SampleAxisMap(), "time_axis": TimeAxisMap()},
         {"channel_axis": ChannelAxisMap()},
@@ -115,13 +113,9 @@ class TensorModelsMap(BaseHDF5Map):
 class TensorModelsHDF5(BaseHDF5):
     """The Tensor Models HDF5 file object."""
 
-    _registration: bool = (
-        True  # Version registration, to learn more about versioning ask Anthony.
-    )
+    _registration: bool = True  # Version registration, to learn more about versioning ask Anthony.
     FILE_TYPE: str = "TensorModels"
-    VERSION: Version = TriNumberVersion(
-        0, 0, 0
-    )  # To learn more about versioning ask Anthony.
+    VERSION: Version = TriNumberVersion(0, 0, 0)  # To learn more about versioning ask Anthony.
     default_map: HDF5Map = TensorModelsMap()
 
 
@@ -152,15 +146,9 @@ if __name__ == "__main__":
 
     # Create New Map with known maxshape (this is optional, but it can save space)
     new_map = TensorModelsMap()
-    new_map.maps["model_1"].kwargs.update(
-        maxshape=(None, n_channels, n_rank, n_windows)
-    )
-    new_map.maps["model_2"].kwargs.update(
-        maxshape=(None, n_channels, n_rank, n_windows)
-    )
-    new_map.maps["model_3"].kwargs.update(
-        maxshape=(None, n_channels, n_rank, n_windows)
-    )
+    new_map.maps["model_1"].kwargs.update(maxshape=(None, n_channels, n_rank, n_windows))
+    new_map.maps["model_2"].kwargs.update(maxshape=(None, n_channels, n_rank, n_windows))
+    new_map.maps["model_3"].kwargs.update(maxshape=(None, n_channels, n_rank, n_windows))
 
     # Print Map
     print("This is the map of the file:")
@@ -170,9 +158,7 @@ if __name__ == "__main__":
 
     # Check if the File Exists
     # These should print false because the file has not been made.
-    print(
-        f"File Exists: {out_path.is_file()}"
-    )  # [.is_file()] is a useful pathlib Path method
+    print(f"File Exists: {out_path.is_file()}")  # [.is_file()] is a useful pathlib Path method
     print(f"File is Openable: {TensorModelsHDF5.is_openable(out_path)}")
 
     # Create the file
@@ -189,9 +175,7 @@ if __name__ == "__main__":
         # Assign a File Attribute
         # These attributes were not defined as a property in the TensorModelHDF5 class, so they have to be set and get
         # directly like a normal h5py attribute. Ask Anthony how to set these up as properties.
-        model_file.attributes[
-            "subject_id"
-        ] = "ECxx"  # If this was setup as a property: model_file.subject_id = "ECxx"
+        model_file.attributes["subject_id"] = "ECxx"  # If this was setup as a property: model_file.subject_id = "ECxx"
         model_file.attributes["start"] = start.timestamp()
 
         # Create Dataset and Directly Add Some Data (Full Data and Time)
@@ -223,9 +207,7 @@ if __name__ == "__main__":
         print(f"The shape of model 2 at start: {model_2_dataset.shape}")
 
         # Append One Point
-        ts_array = np.array(
-            [start.timestamp()]
-        )  # Create a singe point in time to append.
+        ts_array = np.array([start.timestamp()])  # Create a singe point in time to append.
         t_axis = model_2_dataset.components[
             "timeseries"
         ].t_axis  # Get the axis to append along, default is the time axis.
@@ -238,9 +220,7 @@ if __name__ == "__main__":
         print(f"The shape of model 2 after first append: {model_2_dataset.shape}")
 
         # Append Another Point
-        ts_array = np.array(
-            [datetime.datetime.now().timestamp()]
-        )  # Create a singe point in time to append.
+        ts_array = np.array([datetime.datetime.now().timestamp()])  # Create a singe point in time to append.
         model_2_dataset.append(
             data=single_tensor_2,
             axis=t_axis,
@@ -255,9 +235,7 @@ if __name__ == "__main__":
         model_2_dataset.append(
             data=tensor_series_2,
             axis=t_axis,
-            component_kwargs={
-                "timeseries": {"data": np.linspace(now, stop, n_samples_1)}
-            },
+            component_kwargs={"timeseries": {"data": np.linspace(now, stop, n_samples_1)}},
         )
 
         print(f"The shape of model 2 after third append: {model_2_dataset.shape}")
@@ -297,22 +275,14 @@ if __name__ == "__main__":
         model_file.timeless_all_caching()  # Caches will not clear on their own.
         model_file.clear_all_caches()  # Clear all the caches.
         model_file.timed_all_caching()  # Caches will clear at regular intervals.
-        model_file.set_all_lifetimes(
-            2.0
-        )  # The sets lifetime of the cache before it will clear in seconds.
+        model_file.set_all_lifetimes(2.0)  # The sets lifetime of the cache before it will clear in seconds.
         print("")
 
         # Check Data
         print(f"File Type: {model_file.file_type}")
-        print(
-            f"File Version: {model_file.file_version}"
-        )  # An example of an attribute with a property defined.
-        print(
-            f"File Subject ID: {model_file.attributes['subject_id']}"
-        )  # An attribute without a property defined.
-        print(
-            f"Start: {datetime.datetime.fromtimestamp(model_file.attributes['start'])}"
-        )
+        print(f"File Version: {model_file.file_version}")  # An example of an attribute with a property defined.
+        print(f"File Subject ID: {model_file.attributes['subject_id']}")  # An attribute without a property defined.
+        print(f"Start: {datetime.datetime.fromtimestamp(model_file.attributes['start'])}")
 
         model_1_dataset = model_file["model_1"]
         print(f"The shape of model 1: {model_1_dataset.shape}")
@@ -327,9 +297,7 @@ if __name__ == "__main__":
     print(f"The file is open: {model_file.is_open}")
     model_file.close()  # Remember to close the file when finished.
 
-    model_file = TensorModelsHDF5(
-        file=out_path, open_=False, load=True
-    )  # This will close after instantiation
+    model_file = TensorModelsHDF5(file=out_path, open_=False, load=True)  # This will close after instantiation
     print(f"The file is open: {model_file.is_open}")
 
     # Through some wrapping magic you can still access the file even when it is closed.

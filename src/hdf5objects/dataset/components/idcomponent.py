@@ -128,9 +128,7 @@ class IDComponent(BaseDatasetComponent):
         for id_field, array in self._id_arrays.items():
             a_iter = np.nditer(array, flags=["multi_index"])
             if id_field in self.uuid_fields:
-                self.ids[id_field] = bidict(
-                    {a_iter.multi_index: UUID(id_) for id_ in a_iter}
-                )
+                self.ids[id_field] = bidict({a_iter.multi_index: UUID(id_) for id_ in a_iter})
             else:
                 self.ids[id_field] = bidict({a_iter.multi_index: id_ for id_ in a_iter})
 

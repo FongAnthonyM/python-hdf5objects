@@ -154,9 +154,7 @@ class HDF5Caster(BaseObject):
         return item.decode(encoding="utf-8")
 
     @classmethod
-    def to_datetime(
-        cls, item: float, tzinfo: datetime.tzinfo | None = None
-    ) -> datetime.datetime:
+    def to_datetime(cls, item: float, tzinfo: datetime.tzinfo | None = None) -> datetime.datetime:
         """Casts an HDF5 representation to a datetime."""
         return datetime.datetime.fromtimestamp(item, tzinfo)
 

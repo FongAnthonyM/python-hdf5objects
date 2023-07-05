@@ -28,6 +28,4 @@ from .basetimeseriesmap import BaseTimeSeriesMap
 class ElectricalSeriesMap(BaseTimeSeriesMap):
     """A base outline which defines a time series and its methods."""
 
-    default_attributes: Mapping[str, Any] = BaseTimeSeriesMap.default_attributes | {
-        "units": "volts"
-    }
+    default_attributes: Mapping[str, Any] = BaseTimeSeriesMap.default_attributes | {"units": "volts"}

@@ -77,9 +77,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
     # File Validation
     @singlekwargdispatch("file")
     @classmethod
-    def validate_file_type(
-        cls, file: pathlib.Path | str | HDF5File | h5py.File
-    ) -> bool:
+    def validate_file_type(cls, file: pathlib.Path | str | HDF5File | h5py.File) -> bool:
         """Checks if the given file or path is a valid type.
 
         Args:
@@ -179,9 +177,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     @singlekwargdispatch("file")
     @classmethod
-    def new_validated(
-        cls, file: pathlib.Path | str | HDF5File | h5py.File, **kwargs: Any
-    ) -> Union["BaseHDF5", None]:
+    def new_validated(cls, file: pathlib.Path | str | HDF5File | h5py.File, **kwargs: Any) -> Union["BaseHDF5", None]:
         """Checks if the given file or path is a valid type and returns the file if valid.
 
         Args:
@@ -358,9 +354,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     # Instance Methods #
     # Constructors/Destructors
-    def construct_file_attributes(
-        self, map_: HDF5Map = None, load: bool = False, require: bool = False
-    ) -> None:
+    def construct_file_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
         """Creates the attributes for this group.
 
         Args:

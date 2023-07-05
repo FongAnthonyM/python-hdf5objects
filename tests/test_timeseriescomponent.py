@@ -42,9 +42,7 @@ class TimeSeriesTestMap(DatasetMap):
 
     default_attribute_names: Mapping[str, str] = {"t_axis": "t_axis"}
     default_attributes: Mapping[str, Any] = {"t_axis": 0}
-    default_component_types = {
-        "timeseries": (TimeSeriesComponent, {"scale_name": "time_axis"})
-    }
+    default_component_types = {"timeseries": (TimeSeriesComponent, {"scale_name": "time_axis"})}
     default_axis_maps = [{"time_axis": TimeAxisMap()}]
 
 
@@ -52,9 +50,7 @@ class TimeSeriesTestFileMap(BaseHDF5Map):
     """The map for the file which implements a Dataset with a TimeSeriesComponent."""
 
     default_map_names: Mapping[str, str] = {"test_timeseries": "test_timeseries"}
-    default_maps: Mapping[str, HDF5Map] = {
-        "test_timeseries": TimeSeriesTestMap(maxshape=(None, None))
-    }
+    default_maps: Mapping[str, HDF5Map] = {"test_timeseries": TimeSeriesTestMap(maxshape=(None, None))}
 
 
 class TimeSeriesTestHDF5(BaseHDF5):
@@ -109,16 +105,12 @@ class TestDataset(ClassTest):
             start,
             stop,
         ) = generate_data
-        with TimeSeriesTestHDF5(
-            file=tmp_path / "test.h5", mode="a", create=True
-        ) as test_file:
+        with TimeSeriesTestHDF5(file=tmp_path / "test.h5", mode="a", create=True) as test_file:
             test_file.construct_members()
             timeseries = test_file["test_timeseries"]
 
             time_axis_kwargs = {"data": timestamps, "rate": sample_rate}
-            timeseries.require(
-                data=timeseries_data, axes_kwargs=[{"time_axis": time_axis_kwargs}]
-            )
+            timeseries.require(data=timeseries_data, axes_kwargs=[{"time_axis": time_axis_kwargs}])
             existed = timeseries.exists
 
         assert existed

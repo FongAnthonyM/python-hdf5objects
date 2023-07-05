@@ -49,9 +49,7 @@ class DatasetTestFileMap(BaseHDF5Map):
     """The map for the file which implements Dataset."""
 
     default_map_names: Mapping[str, str] = {"test_dataset": "test_dataset"}
-    default_maps: Mapping[str, HDF5Map] = {
-        "test_dataset": DatasetTestMap(shape=(1,), maxshape=(None,))
-    }
+    default_maps: Mapping[str, HDF5Map] = {"test_dataset": DatasetTestMap(shape=(1,), maxshape=(None,))}
 
 
 class DatasetTestHDF5(BaseHDF5):
@@ -84,13 +82,9 @@ class TestDataset(ClassTest):
         return DatasetMap(file=tmp_path)
 
     def test_set_item_dict(self, tmp_path):
-        with DatasetTestHDF5(
-            file=tmp_path / "test.h5", mode="a", create=True, require=True
-        ) as test_file:
+        with DatasetTestHDF5(file=tmp_path / "test.h5", mode="a", create=True, require=True) as test_file:
             multi_dataset = test_file["test_dataset"]
-            multi_dataset.set_item_dict(
-                0, {"First": 2.0, "Second": 3, "Third": "Random"}
-            )
+            multi_dataset.set_item_dict(0, {"First": 2.0, "Second": 3, "Third": "Random"})
             assert tuple(multi_dataset[0]) == (2.0, 3, "Random")
 
     def test_append_item_dict(self, tmp_path):
@@ -100,9 +94,7 @@ class TestDataset(ClassTest):
             "Third": "Random",
             "Fourth": uuid.uuid4(),
         }
-        with DatasetTestHDF5(
-            file=tmp_path / "test.h5", mode="a", create=True, require=True
-        ) as test_file:
+        with DatasetTestHDF5(file=tmp_path / "test.h5", mode="a", create=True, require=True) as test_file:
             multi_dataset = test_file["test_dataset"]
             multi_dataset.append_item_dict(test_data)
             new_dict = multi_dataset.get_item_dict(-1)
