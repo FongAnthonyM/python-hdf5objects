@@ -19,7 +19,6 @@ from typing import Any
 # Third-Party Packages #
 
 # Local Packages #
-from ...hdf5bases import DatasetMap
 from .basetimeseriesmap import BaseTimeSeriesMap
 
 

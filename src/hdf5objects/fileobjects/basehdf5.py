@@ -28,15 +28,14 @@ from classversioning import (
 import h5py
 
 # Local Packages #
-from ..hdf5bases import HDF5Map, HDF5Group, HDF5File
+from ..hdf5bases import HDF5Map, FileMap, HDF5File
 
 
 # Definitions #
 # Classes #
-class BaseHDF5Map(HDF5Map):
+class BaseHDF5Map(FileMap):
     """A map for BaseHDF5 files."""
 
-    default_type = HDF5Group
     default_attribute_names = {"file_type": "FileType", "file_version": "FileVersion"}
     default_attributes = {"file_type": "", "file_version": ""}
 

@@ -66,6 +66,7 @@ class DatasetMap(HDF5Map):
     """
 
     default_attributes_type = HDF5Attributes
+    # default_type = HDF5Dataset  # This will be assigned after HDF5Dataset is defined
     default_dtype: np.dtype | str | tuple[tuple[str, type]] | None = None
     default_casting_kwargs: list[dict[str, Any]] | None = None
     default_axis_maps: list[dict[str, Any]] = []
@@ -315,7 +316,7 @@ class HDF5Dataset(HDF5BaseObject):
 
     _wrapped_types: list[type | object] = [h5py.Dataset]
     _wrap_attributes: list[str] = ["dataset"]
-    default_map: HDF5Map = DatasetMap()
+    # default_map: HDF5Map = DatasetMap()  # This will be assigned after HDF5Dataset is defined
     default_axis_map_type: Any = None
 
     # Magic Methods
@@ -1404,3 +1405,4 @@ class HDF5Dataset(HDF5BaseObject):
 
 # Assign Cyclic Definitions
 DatasetMap.default_type = HDF5Dataset
+HDF5Dataset.default_map = DatasetMap()

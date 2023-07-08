@@ -128,6 +128,23 @@ class HDF5Map(BaseObject):
             cls.default_attribute_names = map_attribute_names | cls.default_attribute_names
             cls.default_attributes = map_attributes | cls.default_attributes
 
+    @classmethod
+    def print_tree_class(cls, indent: int = 0) -> None:
+        """Prints the entire map of the class.
+
+        Args:
+            indent: The number of space to print between each layer.
+        """
+        if cls.default_attribute_names:
+            print(f"{' ' * indent}  Attributes:")
+            for name in cls.default_attribute_names.values():
+                print(f"{' ' * indent}      {name}")
+        if cls.default_maps:
+            print(f"{' ' * indent}  Contents: ({''.join(f'{name}, ' for name in cls.default_map_names.values())})")
+            for name, map_ in cls.default_maps.items():
+                print(f"{' ' * indent}  +  {name}: {map_.full_name} {map_.type}")
+                map_.print_tree(indent=indent + 5)
+
     # Magic Methods
     # Construction/Destruction
     def __init__(
@@ -275,6 +292,7 @@ class HDF5Map(BaseObject):
         component_types: dict[str, type] | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
         object_kwargs: dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> None:
         """Constructs this object, setting attributes and sets nested maps' parents.
 
@@ -289,6 +307,7 @@ class HDF5Map(BaseObject):
             component_types: The components to add to the HDF5Object when created.
             component_kwargs: The keyword arguments for the components.
             object_kwargs: The keyword arguments for the object this map represents.
+            kwargs: The keyword arguments for the object this map represents.
         """
         if parent is not None:
             self.set_parent(parent=parent)
@@ -323,8 +342,7 @@ class HDF5Map(BaseObject):
                 type_, old_kwargs = self.component_types.get(name, (None, {}))
                 self.component_types[name] = (type_, old_kwargs | c_kwargs)
 
-        if object_kwargs is not None:
-            self.kwargs.update(object_kwargs)
+        self.kwargs.update(kwargs | (object_kwargs if object_kwargs is not None else {}))
 
         self.set_children()
 

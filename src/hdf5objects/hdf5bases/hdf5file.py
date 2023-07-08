@@ -27,12 +27,16 @@ import h5py
 from .hdf5map import HDF5Map
 from .hdf5baseobject import HDF5BaseObject
 from .hdf5attributes import HDF5Attributes
-from .hdf5group import HDF5Group
+from .hdf5group import HDF5Group, GroupMap
 from .hdf5dataset import HDF5Dataset
 
 
 # Definitions #
 # Classes #
+class FileMap(GroupMap):
+    """A general map for HDF5 Files, which is the same as an HDF5 Group."""
+
+
 class HDF5File(HDF5BaseObject):
     """A class which wraps a HDF5 File and gives more functionality, but retains its generalization.
 
@@ -69,6 +73,7 @@ class HDF5File(HDF5BaseObject):
     # Todo: Rethink about how Errors and Warnings are handled in this object.
     _wrapped_types: list[type | object] = [HDF5Group, h5py.File]
     _wrap_attributes: list[str] = ["group", "_file"]
+    default_map = FileMap()
     default_component_types: dict[str, tuple[type, dict[str, Any]]] = {}
     attribute_type: type = HDF5Attributes
     group_type: type = HDF5Group

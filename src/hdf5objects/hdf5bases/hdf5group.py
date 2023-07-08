@@ -13,7 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, KeysView, ItemsView, ValuesView
 import pathlib
 from typing import Any
 
@@ -25,7 +25,7 @@ import h5py
 from .hdf5map import HDF5Map
 from .hdf5baseobject import HDF5BaseObject
 from .hdf5attributes import HDF5Attributes
-
+from .hdf5dataset import DatasetMap
 
 # Definitions #
 # Names #
@@ -33,6 +33,17 @@ _SENTINEL = object()
 
 
 # Classes #
+class GroupMap(HDF5Map):
+    """A general map for HDF5 Groups.
+
+    Class Attributes:
+        default_attributes_type: The default type for attribute objects in this map.
+    """
+
+    default_attributes_type: type = HDF5Attributes
+    # default_type: type = HDF5Group  # This will be assigned after HDF5Group is defined
+
+
 class HDF5Group(HDF5BaseObject):
     """A wrapper object which wraps a HDF5 group and gives more functionality.
 
@@ -66,8 +77,9 @@ class HDF5Group(HDF5BaseObject):
 
     _wrapped_types: list[type | object] = [h5py.Group]
     _wrap_attributes: list[str] = ["group"]
-    default_group_map: type = None
-    default_dataset_map: type = None
+    # default_map: HDF5Map = GroupMap()  # This will be assigned after HDF5Group is defined
+    default_group_map: type = None  # This will be assigned after HDF5Group is defined
+    default_dataset_map: type = DatasetMap
 
     # Magic Methods #
     # Constructors/Destructors
@@ -554,6 +566,70 @@ class HDF5Group(HDF5BaseObject):
         else:
             return item
 
+    def keys(
+        self,
+        as_file_keys: bool = False,
+        load: bool = False,
+        require: bool = False,
+        mapped: bool = False,
+    ) -> KeysView:
+        """Get all members in this group as an KeysView.
+
+        Args:
+            as_file_keys: Determines if the returned keys will be in the file or python form.
+            load: Determines if this object will recursively load the members from the file on construction.
+            require: Determines if this object will recursively create and fill the members in the file on construction.
+            mapped: Determines if this object will only add object that are mapped.
+
+        Returns:
+            The names and members in this group.
+        """
+        self.get_members(load=load, require=require, mapped=mapped)
+        keys = self.members.keys()
+        if as_file_keys:
+            return keys
+        else:
+            return {self.map.map_names.inverse.get(key, key): None for key in keys}.keys()
+
+    def items(
+        self,
+        as_file_keys: bool = False,
+        load: bool = False,
+        require: bool = False,
+        mapped: bool = False,
+    ) -> ItemsView:
+        """Get all members in this group as an ItemView.
+
+        Args:
+            as_file_keys: Determines if the returned keys will be in the file or python form.
+            load: Determines if this object will recursively load the members from the file on construction.
+            require: Determines if this object will recursively create and fill the members in the file on construction.
+            mapped: Determines if this object will only add object that are mapped.
+
+        Returns:
+            The names and members in this group.
+        """
+        self.get_members(load=load, require=require, mapped=mapped)
+        items = self.members.items()
+        if as_file_keys:
+            return items
+        else:
+            return {self.map.map_names.inverse.get(k, k): i for k, i in items}.items()
+
+    def values(self, load: bool = False, require: bool = False, mapped: bool = False) -> ValuesView:
+        """Get all members in this group as an ValuesView.
+
+        Args:
+            load: Determines if this object will recursively load the members from the file on construction.
+            require: Determines if this object will recursively create and fill the members in the file on construction.
+            mapped: Determines if this object will only add object that are mapped.
+
+        Returns:
+            The names and members in this group.
+        """
+        self.get_members(load=load, require=require, mapped=mapped)
+        return self.members.values()
+
     # Group Modification
     def create_group(self, name: str | None = None, track_order: bool | None = None) -> "HDF5Group":
         """Creates this group in the HDF5 file.
@@ -648,3 +724,9 @@ class HDF5Group(HDF5BaseObject):
         self.require_components(**component_kwargs)
 
         return self
+
+
+# Assign Cyclic Definitions
+GroupMap.default_type = HDF5Group
+HDF5Group.default_map = GroupMap()
+HDF5Group.default_group_map = GroupMap()
