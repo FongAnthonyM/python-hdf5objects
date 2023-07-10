@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ group_example.py
-An example of creating a file map with groups.
+An example of editing a map before creating a file, at runtime.
+
+Runtime map editing is useful because default parameters can be set without permanently changing the structure.
 """
 
 # Imports #
@@ -52,7 +54,7 @@ class ExampleFile(HDF5File):
 # Main #
 if __name__ == "__main__":
     # Parameters #
-    file_name = "group_example_file.h5"
+    file_name = "runtime_map_editing_example.h5"
     out_path = pathlib.Path.cwd() / file_name  # The file path as a pathlib Path
 
     raw_data = np.random.rand(10, 10)
@@ -72,20 +74,48 @@ if __name__ == "__main__":
     print(f"File is Openable: {ExampleFile.is_openable(out_path)}")
     print("")
 
+    # Edit Map
+    # Create New Map with known maxshape (this is optional, but it can save space)
+    new_map = ExampleFileMap()
+    new_map["group_1"].attributes["sample_rate"] = 512
+    new_map["group_1"]["raw_data"].kwargs.update(shape=(10, 10), maxshape=(None, 10))
+
+    new_map["group_2"].attributes["sample_rate"] = 1024
+    new_map["group_2"]["raw_data"].kwargs.update(shape=(10, 10), maxshape=(None, 10))
+
     # Create the file #
+    # The map_ kwarg overrides the default map, in this case the same map with the maxshape changed.
     # The create kwarg determines if the file will be created.
     # The require kwarg determines if the file's structure will be built, which is highly suggested for SWMR.
-    with ExampleFile(file=out_path, mode="a", create=True, require=True) as file:
+    with ExampleFile(file=out_path, mode="a", map_=new_map, create=True, require=True) as file:
         # Go Through Groups
         for i, (name, value) in enumerate(file.items()):
             print(f"Group Python Name: {name}")
-            print(f"Original Label: {value.attributes['label']}")
-            value.attributes["label"] = f"New Label {i}"
-            print(f"Edited Label: {value.attributes['label']}")
+            print(f"Sample Rate: {value.attributes['sample_rate']}")
 
-            print(f"Original Sample Rate: {value.attributes['sample_rate']}")
-            value.attributes["sample_rate"] = (i + 1) * 512
-            print(f"Edited Sample Rate: {value.attributes['sample_rate']}")
+            # Go through Group contents
+            for j, (n, v) in enumerate(value.items()):
+                print(f"Group Content {i}: {n}")
+                print(f"Shape: {v.shape}")
+
+            print("")
+
+    # After Closing Check if the File Exists
+    print(f"File Exists: {out_path.is_file()}")
+    print(f"File is Openable: {ExampleFile.is_openable(out_path)}")
+    print("")
+
+    # Open File
+    # read mode is the default mode.
+    # The load kwarg determines if the whole file structure will be loaded in. This is useful if you plan on looking at
+    # everything in the file, but if load is False or not set it will load parts of the structure on demand which is
+    # more efficient if you are looking at specific parts and not checking others.
+    # [map_=new_map] does not need to be set here because we are loading a file and not requiring it.
+    with ExampleFile(file=out_path, load=True, swmr=True) as file:
+        # Go Through Groups
+        for i, (name, value) in enumerate(file.items()):
+            print(f"Group Python Name: {name}")
+            print(f"Sample Rate: {value.attributes['sample_rate']}")
 
             # Go through Group contents
             for j, (n, v) in enumerate(value.items()):

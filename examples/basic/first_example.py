@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ first_example.py
-Description: 
+A basic example, which introduces Maps and file creation/reading.
 """
 
 # Imports #
@@ -83,3 +83,40 @@ if __name__ == "__main__":
         file_data.append(raw_data)
         print(f"Shape After Append: {file_data.shape}")
 
+    print("")
+
+    # After Closing Check if the File Exists
+    print(f"File Exists: {out_path.is_file()}")
+    print(f"File is Openable: {ExampleFile.is_openable(out_path)}")
+    print("")
+
+    # Open File
+    # read mode is the default mode.
+    # The load kwarg determines if the whole file structure will be loaded in. This is useful if you plan on looking at
+    # everything in the file, but if load is False or not set it will load parts of the structure on demand which is
+    # more efficient if you are looking at specific parts and not checking others.
+    with ExampleFile(file=out_path, load=True, swmr=True) as file:
+        # Caching is on when in read mode.
+        # In normal read mode, once data is loaded into cache it has to manually be told refresh the cache.
+        # In SWMR mode the cache will clear and get the values from the file again at a predefined interval.
+        # There are methods which can turn caching on and off and can set the caching interval.
+
+        # Caching
+        # There are two versions of the caching methods. There methods that operate on the specific object and ones that
+        # change the caching for all objects contained within that object as well. The larger scope methods have _all_
+        # in their method name.
+        print(f"Caching: {file.is_cache}")
+        file.disable_all_caching()  # Since _all_ is present, this will apply to all contained objects as well.
+        print(f"Caching: {file.is_cache}")
+        file.enable_all_caching()
+        print(f"Caching: {file.is_cache}")
+        file.timeless_all_caching()  # Caches will not clear on their own.
+        file.clear_all_caches()  # Clear all the caches.
+        file.timed_all_caching()  # Caches will clear at regular intervals.
+        file.set_all_lifetimes(2.0)  # The sets lifetime of the cache before it will clear in seconds.
+        print("")
+
+        # Check Data
+        print(f"Attribute: {file.attributes['python_name'] == 'Timmy'}")
+        file_data = file["data"]
+        print(f"Shape: {file_data.shape}")

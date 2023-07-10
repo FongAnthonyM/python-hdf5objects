@@ -133,7 +133,7 @@ if __name__ == "__main__":
         # Assign a File Attribute
         # These attributes were not defined as a property in the TensorModelHDF5 class, so they have to be set and get
         # directly like a normal h5py attribute. Ask Anthony how to set these up as properties.
-        model_file.attributes["subject_id"] = "ECxx"  # If this was setup as a property: model_file.subject_id = "ECxx"
+        model_file.attributes["subject_id"] = "ECxx"  # If this was setup as a property: file.subject_id = "ECxx"
         model_file.attributes["start"] = start.timestamp()
 
         # Create Dataset and Directly Add Some Data (Full Data and Time)
