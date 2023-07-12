@@ -80,6 +80,7 @@ if __name__ == "__main__":
     print("")
 
     # Create the file #
+    # test
     # The create kwarg determines if the file will be created.
     # The require kwarg determines if the file's structure will be built, which is highly suggested for SWMR.
     with ExampleFile(file=out_path, mode="a", create=True, require=True) as file:
