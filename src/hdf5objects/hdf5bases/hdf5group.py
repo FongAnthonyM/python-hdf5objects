@@ -18,18 +18,20 @@ import pathlib
 from typing import Any
 
 # Third-Party Packages #
+from baseobjects import search_sentinel
 from baseobjects.functions import singlekwargdispatch
 import h5py
+import numpy as np
 
 # Local Packages #
 from .hdf5map import HDF5Map
 from .hdf5baseobject import HDF5BaseObject
 from .hdf5attributes import HDF5Attributes
-from .hdf5dataset import DatasetMap
+from .hdf5dataset import DatasetMap, HDF5Dataset
 
 # Definitions #
 # Names #
-_SENTINEL = object()
+search_sentinel_2 = object()
 
 
 # Classes #
@@ -66,12 +68,14 @@ class HDF5Group(HDF5BaseObject):
         mode: The edit mode of this object.
         file: The file object that this group object originates from.
         load: Determines if this object will load the group from the file on construction.
-        construct: Determines if this object will create members in the file on construction.
-        require: Determines if this object will create and fill the group in the file on construction.
+        require: Determines if this object will be created on construction.
+        construct: Determines if this object will create its members recursively on construction.
         parent: The HDF5 name of the parent of this HDF5 object.
         component_kwargs: The keyword arguments for creating the components.
         component_types: Component class and their keyword arguments to instantiate.
         components: Components to add.
+        track_order: Track dataset/group/attribute creation order under this group if True. If None use global
+                default h5.get_config().track_order.
         init: Determines if this object will construct.
     """
 
@@ -91,12 +95,13 @@ class HDF5Group(HDF5BaseObject):
         mode: str | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
-        construct: bool = False,
         require: bool = False,
+        construct: bool = False,
         parent: str | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
         component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
         components: dict[str, Any] | None = None,
+        track_order: bool | None = None,
         init: bool = True,
     ) -> None:
         # New Attributes #
@@ -118,10 +123,12 @@ class HDF5Group(HDF5BaseObject):
                 file=file,
                 load=load,
                 require=require,
+                construct=construct,
                 parent=parent,
                 component_kwargs=component_kwargs,
                 component_types=component_types,
                 components=components,
+                track_order=track_order
             )
 
     # Pickling
@@ -160,12 +167,13 @@ class HDF5Group(HDF5BaseObject):
         mode: str | None = None,
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
-        construct: bool = False,
         require: bool = False,
+        construct: bool = False,
         parent: str | None = None,
         component_kwargs: dict[str, dict[str, Any]] | None = None,
         component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
         components: dict[str, Any] | None = None,
+        track_order: bool | None = None,
     ) -> None:
         """Constructs this object from the provided arguments.
 
@@ -176,12 +184,14 @@ class HDF5Group(HDF5BaseObject):
             mode: The edit mode of this object.
             file: The file object that this group object originates from.
             load: Determines if this object will load the group from the file on construction.
-            construct: Determines if this object will create members in the file on construction.
-            require: Determines if this object will create and fill the group in the file on construction.
+            require: Determines if this object will be created on construction.
+            construct: Determines if this object will create its members in the file on construction.
             parent: The HDF5 name of the parent of this HDF5 object.
             component_kwargs: The keyword arguments for creating the components.
             component_types: Component class and their keyword arguments to instantiate.
             components: Components to add.
+            track_order: Track dataset/group/attribute creation order under this group if True. If None use global
+                default h5.get_config().track_order.
         """
         if map_ is not None:
             self.map = map_
@@ -230,8 +240,8 @@ class HDF5Group(HDF5BaseObject):
         if load and self.exists:
             self.load(load=load)
 
-        if require:
-            self.require(load=load, construct=construct, require=require)
+        if require or construct:
+            self.require(load=load, construct=construct, track_order=track_order)
 
     def construct_attributes(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
         """Creates the attributes for this group.
@@ -253,6 +263,7 @@ class HDF5Group(HDF5BaseObject):
         map_: HDF5Map = None,
         load: bool = False,
         require: bool = False,
+        construct: bool = False,
         **kwargs: Any,
     ) -> Any:
         """Constructs a member of this group.
@@ -261,17 +272,18 @@ class HDF5Group(HDF5BaseObject):
             name: The name of the member to construct.
             map_: The map to use to create the members.
             load: Determines if this object will recursively load the members from the file on construction.
-            require: Determines if this object will recursively create and fill the members in the file on construction.
+            require: Determines if this object will be created on construction.
+            construct: Determines if this object will create its members recursively on construction.
             **kwargs: The keyword arguments to construct the member.
         """
         if map_ is not None:
             self.map = map_
 
         name = self._parse_name(name)
-        member = self.members.get(name, self.sentinel)
-        if member is self.sentinel:
+        member = self.members.get(name, search_sentinel)
+        if member is search_sentinel:
             value = self.map[name]
-            member = value.get_object(load=load, require=require, file=self.file, **kwargs)
+            member = value.get_object(load=load, require=require, construct=construct, file=self.file, **kwargs)
             if member is None:
                 self.members[name] = member = value.get_object(load=load, file=self.file, **kwargs)
             else:
@@ -279,13 +291,20 @@ class HDF5Group(HDF5BaseObject):
 
         return member
 
-    def construct_members(self, map_: HDF5Map = None, load: bool = False, require: bool = False) -> None:
+    def construct_members(
+        self,
+        map_: HDF5Map = None,
+        load: bool = False,
+        require: bool = False,
+        construct: bool = False,
+    ) -> None:
         """Creates the members of this group.
 
         Args:
             map_: The map to use to create the members.
             load: Determines if this object will recursively load the members from the file on construction.
-            require: Determines if this object will recursively create and fill the members in the file on construction.
+            require: Determines if this object will be created on construction.
+            construct: Determines if this object will create its members recursively on construction.
         """
         if map_ is not None:
             self.map = map_
@@ -293,11 +312,69 @@ class HDF5Group(HDF5BaseObject):
         for name, value in self.map.items():
             name = self._parse_name(name)
             if name not in self.members:
-                obj = value.get_object(load=load, require=require, file=self.file)
+                obj = value.get_object(load=load, require=require, construct=construct, file=self.file)
                 if obj is None:
                     self.members[name] = value.get_object(load=load, file=self.file)
                 else:
                     self.members[name] = obj
+    
+    def require_composite(
+        self,
+        name: str | None = None,
+        load: bool = False,
+        construct: bool = False,
+        track_order: bool | None = None,
+    ) -> "HDF5Group":
+        """Creates this group if it does not exist.
+
+        Args:
+            name: The name of this group.
+            load: Determines if this object will load the contents of the group.
+            construct: Determines if this object will create its members recursively on construction.
+            track_order: Track dataset/group/attribute creation order under this group if True. If None use global
+                default h5.get_config().track_order.
+
+        Returns:
+            This object.
+        """
+        if name is not None:
+            self._name = name
+
+        with self.file.temp_open():
+            if not self.exists:
+                self._group = self.file._file.create_group(name=self._full_name, track_order=track_order)
+                self.attributes.construct_attributes()
+
+        if construct:
+            self.construct_members(load=load, require=construct, construct=construct)
+
+        return self   
+                    
+    def require(
+        self,
+        name: str | None = None,
+        load: bool = False,
+        construct: bool = False,
+        track_order: bool | None = None,
+        component_kwargs: dict[str, Any] = {},
+    ) -> "HDF5Group":
+        """Creates this group if it does not exist.
+
+        Args:
+            name: The name of this group.
+            load: Determines if this object will load the contents of the group.
+            construct: Determines if this object will create its members recursively on construction.
+            track_order: Track dataset/group/attribute creation order under this group if True. If None use global
+                default h5.get_config().track_order.
+            component_kwargs: The keyword arguments for the components' create methods.
+
+        Returns:
+            This group.
+        """
+        self.require_composite(name=name, load=load, construct=construct, track_order=track_order)
+        self.require_components(**component_kwargs)
+
+        return self
 
     # Parsers
     def _parse_name(self, name: str) -> str:
@@ -309,21 +386,20 @@ class HDF5Group(HDF5BaseObject):
         Returns:
             The hdf5 name of the member.
         """
-        new_name = self.map.map_names.get(name, self.sentinel)
-        if new_name is not self.sentinel:
+        new_name = self.map.map_names.get(name, search_sentinel)
+        if new_name is not search_sentinel:
             name = new_name
         return name
 
     # File
-    def load(self, load: bool = False, require: bool = False) -> None:
+    def load(self, load: bool = False) -> None:
         """Loads this group from file with the option to create and fill it.
 
         Args:
             load: Determines if this object will recursively load the members from the file on construction.
-            require: Determines if this object will recursively create and fill the members in the file on construction.
         """
         self.attributes.load()
-        self.get_members(load=load, require=require)
+        self.get_members(load=load)
 
     def refresh(self) -> None:
         """Reloads the attributes and members from the file."""
@@ -446,69 +522,75 @@ class HDF5Group(HDF5BaseObject):
     def get_member(
         self,
         name: str,
+        default: Any = search_sentinel,
         load: bool = False,
-        require: bool = False,
-        mapped: bool = False,
+        mapped: bool = True,
         **kwargs: Any,
     ) -> HDF5BaseObject:
         """Get a member of the group.
 
         Args:
             name: The name of the member to get.
-            load: Determines if this object will recursively load the members from the file on construction.
-            require: Determines if this object will recursively create and fill the members in the file on construction.
+            default: Returns this value if the member is not in this group.
+            load: Determines if the member will recursively load the members from the file on construction.
+            mapped: Determines if the member will have a default assigned to it if no map is found.
             **kwargs: Extra kwargs to use to create the member.
 
         Returns:
             The requested member.
         """
         name = self._parse_name(name)
-        with self:
-            item = self._group[name]
-            map_ = self.map.get_item(name, self.sentinel)
-            if map_ is self.sentinel:
-                map_namespace = item.attrs.get("map_namespace", "")
-                map_name = item.attrs.get("map_type", "")
-                map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
-
-                if map_type is not None:
-                    map_ = map_type(name=name)
-                    self.map.set_item(map_)
-                elif not mapped:
-                    if isinstance(item, h5py.Dataset):
-                        map_ = self.default_dataset_map()
-                    elif isinstance(item, h5py.Group):
-                        map_ = self.default_group_map()
-
-            if map_ is not self.sentinel:
-                if isinstance(item, h5py.Group):
-                    kwargs["group"] = item
+        
+        member = self.members.get(name, None)
+        if member is None:
+            with self:
+                if default is not search_sentinel and name not in self._group:
+                    return default
+                item = self._group[name]
+                map_ = self.map.get_item(name, search_sentinel)
+                if map_ is search_sentinel:
+                    map_namespace = item.attrs.get("map_namespace", "")
+                    map_name = item.attrs.get("map_type", "")
+                    map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
+    
+                    if map_type is not None:
+                        map_ = map_type(name=name)
+                        self.map.set_item(map_)
+                    elif not mapped:
+                        if isinstance(item, h5py.Dataset):
+                            map_ = self.default_dataset_map()
+                        elif isinstance(item, h5py.Group):
+                            map_ = self.default_group_map()
+    
+                if map_ is not search_sentinel:
+                    if isinstance(item, h5py.Group):
+                        kwargs["group"] = item
+                    else:
+                        kwargs["dataset"] = item
+                    self.members[name] = member = map_.get_object(
+                        map_=map_,
+                        file=self.file,
+                        load=load,
+                        **kwargs,
+                    )
                 else:
-                    kwargs["dataset"] = item
-                self.members[name] = map_.get_object(
-                    map_=map_,
-                    file=self.file,
-                    load=load,
-                    require=require,
-                    **kwargs,
-                )
-        return self.members[name]
+                    member = item
+        return member
 
-    def get_members(self, load: bool = False, require: bool = False, mapped: bool = False) -> dict[str, HDF5BaseObject]:
+    def get_members(self, load: bool = False, mapped: bool = True) -> dict[str, HDF5BaseObject]:
         """Get all the members in this group.
 
         Args:
             load: Determines if this object will recursively load the members from the file on construction.
-            require: Determines if this object will recursively create and fill the members in the file on construction.
-            mapped: Determines if this object will only add object that are mapped.
+            mapped: Determines if members will have a default assigned to it if no map is found.
 
         Returns:
             The names and members in this group.
         """
         with self:
             for name, item in self._group.items():
-                map_ = self.map.get_item(name, self.sentinel)
-                if map_ is self.sentinel:
+                map_ = self.map.get_item(name, search_sentinel)
+                if map_ is search_sentinel:
                     map_namespace = item.attrs.get("map_namespace", "")
                     map_name = item.attrs.get("map_type", "")
                     map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
@@ -522,7 +604,7 @@ class HDF5Group(HDF5BaseObject):
                         elif isinstance(item, h5py.Group):
                             map_ = self.default_group_map()
 
-                if map_ is not self.sentinel:
+                if map_ is not search_sentinel:
                     if isinstance(item, h5py.Group):
                         kwargs = {"group": item}
                     else:
@@ -531,18 +613,17 @@ class HDF5Group(HDF5BaseObject):
                         map_=map_,
                         file=self.file,
                         load=load,
-                        require=require,
                         **kwargs,
                     )
 
         return self.members.copy()
 
-    def get(self, key: str | Iterable[str], sentinel: Any = _SENTINEL) -> HDF5BaseObject:
+    def get(self, key: str | Iterable[str], default: Any = search_sentinel) -> HDF5BaseObject:
         """Get a member of this group.
 
         Args:
             key: The key name of the member to get.
-            sentinel: An object to return if the key cannot be found.
+            default: An object to return if the key cannot be found.
 
         Returns:
             The requested member.
@@ -551,18 +632,13 @@ class HDF5Group(HDF5BaseObject):
         key = keys.pop(0)
         key = self._parse_name(key)
 
-        item = self.members.get(key, self.sentinel)
-        if item is self.sentinel:
-            try:
-                item = self.get_member(key)
-            except ValueError as error:
-                if sentinel is not _SENTINEL:
-                    return sentinel
-                else:
-                    raise error
+        item = self.get_member(name=key, default=default)
 
-        if keys:
-            return item.get(key=keys, sentinel=sentinel)
+        if item is not default and keys:
+            if isinstance(item, HDF5Group):
+                return item.get(key=keys, default=default)
+            else:
+                return item.get(keys)
         else:
             return item
 
@@ -570,7 +646,6 @@ class HDF5Group(HDF5BaseObject):
         self,
         as_file_keys: bool = False,
         load: bool = False,
-        require: bool = False,
         mapped: bool = False,
     ) -> KeysView:
         """Get all members in this group as an KeysView.
@@ -578,13 +653,12 @@ class HDF5Group(HDF5BaseObject):
         Args:
             as_file_keys: Determines if the returned keys will be in the file or python form.
             load: Determines if this object will recursively load the members from the file on construction.
-            require: Determines if this object will recursively create and fill the members in the file on construction.
             mapped: Determines if this object will only add object that are mapped.
 
         Returns:
             The names and members in this group.
         """
-        self.get_members(load=load, require=require, mapped=mapped)
+        self.get_members(load=load, mapped=mapped)
         keys = self.members.keys()
         if as_file_keys:
             return keys
@@ -595,7 +669,6 @@ class HDF5Group(HDF5BaseObject):
         self,
         as_file_keys: bool = False,
         load: bool = False,
-        require: bool = False,
         mapped: bool = False,
     ) -> ItemsView:
         """Get all members in this group as an ItemView.
@@ -603,130 +676,268 @@ class HDF5Group(HDF5BaseObject):
         Args:
             as_file_keys: Determines if the returned keys will be in the file or python form.
             load: Determines if this object will recursively load the members from the file on construction.
-            require: Determines if this object will recursively create and fill the members in the file on construction.
             mapped: Determines if this object will only add object that are mapped.
 
         Returns:
             The names and members in this group.
         """
-        self.get_members(load=load, require=require, mapped=mapped)
+        self.get_members(load=load, mapped=mapped)
         items = self.members.items()
         if as_file_keys:
             return items
         else:
             return {self.map.map_names.inverse.get(k, k): i for k, i in items}.items()
 
-    def values(self, load: bool = False, require: bool = False, mapped: bool = False) -> ValuesView:
+    def values(self, load: bool = False, mapped: bool = False) -> ValuesView:
         """Get all members in this group as an ValuesView.
 
         Args:
             load: Determines if this object will recursively load the members from the file on construction.
-            require: Determines if this object will recursively create and fill the members in the file on construction.
             mapped: Determines if this object will only add object that are mapped.
 
         Returns:
             The names and members in this group.
         """
-        self.get_members(load=load, require=require, mapped=mapped)
+        self.get_members(load=load, mapped=mapped)
         return self.members.values()
 
     # Group Modification
-    def create_group(self, name: str | None = None, track_order: bool | None = None) -> "HDF5Group":
-        """Creates this group in the HDF5 file.
-
-        Args:
-            name: The name of this group.
-            track_order: Track dataset/group/attribute creation order under this group if True. If None use global
-                default h5.get_config().track_order.
-
-        Returns:
-            This group.
-        """
-        if name is not None:
-            self._name = name
-
-        with self.file.temp_open():
-            self._group = self.file._file.create_group(name=self._full_name, track_order=track_order)
-            self.attributes.construct_attributes()
-
-        return self
-
-    def create(
-        self,
-        name: str | None = None,
-        track_order: bool | None = None,
-        component_kwargs: dict[str, Any] = {},
-    ) -> "HDF5Group":
-        """Creates this group in the HDF5 file.
-
-        Args:
-            name: The name of this group.
-            track_order: Track dataset/group/attribute creation order under this group if True. If None use global
-                default h5.get_config().track_order.
-            component_kwargs: The keyword arguments for the components' create methods.
-
-        Returns:
-            This group.
-        """
-        self.create_group(name=name, track_order=track_order)
-        self.create_components(**component_kwargs)
-        return self
-
-    def require_group(self, name: str | None = None, track_order: bool | None = None) -> "HDF5Group":
-        """Creates this group if it does not exist.
-
-        Args:
-            name: The name of this group.
-            track_order: Track dataset/group/attribute creation order under this group if True. If None use global
-                default h5.get_config().track_order.
-
-        Returns:
-            This object.
-        """
-        if name is not None:
-            self._name = name
-
-        with self.file.temp_open():
-            if not self.exists:
-                self._group = self.file._file.create_group(name=self._full_name, track_order=track_order)
-                self.attributes.construct_attributes()
-
-        return self
-
-    def require(
-        self,
-        name: str | None = None,
-        load: bool = False,
+    def create_group(
+        self, 
+        name: str, 
+        map_: HDF5Map | None = None, 
+        mode: str | None = None,
+        require: bool = True,
         construct: bool = False,
-        require: bool = False,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
         track_order: bool | None = None,
-        component_kwargs: dict[str, Any] = {},
     ) -> "HDF5Group":
-        """Creates this group if it does not exist.
+        """Creates a group in this group.
 
         Args:
-            name: The name of this group.
-            load: Determines if this object will load the contents of the group.
-            construct: Determines if this object will create members of the group.
-            require: Determines if this object will create and fill the members of the group.
-            track_order: Track dataset/group/attribute creation order under this group if True. If None use global
+            name: The HDF5 name of the group to create.
+            map_: The map of the group to create.
+            mode: The edit mode of the group to create.
+            require: Determines if the group will be created on construction.
+            construct: Determines if the group will create its members in the file on construction.
+            component_kwargs: The keyword arguments for creating the components.
+            component_types: Component class and their keyword arguments to instantiate.
+            components: Components to add.
+            track_order: Track dataset/group/attribute creation order under the group if True. If None use global
                 default h5.get_config().track_order.
-            component_kwargs: The keyword arguments for the components' create methods.
 
         Returns:
-            This group.
+            The new group.
         """
-        self.require_group(name=name, track_order=track_order)
+        if map_ is None:
+            map_ = self.default_group_map
 
-        if construct or require:
-            self.construct_members(load=load, require=require)
+        with self.file.temp_open():
+            self.members[name] = group = HDF5Group(
+                name=f"{self._full_name}/{name}",
+                map_=map_,
+                mode=self._mode if mode is None else mode,
+                file=self.file,
+                require=require,
+                construct=construct,
+                parent=self._full_name,
+                component_kwargs=component_kwargs,
+                component_types=component_types,
+                components=components,
+                track_order=track_order,
+            )
 
-        self.require_components(**component_kwargs)
+        return group
 
-        return self
+    def require_group(
+        self, 
+        name: str, 
+        map_: HDF5Map | None = None, 
+        mode: str | None = None,
+        load: bool = False,
+        require: bool = True,
+        construct: bool = False,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
+        mapped: bool = True,
+        track_order: bool | None = None,
+    ) -> "HDF5Group":
+        """Creates a group if it does not exist.
+
+        Args:
+            name: The HDF5 name of the group to create.
+            map_: The map of the group to create.
+            mode: The edit mode of the group to create.
+            load: Determines if the group will load on construction.
+            require: Determines if this object will be created on construction.
+            construct: Determines if this object will create its members in the file on construction.
+            component_kwargs: The keyword arguments for creating the components.
+            component_types: Component class and their keyword arguments to instantiate.
+            components: Components to add.
+            mapped: Determines if the member will have a default assigned to it if no map is found.
+            track_order: Track dataset/group/attribute creation order under the group if True. If None use global
+                default h5.get_config().track_order.
+
+        Returns:
+            The requested group.
+        """
+        group = self.get_member(name, default=None, load=load, mapped=mapped)
+        if group is None:
+            group = self.create_group(
+                name=name, 
+                map_=map_, 
+                mode=mode, 
+                construct=construct, 
+                require=require, 
+                component_kwargs=component_kwargs,
+                component_types=component_types,
+                components=components,
+                track_order=track_order,
+            )
+            
+        return group
+
+    def create_dataset(
+        self,
+        name: str,
+        data: np.ndarray | None = None,
+        map_: HDF5Map | None = None,
+        mode: str | None = None,
+        require: bool = False,
+        construct: bool = False,
+        dtype: np.dtype | str | tuple[tuple[str, type]] | None = None,
+        scale_name: str | None = None,
+        casting_kwargs: tuple[dict[str, Any]] | None = None,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> HDF5Dataset:
+        """Creates a dataset in this group.
+
+        Args:
+            name: The HDF5 name of the dataset to create.
+            data: The data to fill in the dataset.
+            map_: The map of the dataset to create.
+            mode: The edit mode of the dataset to create.
+            require: Determines if the group will be created on construction.
+            construct: Determines if the group will create its members in the file on construction.
+            dtype: The dtype of the dataset.
+            scale_name: Makes the data an axis with this name.
+            casting_kwargs: The keyword arguments for casting HDF5 dtypes to python types.
+            component_kwargs: The keyword arguments for creating the components.
+            component_types: Component class and their keyword arguments to instantiate.
+            components: Components to add.
+            **kwargs: The keyword arguments to construct the base HDF5 dataset.
+
+        Returns:
+            The new dataset.
+        """
+        if map_ is None:
+            map_ = self.default_dataset_map
+
+        with self.file.temp_open():
+            self.members[name] = dataset = HDF5Dataset(
+                data=data,
+                name=f"{self._full_name}/{name}",
+                map_=map_,
+                mode=self._mode if mode is None else mode,
+                file=self.file,
+                require=require,
+                construct=construct,
+                parent=self._full_name,
+                dtype=dtype,
+                scale_name=scale_name,
+                casting_kwargs=casting_kwargs,
+                component_kwargs=component_kwargs,
+                component_types=component_types,
+                components=components,
+                **kwargs,
+            )
+
+        return dataset
+
+    def require_dataset(
+        self,
+        name: str,
+        data: np.ndarray | None = None,
+        map_: HDF5Map | None = None,
+        mode: str | None = None,
+        load: bool = False,
+        require: bool = False,
+        construct: bool = False,
+        dtype: np.dtype | str | tuple[tuple[str, type]] | None = None,
+        scale_name: str | None = None,
+        casting_kwargs: tuple[dict[str, Any]] | None = None,
+        component_kwargs: dict[str, dict[str, Any]] | None = None,
+        component_types: dict[str, tuple[type, dict[str, Any]]] | None = None,
+        components: dict[str, Any] | None = None,
+        mapped: bool = True,
+        **kwargs: Any,
+    ) -> HDF5Dataset:
+        """Creates a dataset if it does not exist.
+
+        Args:
+            name: The HDF5 name of the dataset to create.
+            data: The data to fill in the dataset.
+            map_: The map of the dataset to create.
+            mode: The edit mode of the dataset to create.
+            load: Determines if the dataset will load from the file on construction.
+            require: Determines if the group will be created on construction.
+            construct: Determines if the group will create its members in the file on construction.
+            dtype: The dtype of the dataset.
+            scale_name: Makes the data an axis with this name.
+            casting_kwargs: The keyword arguments for casting HDF5 dtypes to python types.
+            component_kwargs: The keyword arguments for creating the components.
+            component_types: Component class and their keyword arguments to instantiate.
+            components: Components to add.
+            mapped: Determines if the member will have a default assigned to it if no map is found.
+            **kwargs: The keyword arguments to construct the base HDF5 dataset.
+
+        Returns:
+            The requested dataset.
+        """
+        dataset = self.get_member(name, default=None, load=load, require=require, mapped=mapped)
+        if dataset is None:
+            dataset = self.create_dataset(
+                name=name,
+                data=data,
+                map_=map_,
+                mode=mode,
+                require=require,
+                construct=construct,
+                dtype=dtype,
+                scale_name=scale_name,
+                casting_kwargs=casting_kwargs,
+                component_kwargs=component_kwargs,
+                component_types=component_types,
+                components=components,
+                **kwargs,
+            )
+
+        return dataset
+
+    def print_contents(self, indent: int = 0) -> None:
+        """Prints the entire contents.
+
+        Args:
+            indent: The number of space to print between each layer.
+        """
+        if self.attributes:
+            print(f"{' ' * indent}  Attributes:")
+            for name in self.attributes.keys():
+                print(f"{' ' * indent}      {name}")
+        if self.members:
+            print(f"{' ' * indent}  Contents: ({''.join(f'{name}, ' for name in self.keys())})")
+            for name, value in self.items():
+                print(f"{' ' * indent}  +  {name}: {value._full_name} {value.map}")
+                value.print_contents(indent=indent + 5)
 
 
 # Assign Cyclic Definitions
 GroupMap.default_type = HDF5Group
 HDF5Group.default_map = GroupMap()
-HDF5Group.default_group_map = GroupMap()
+HDF5Group.default_group_map = GroupMap

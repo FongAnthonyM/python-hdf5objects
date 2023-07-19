@@ -86,8 +86,8 @@ if __name__ == "__main__":
     # Create the file #
     # The map_ kwarg overrides the default map, in this case the same map with the maxshape changed.
     # The create kwarg determines if the file will be created.
-    # The require kwarg determines if the file's structure will be built, which is highly suggested for SWMR.
-    with ExampleFile(file=out_path, mode="a", map_=new_map, create=True, require=True) as file:
+    # The construct kwarg determines if the file's structure will be built, which is highly suggested for SWMR.
+    with ExampleFile(file=out_path, mode="a", map_=new_map, create=True, construct=True) as file:
         # Go Through Groups
         for i, (name, value) in enumerate(file.items()):
             print(f"Group Python Name: {name}")

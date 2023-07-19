@@ -83,7 +83,7 @@ if __name__ == "__main__":
     # test
     # The create kwarg determines if the file will be created.
     # The require kwarg determines if the file's structure will be built, which is highly suggested for SWMR.
-    with ExampleFile(file=out_path, mode="a", create=True, require=True) as file:
+    with ExampleFile(file=out_path, mode="a", create=True, construct=True) as file:
         # Validate specifications were created
         print(f"Data Shape: {file['data'].shape == (0, 0)}")
         print("")
