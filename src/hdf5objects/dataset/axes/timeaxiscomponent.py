@@ -24,7 +24,7 @@ import zoneinfo
 from baseobjects.functions import singlekwargdispatch
 from baseobjects.cachingtools import timed_keyless_cache
 from baseobjects.operations import timezone_offset
-from framestructure import TimeAxisContainer
+from proxyarrays import ContainerTimeAxis
 import h5py
 import numpy as np
 
@@ -35,7 +35,7 @@ from .axiscomponent import AxisMap, AxisComponent
 
 # Definitions #
 # Classes #
-class TimeAxisComponent(AxisComponent, TimeAxisContainer):
+class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
     """A component for a HDF5Dataset which defines it as an axis that represents time.
 
     Class Attributes:
@@ -95,7 +95,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 
     @property
     def precise(self) -> bool:
-        """Determines if this frame returns nanostamps (True) or timestamps (False)."""
+        """Determines if this proxy returns nanostamps (True) or timestamps (False)."""
         if self._precise is None:
             return self.get_original_precision()
         else:
@@ -107,7 +107,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 
     @property
     def _nanostamps(self) -> np.ndarray | None:
-        """The nanosecond timestamps of this frame."""
+        """The nanosecond timestamps of this proxy."""
         if self.get_original_precision():
             return self.get_all_data.caching_call()
         else:
@@ -119,7 +119,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 
     @property
     def _timestamps(self) -> np.ndarray | None:
-        """The timestamps of this frame."""
+        """The timestamps of this proxy."""
         if not self.get_original_precision():
             return self.get_all_data.caching_call()
         else:
@@ -131,7 +131,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 
     @property
     def nanostamps(self) -> np.ndarray | None:
-        """The nanosecond timestamps of this frame."""
+        """The nanosecond timestamps of this proxy."""
         try:
             return self.get_nanostamps.caching_call()
         except AttributeError:
@@ -143,7 +143,7 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
 
     @property
     def timestamps(self) -> np.ndarray | None:
-        """The timestamps of this frame."""
+        """The timestamps of this proxy."""
         try:
             return self.get_timestamps.caching_call()
         except AttributeError:
@@ -341,15 +341,15 @@ class TimeAxisComponent(AxisComponent, TimeAxisContainer):
         """Gets the presision of the timestamps from the orignial file.
 
         Args:
-            nano: Determines if this frame returns nanostamps (True) or timestamps (False).
+            nano: Determines if this proxy returns nanostamps (True) or timestamps (False).
         """
         return self.composite.dtype == np.uint64
 
     def set_precision(self, nano: bool | None) -> None:
-        """Sets if this frame returns nanostamps (True) or timestamps (False).
+        """Sets if this proxy returns nanostamps (True) or timestamps (False).
 
         Args:
-            nano: Determines if this frame returns nanostamps (True) or timestamps (False).
+            nano: Determines if this proxy returns nanostamps (True) or timestamps (False).
         """
         if nano is None:
             pass

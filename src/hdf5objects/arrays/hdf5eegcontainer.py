@@ -1,5 +1,5 @@
-"""hdf5eegframe.py
-A frame that interfaces with a HDF5EEG file.
+"""hdf5eegcontainer.py
+A proxy that interfaces with a HDF5EEG file.
 """
 # Package Header #
 from ..header import *
@@ -22,11 +22,7 @@ from typing import Any, Union
 
 # Third-Party Packages #
 from dspobjects.dataclasses import IndexDateTime, FoundTimeRange, FoundData
-from framestructure import (
-    TimeSeriesFrame,
-    TimeSeriesFrameInterface,
-    FileTimeContainerInterface,
-)
+from proxyarrays import TimeSeriesProxy, BaseTimeSeries, BaseContainerFileTimeSeries
 import h5py
 import numpy as np
 
@@ -37,12 +33,12 @@ from ..fileobjects import HDF5EEG
 
 # Definitions #
 # Classes #
-class HDF5EEGFrame(FileTimeContainerInterface):
-    """A frame that interfaces with a HDF5EEG file.
+class HDF5EEGContainer(BaseContainerFileTimeSeries):
+    """A container proxy array that contains an HDF5EEG file.
 
     Class Attributes:
         file_type: The type of file this object will be wrapping.
-        default_data_container: The default data container to use when making new data container frames.
+        default_data_container: The default data container to use when making new data container proxies.
 
     Attributes:
         subject_id: The subject id.
@@ -52,7 +48,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         s_id: The subject id.
         s_dir: The directory where subjects data are stored.
         start: The start time of the data, if creating.
-        mode: The mode this frame and file will be in.
+        mode: The mode this proxy and file will be in.
         init: Determines if this object will construct.
         **kwargs: The keyword arguments for the open method.
     """
@@ -80,7 +76,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
             return False
 
     @classmethod
-    def new_validated(cls, path: pathlib.Path | str, mode: str = "r+", **kwargs: Any) -> Union["HDF5EEGFrame", None]:
+    def new_validated(cls, path: pathlib.Path | str, mode: str = "r+", **kwargs: Any) -> Union["HDF5EEGContainer", None]:
         """Checks if the given path is a valid file and returns an instance of this object if valid.
 
         Args:
@@ -132,7 +128,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
         self.file.subject_id = value
 
     # Context Managers
-    def __enter__(self) -> "HDF5EEGFrame":
+    def __enter__(self) -> "HDF5EEGContainer":
         """The context enter which opens the HDF5 file.
 
         Returns:
@@ -147,7 +143,7 @@ class HDF5EEGFrame(FileTimeContainerInterface):
     # Instance Methods #
     # File
     @contextmanager
-    def temp_open(self, **kwargs: Any) -> "HDF5EEGFrame":
+    def temp_open(self, **kwargs: Any) -> "HDF5EEGContainer":
         """Temporarily opens the file if it is not already open.
 
         Args:

@@ -579,13 +579,13 @@ pygments = "*"
 restructuredtext-lint = "*"
 
 [[package]]
-name = "framestructure"
+name = "proxyarrays"
 version = "0.4.0"
 description = "Objects for organizing data in frame structures."
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "framestructure-0.4.0-py3-none-any.whl", hash = "sha256:ccf0b33bac574c8b785e743bcf2067f98134fa9465251c5860a50c86a38d0a82"},
+    {file = "proxyarrays-0.4.0-py3-none-any.whl", hash = "sha256:ccf0b33bac574c8b785e743bcf2067f98134fa9465251c5860a50c86a38d0a82"},
 ]
 
 [package.dependencies]
