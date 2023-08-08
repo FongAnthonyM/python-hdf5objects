@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" first_example.py
+""" component_example.py
 A basic example, which introduces Maps and file creation/reading.
 """
 
@@ -92,15 +92,5 @@ if __name__ == "__main__":
         print("Data Manipulation:")
 
         file_data = file["data"]
-        print(f"Original Shape: {file_data.shape}")
-
-        # Set Data
-        file_data.resize((10, 10))
-        file_data[:, :] = raw_data
-        print(f"Shape After Resize: {file_data.shape}")
-
-        # Append
-        file_data.append(raw_data)
-        print(f"Shape After Append: {file_data.shape}")
-
+        out = file_data.components["shapes"].get_min_shape()
 
