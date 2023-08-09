@@ -493,6 +493,9 @@ class HDF5File(HDF5BaseObject):
             self._path = pathlib.Path(file.filename)
             self._file = file
             self._get_file = self._get_file_direct.__func__
+            if file.mode != self._mode_:
+                self.close()
+                self.open()
         else:
             raise ValueError("The supplied HDF5 File must be open.")
 

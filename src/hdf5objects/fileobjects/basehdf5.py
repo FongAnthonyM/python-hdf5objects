@@ -285,7 +285,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
             file = file.as_posix()
 
         if isinstance(file, str):
-            file = h5py.File(file)
+            file = h5py.File(file, mode="r", swmr=True)
 
         return TriNumberVersion(file.attrs[v_name]), file
 
