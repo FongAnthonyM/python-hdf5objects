@@ -753,7 +753,10 @@ class HDF5Dataset(HDF5BaseObject):
         if self.file.swmr_mode:
             ds = getattr(self, self._wrap_attributes[0])
             ds.refresh()
-            return ds[key]
+            try:
+                return ds[key]
+            except OSError:
+                return ds[...][key]  # This is very slow but sometimes indexing breaks when in SWMR
         else:
             return getattr(self, self._wrap_attributes[0])[key]
 
