@@ -488,6 +488,28 @@ class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
 
         self.data.append(data, axis)
 
+    def fill_nanostamps_array(
+        self,
+        data_array: np.ndarray,
+        array_slice: slice | None = None,
+        slice_: slice | None = None,
+    ) -> np.ndarray:
+        """Fills a given array with nanostamps from the contained proxies/objects.
+
+        Args:
+            data_array: The numpy array to fill.
+            array_slice: The slices to fill within the data_array.
+            slice_: The slices to get the data from.
+
+        Returns:
+            The original array but filled.
+        """
+        try:
+            data_array[array_slice] = self.nanostamps[slice_]
+        except ValueError:
+            data_array[array_slice] = self.get_nanostamps()[slice_]
+        return data_array
+
 
 class TimeAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents time."""
