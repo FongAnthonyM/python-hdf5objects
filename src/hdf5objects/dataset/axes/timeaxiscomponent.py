@@ -507,7 +507,7 @@ class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
         try:
             data_array[array_slice] = self.nanostamps[slice_]
         except ValueError:
-            data_array[array_slice] = self.get_nanostamps()[slice_]
+            data_array[array_slice] = self.get_all_data()[slice_]
         return data_array
 
 
