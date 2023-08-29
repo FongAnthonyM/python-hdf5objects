@@ -23,3 +23,4 @@ from .regionreferenceaxiscomponent import (
     RegionReferenceAxisMap,
 )
 from .labelaxiscomponent import LabelAxisComponent, LabelAxisMap
+from .coordinateaxiscomponent import CoordinateAxisComponent, CoordinateAxisMap
