@@ -22,6 +22,7 @@ from typing import Any
 from ...hdf5bases import DatasetMap
 from ..axes import TimeAxisMap
 from ..axes import LabelAxisMap
+from ..axes import CoordinateAxisMap
 from ..components import TimeSeriesComponent
 
 
@@ -32,5 +33,5 @@ class BaseTimeSeriesMap(DatasetMap):
 
     default_attribute_names: Mapping[str, str] = {"t_axis": "t_axis", "c_axis": "c_axis"}
     default_attributes: Mapping[str, Any] = {"t_axis": 0, "c_axis": 1}
-    default_axis_maps: list[dict[str, Any], ...] = [{"time_axis": TimeAxisMap()}, {"label_axis": LabelAxisMap()}]
+    default_axis_maps: list[dict[str, Any], ...] = [{"time_axis": TimeAxisMap()}, {"label_axis": LabelAxisMap(), "coordinate_axis": CoordinateAxisMap()}]
     default_component_types = {"timeseries": (TimeSeriesComponent, {"scale_name": "time_axis"})}
