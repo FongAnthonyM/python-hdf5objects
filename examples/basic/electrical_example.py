@@ -94,14 +94,14 @@ if __name__ == "__main__":
     print("file['data'].components: ", file["data"].components)
     print("file['data'].axes: ", file["data"].axes)
     print("file['data'].axes[0]['time_axis']: ", file["data"].axes[0]['time_axis'][...])
-    print("file['data'].axes[1]['label_axis']: ", file["data"].axes[1]['label_axis'][...])
-    print("file['data'].axes[1]['coordinate_axis']: ", file["data"].axes[1]['coordinate_axis'][...])
+    print("file['data'].axes[1]['channellabel_axis']: ", file["data"].axes[1]['channellabel_axis'][...])
+    print("file['data'].axes[1]['channelcoord_axis']: ", file["data"].axes[1]['channelcoord_axis'][...])
 
     print("\nAxes after appending")
-    file_data.axes[1]['label_axis'].append(raw_lbl)
-    file_data.axes[1]['coordinate_axis'].append(raw_crd)
-    print("file['data'].axes[1]['label_axis']: ", file["data"].axes[1]['label_axis'][...])
-    print("file['data'].axes[1]['coordinate_axis']: ", file["data"].axes[1]['coordinate_axis'][...])
+    file_data.axes[1]['channellabel_axis'].append(raw_lbl)
+    file_data.axes[1]['channelcoord_axis'].append(raw_crd)
+    print("file['data'].axes[1]['channellabel_axis']: ", file["data"].axes[1]['channellabel_axis'][...])
+    print("file['data'].axes[1]['channelcoord_axis']: ", file["data"].axes[1]['channelcoord_axis'][...])
 
     print("")
 
@@ -120,6 +120,5 @@ if __name__ == "__main__":
         print(f"Attribute: {file.attributes['python_name'] == 'Timmy'}")
         file_data = file["data"]
         print(f"Shape: {file_data.shape}")
-        print("file['data'].axes[1]['label_axis']: ", file["data"].axes[1]['label_axis'][...])
-        print("file['data'].axes[1]['coordinate_axis']: ", file["data"].axes[1]['coordinate_axis'][...])
-
+        print("file['data'].axes[1]['channellabel_axis']: ", file["data"].axes[1]['channellabel_axis'][...])
+        print("file['data'].axes[1]['channelcoord_axis']: ", file["data"].axes[1]['channelcoord_axis'][...])
