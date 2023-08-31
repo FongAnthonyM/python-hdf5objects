@@ -29,4 +29,4 @@ class ElectricalSeriesMap(BaseTimeSeriesMap):
     """A base outline which defines a time series and its methods."""
 
     default_attributes: Mapping[str, Any] = BaseTimeSeriesMap.default_attributes | {"units": "volts"}
-    default_axis_maps: list[dict[str, Any], ...] = [BaseTimeSeriesMap.default_axis_maps[0], {"channellabel_axis": LabelAxisMap(), "channelsensor_axis": LabelAxisMap(), "channelcoord_axis": CoordinateAxisMap()}]
+    default_axis_maps: list[dict[str, Any], ...] = [BaseTimeSeriesMap.default_axis_maps[0], {"channellabel_axis": LabelAxisMap(), "channelcoord_axis": CoordinateAxisMap()}]
