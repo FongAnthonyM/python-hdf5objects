@@ -43,10 +43,12 @@ if __name__ == "__main__":
     file_name = "electrical_example_file.h5"
     out_path = pathlib.Path.cwd() / file_name  # The file path as a pathlib Path
 
-    raw_data = np.random.rand(100, 10)
-    raw_time = np.arange(100)
-    raw_lbl = np.array(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'])
-    raw_crd = np.random.randn(10, 3)
+    n_s = int(2000*300)
+    raw_data = np.random.rand(n_s, 7)
+    raw_time = ((np.arange(n_s)/2000)*1e9).astype(int)
+    raw_lbl = np.array([('AA', 1), ('AA', 2), ('AA', 3), ('BB', 1), ('CC', 1), ('CC', 1), ('CC', 1)])
+    print(raw_lbl.shape)
+    raw_crd = np.random.randn(7, 3)
 	
     # Start of the actual code.
 
@@ -100,8 +102,11 @@ if __name__ == "__main__":
     print("\nAxes after appending")
     file_data.axes[1]['channellabel_axis'].append(raw_lbl)
     file_data.axes[1]['channelcoord_axis'].append(raw_crd)
-    print("file['data'].axes[1]['channellabel_axis']: ", file["data"].axes[1]['channellabel_axis'][...])
+    print("channellabel_axis component methods: ", file["data"].axes[1]['channellabel_axis'].components["axis"].channels)
+    print("channellabel_axis component methods: ", file["data"].axes[1]['channellabel_axis'].components["axis"].complete_labels)
+    print("channellabel_axis component methods: ", file["data"].axes[1]['channellabel_axis'].components["axis"].group_channels_by_sensor())
     print("file['data'].axes[1]['channelcoord_axis']: ", file["data"].axes[1]['channelcoord_axis'][...])
+    print("channelcoord_axis component methods: ", file["data"].axes[1]['channelcoord_axis'].components["axis"].calculate_channel_distance())
 
     print("")
 
@@ -120,5 +125,8 @@ if __name__ == "__main__":
         print(f"Attribute: {file.attributes['python_name'] == 'Timmy'}")
         file_data = file["data"]
         print(f"Shape: {file_data.shape}")
+        print("file['data'].axes[0]['time_axis']: ", file["data"].axes[0]['time_axis'][...])
         print("file['data'].axes[1]['channellabel_axis']: ", file["data"].axes[1]['channellabel_axis'][...])
         print("file['data'].axes[1]['channelcoord_axis']: ", file["data"].axes[1]['channelcoord_axis'][...])
+        print("channelcoord_axis component methods: ", file["data"].axes[1]['channelcoord_axis'].components["axis"].calculate_channel_distance())
+
