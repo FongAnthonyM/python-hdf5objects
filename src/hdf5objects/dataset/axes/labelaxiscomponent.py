@@ -40,6 +40,24 @@ class LabelAxisComponent(AxisComponent):
         except AttributeError:
             return self.composite.get_all_data()
 
+    @property
+    def complete_labels(self) -> np.ndarray:
+        """Returns all the complete channel names of this axis.
+
+        Returns:
+            All the channel labels.
+        """
+        return self.get_complete_labels()
+
+    @property
+    def sensors(self) -> np.ndarray:
+        """Returns all the unique sensor in this axis.
+
+        Returns:
+            All the sensors.
+        """
+        return self.get_sensors()
+
     def get_channels(self) -> np.ndarray:
         """Returns all the channels of this axis.
 
@@ -47,6 +65,30 @@ class LabelAxisComponent(AxisComponent):
             All the channel labels.
         """
         return self.composite.get_all_data()
+
+    def get_complete_labels(self) -> np.ndarray:
+        """Returns all the complete channel names of this axis.
+
+        Returns:
+            All complete channel labels.
+        """
+        return np.char.add(*self.channels.astype(str).T)
+
+    def get_sensors(self) -> np.ndarray:
+        """Returns all the unique sensors in this axis.
+
+        Returns:
+            All the sensors.
+        """
+        return np.unique(self.channels[:,0])
+
+    def group_channels_by_sensor(self) -> dict:
+        """Returns a dictionary all the unique sensors in this axis.
+
+        Returns:
+            All the sensors.
+        """
+        return dict([(sensor, np.flatnonzero(self.channels[:,0] == sensor)) for sensor in self.sensors])
 
 
 class LabelAxisMap(AxisMap):
