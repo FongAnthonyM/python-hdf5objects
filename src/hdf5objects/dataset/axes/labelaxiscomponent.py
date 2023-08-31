@@ -52,7 +52,7 @@ class LabelAxisComponent(AxisComponent):
 class LabelAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents channel label."""
 
-    default_kwargs: dict[str, Any] = {"shape": (0,), "maxshape": (None,), "dtype": h5py.special_dtype(vlen=str)}
+    default_kwargs: dict[str, Any] = {"shape": (0,2), "maxshape": (None,), "dtype": h5py.special_dtype(vlen=str)}
     default_component_types = {
         "axis": (LabelAxisComponent, {}),
     }
