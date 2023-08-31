@@ -13,6 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Standard Libraries #
+from collections.abc import Mapping
 from typing import Any
 
 # Third-Party Packages #
@@ -49,9 +50,35 @@ class CoordinateAxisComponent(AxisComponent):
         return self.composite.get_all_data()
 
 
+    def calculate_channel_distance(self) -> np.ndarray:
+        """
+        Compute the Euclidean distance between channels using coordinates.
+
+        Returns:
+            Euclidean distances between channels.
+        """
+
+        # Get number of channels
+        n_chan = len(self.channels)
+
+        # Construct a meshgrid to efficiently compute all possible distances
+        c_i, c_j = np.meshgrid(np.arange(n_chan), np.arange(n_chan))
+
+        # Compute distances using Euclidean geometry
+        channel_dist = np.sqrt(
+            np.sum((self.channels[c_i, :] - self.channels[c_j, :])**2, axis=-1))
+
+        return channel_dist
+
 class CoordinateAxisMap(AxisMap):
     """An outline which defines an HDF5Dataset as an Axis that represents channel coords."""
 
+    default_attribute_names: Mapping[str, str] = {
+        "coordinate_system": "coordinate_system"
+    }
+    default_attributes: Mapping[str, Any] = {
+        "coordinate_system": ""
+    }
     default_kwargs: dict[str, Any] = {"shape": (0,3), "maxshape": (None,3), "dtype": float}
     default_component_types = {
         "axis": (CoordinateAxisComponent, {}),
