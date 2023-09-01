@@ -547,34 +547,35 @@ class HDF5Group(HDF5BaseObject):
                 if default is not search_sentinel and name not in self._group:
                     return default
                 item = self._group[name]
-                map_ = self.map.get_item(name, search_sentinel)
-                if map_ is search_sentinel:
-                    map_namespace = item.attrs.get("map_namespace", "")
-                    map_name = item.attrs.get("map_type", "")
-                    map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
-    
-                    if map_type is not None:
-                        map_ = map_type(name=name)
-                        self.map.set_item(map_)
-                    elif not mapped:
-                        if isinstance(item, h5py.Dataset):
-                            map_ = self.default_dataset_map()
-                        elif isinstance(item, h5py.Group):
-                            map_ = self.default_group_map()
-    
-                if map_ is not search_sentinel:
-                    if isinstance(item, h5py.Group):
-                        kwargs["group"] = item
+                if not item.is_scale:
+                    map_ = self.map.get_item(name, search_sentinel)
+                    if map_ is search_sentinel:
+                        map_namespace = item.attrs.get("map_namespace", "")
+                        map_name = item.attrs.get("map_type", "")
+                        map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
+
+                        if map_type is not None:
+                            map_ = map_type(name=name)
+                            self.map.set_item(map_)
+                        elif not mapped:
+                            if isinstance(item, h5py.Dataset):
+                                map_ = self.default_dataset_map()
+                            elif isinstance(item, h5py.Group):
+                                map_ = self.default_group_map()
+
+                    if map_ is not search_sentinel:
+                        if isinstance(item, h5py.Group):
+                            kwargs["group"] = item
+                        else:
+                            kwargs["dataset"] = item
+                        self.members[name] = member = map_.get_object(
+                            map_=map_,
+                            file=self.file,
+                            load=load,
+                            **kwargs,
+                        )
                     else:
-                        kwargs["dataset"] = item
-                    self.members[name] = member = map_.get_object(
-                        map_=map_,
-                        file=self.file,
-                        load=load,
-                        **kwargs,
-                    )
-                else:
-                    member = item
+                        member = item
         return member
 
     def get_members(self, load: bool = False, mapped: bool = True) -> dict[str, HDF5BaseObject]:
@@ -589,32 +590,33 @@ class HDF5Group(HDF5BaseObject):
         """
         with self:
             for name, item in self._group.items():
-                map_ = self.map.get_item(name, search_sentinel)
-                if map_ is search_sentinel:
-                    map_namespace = item.attrs.get("map_namespace", "")
-                    map_name = item.attrs.get("map_type", "")
-                    map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
+                if not item.is_scale:
+                    map_ = self.map.get_item(name, search_sentinel)
+                    if map_ is search_sentinel:
+                        map_namespace = item.attrs.get("map_namespace", "")
+                        map_name = item.attrs.get("map_type", "")
+                        map_type = self.map.map_registry.get(map_namespace, {}).get(map_name, None)
 
-                    if map_type is not None:
-                        map_ = map_type(name=name)
-                        self.map.set_item(map_)
-                    elif not mapped:
-                        if isinstance(item, h5py.Dataset):
-                            map_ = self.default_dataset_map()
-                        elif isinstance(item, h5py.Group):
-                            map_ = self.default_group_map()
+                        if map_type is not None:
+                            map_ = map_type(name=name)
+                            self.map.set_item(map_)
+                        elif not mapped:
+                            if isinstance(item, h5py.Dataset):
+                                map_ = self.default_dataset_map()
+                            elif isinstance(item, h5py.Group):
+                                map_ = self.default_group_map()
 
-                if map_ is not search_sentinel:
-                    if isinstance(item, h5py.Group):
-                        kwargs = {"group": item}
-                    else:
-                        kwargs = {"dataset": item}
-                    self.members[name] = map_.get_object(
-                        map_=map_,
-                        file=self.file,
-                        load=load,
-                        **kwargs,
-                    )
+                    if map_ is not search_sentinel:
+                        if isinstance(item, h5py.Group):
+                            kwargs = {"group": item}
+                        else:
+                            kwargs = {"dataset": item}
+                        self.members[name] = map_.get_object(
+                            map_=map_,
+                            file=self.file,
+                            load=load,
+                            **kwargs,
+                        )
 
         return self.members.copy()
 
