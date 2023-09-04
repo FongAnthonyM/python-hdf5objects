@@ -82,14 +82,14 @@ if __name__ == "__main__":
     print(f"Original Shape: {file_data.shape}")
 
     # Set Data
-    #file_data.resize(raw_data.shape)
-    #file_data[:, :] = raw_data
-    #print(f"Shape After Resize: {file_data.shape}")
+    file_data.resize(raw_data.shape)
+    file_data[:, :] = raw_data
+    print(f"Shape After Resize: {file_data.shape}")
 
     # Append
-    file_data.append(raw_data, component_kwargs={"timeseries": {"data": raw_time}})
-    print(f"Shape After Append: {file_data.shape}")
-    print([*file.keys()])
+    #file_data.append(raw_data, component_kwargs={"timeseries": {"data": raw_time}})
+    #print(f"Shape After Append: {file_data.shape}")
+    #print([*file.keys()])
 
     # View Components and Axes
     print("\nAxes before appending")
@@ -100,8 +100,10 @@ if __name__ == "__main__":
     print("file['data'].axes[1]['channelcoord_axis']: ", file["data"].axes[1]['channelcoord_axis'][...])
 
     print("\nAxes after appending")
+    file_data.components['timeseries'].append_component(raw_time)
     file_data.axes[1]['channellabel_axis'].append(raw_lbl)
     file_data.axes[1]['channelcoord_axis'].append(raw_crd)
+    print("time_axis component methods: ", file["data"].axes[0]['time_axis'][...])
     print("channellabel_axis component methods: ", file["data"].axes[1]['channellabel_axis'].components["axis"].channels)
     print("channellabel_axis component methods: ", file["data"].axes[1]['channellabel_axis'].components["axis"].complete_labels)
     print("channellabel_axis component methods: ", file["data"].axes[1]['channellabel_axis'].components["axis"].group_channels_by_sensor())
