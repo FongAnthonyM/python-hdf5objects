@@ -131,4 +131,8 @@ if __name__ == "__main__":
         print("file['data'].axes[1]['channellabel_axis']: ", file["data"].axes[1]['channellabel_axis'][...])
         print("file['data'].axes[1]['channelcoord_axis']: ", file["data"].axes[1]['channelcoord_axis'][...])
         print("channelcoord_axis component methods: ", file["data"].axes[1]['channelcoord_axis'].components["axis"].calculate_channel_distance())
+        print(file["data"].components["geometry"])
+        print(file["data"].components["geometry"].label_axis.data[...])
+        print(file["data"].components["geometry"].coordinate_axis.data[...])
+
 

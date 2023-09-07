@@ -22,6 +22,7 @@ from typing import Any
 from .basetimeseriesmap import BaseTimeSeriesMap
 from ..axes import LabelAxisMap
 from ..axes import CoordinateAxisMap
+from ..components import GeometryComponent
 
 # Definitions #
 # Classes #
@@ -30,3 +31,4 @@ class ElectricalSeriesMap(BaseTimeSeriesMap):
 
     default_attributes: Mapping[str, Any] = BaseTimeSeriesMap.default_attributes | {"units": "volts"}
     default_axis_maps: list[dict[str, Any], ...] = [BaseTimeSeriesMap.default_axis_maps[0], {"channellabel_axis": LabelAxisMap(), "channelcoord_axis": CoordinateAxisMap()}]
+    default_component_types: dict[str, Any] = BaseTimeSeriesMap.default_component_types | {"geometry": (GeometryComponent, {"label_scale_name": "channellabel_axis", "coordinate_scale_name": "channelcoord_axis"})}
