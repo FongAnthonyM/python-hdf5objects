@@ -547,7 +547,7 @@ class HDF5Group(HDF5BaseObject):
                 if default is not search_sentinel and name not in self._group:
                     return default
                 item = self._group[name]
-                if not item.is_scale:
+                if getattr(item, "is_scale", False):
                     map_ = self.map.get_item(name, search_sentinel)
                     if map_ is search_sentinel:
                         map_namespace = item.attrs.get("map_namespace", "")
@@ -590,7 +590,7 @@ class HDF5Group(HDF5BaseObject):
         """
         with self:
             for name, item in self._group.items():
-                if not item.is_scale:
+                if getattr(item, "is_scale", False):
                     map_ = self.map.get_item(name, search_sentinel)
                     if map_ is search_sentinel:
                         map_namespace = item.attrs.get("map_namespace", "")

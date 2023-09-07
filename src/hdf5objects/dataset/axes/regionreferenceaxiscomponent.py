@@ -79,6 +79,7 @@ class RegionReferenceAxisComponent(AxisComponent):
         if init:
             self.construct(
                 composite=composite,
+                object_attribute=object_attribute,
                 object_field=object_field,
                 region_field=region_field,
                 **kwargs,
