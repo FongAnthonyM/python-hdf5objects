@@ -121,7 +121,7 @@ class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
     def _timestamps(self) -> np.ndarray | None:
         """The timestamps of this proxy."""
         if not self.get_original_precision():
-            return self.get_all_data.caching_call()
+            return self.get_all_data()
         else:
             return None
 
@@ -132,26 +132,12 @@ class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
     @property
     def nanostamps(self) -> np.ndarray | None:
         """The nanosecond timestamps of this proxy."""
-        try:
-            return self.get_nanostamps.caching_call()
-        except AttributeError:
-            return self.get_nanostamps()
-
-    @nanostamps.setter
-    def nanostamps(self, value: np.ndarray | None) -> None:
-        pass
+        return self.get_nanostamps()
 
     @property
     def timestamps(self) -> np.ndarray | None:
         """The timestamps of this proxy."""
-        try:
-            return self.get_timestamps.caching_call()
-        except AttributeError:
-            return self.get_timestamps()
-
-    @timestamps.setter
-    def timestamps(self, value: np.ndarray | None) -> None:
-        pass
+        return self.get_timestamps()
 
     @property
     def _sample_rate(self) -> Decimal | None:
