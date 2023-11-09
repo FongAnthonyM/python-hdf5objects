@@ -471,7 +471,7 @@ class HDF5Attributes(HDF5BaseObject):
             self.file.close()
         elif self.file.mode not in {"w", "a"} and self.file.swmr_mode:
             self.file.close()
-            self.file.open()
+            self.file.open(**self.file.open_kwargs)
 
     def load(self) -> None:
         """Loads the attributes from the file."""
