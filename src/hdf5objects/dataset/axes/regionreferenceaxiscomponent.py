@@ -79,6 +79,7 @@ class RegionReferenceAxisComponent(AxisComponent):
         if init:
             self.construct(
                 composite=composite,
+                object_attribute=object_attribute,
                 object_field=object_field,
                 region_field=region_field,
                 **kwargs,
@@ -141,7 +142,7 @@ class RegionReferenceAxisComponent(AxisComponent):
             object_ = self.object
 
         if not isinstance(object_, h5py.Reference):
-            object_rf = object_.ref
+            object_ref = object_.ref
             object_ = self.composite.file[object_]
         else:
             object_ref = object_.ref

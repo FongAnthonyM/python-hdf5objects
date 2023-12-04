@@ -109,7 +109,7 @@ class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
     def _nanostamps(self) -> np.ndarray | None:
         """The nanosecond timestamps of this proxy."""
         if self.get_original_precision():
-            return self.get_all_data.caching_call()
+            return self.composite[...]
         else:
             return None
 
@@ -121,7 +121,7 @@ class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
     def _timestamps(self) -> np.ndarray | None:
         """The timestamps of this proxy."""
         if not self.get_original_precision():
-            return self.get_all_data.caching_call()
+            return self.get_all_data()
         else:
             return None
 
@@ -132,26 +132,12 @@ class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
     @property
     def nanostamps(self) -> np.ndarray | None:
         """The nanosecond timestamps of this proxy."""
-        try:
-            return self.get_nanostamps.caching_call()
-        except AttributeError:
-            return self.get_nanostamps()
-
-    @nanostamps.setter
-    def nanostamps(self, value: np.ndarray | None) -> None:
-        pass
+        return self.get_nanostamps()
 
     @property
     def timestamps(self) -> np.ndarray | None:
         """The timestamps of this proxy."""
-        try:
-            return self.get_timestamps.caching_call()
-        except AttributeError:
-            return self.get_timestamps()
-
-    @timestamps.setter
-    def timestamps(self, value: np.ndarray | None) -> None:
-        pass
+        return self.get_timestamps()
 
     @property
     def _sample_rate(self) -> Decimal | None:
@@ -327,14 +313,12 @@ class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
         self.get_datetimes.clear_cache()
 
     # Getters/Setter
-    @timed_keyless_cache(lifetime=1.0, call_method="clearing_call", local=True)
     def get_all_data(self) -> np.ndarray:
         """Gets all the data in the dataset.
 
         Returns:
             All the data in the dataset.
         """
-        self.get_datetimes.clear_cache()
         return self.composite[...]
 
     def get_original_precision(self) -> bool:

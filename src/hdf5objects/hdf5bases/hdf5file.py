@@ -49,7 +49,8 @@ class HDF5File(HDF5BaseObject):
         dataset_type: The class to cast the HDF5 dataset as.
 
     Attributes:
-        _is_open:
+        open_kwargs: The open keyword arguments used to open this file.
+        _is_open: Represents if this file is open.
         _path: The path to the file.
         _name_: The name of the first layer in the file.
         allow_swmr_create: Determines if creating a dataset during swmr is allowed, forces close open if allowed.
@@ -176,6 +177,7 @@ class HDF5File(HDF5BaseObject):
         **kwargs: Any,
     ) -> None:
         # New Attributes #
+        self.open_kwargs: dict[str, Any] = {}
         self._is_open: bool = False
 
         self._path: pathlib.Path | None = None
@@ -646,6 +648,8 @@ class HDF5File(HDF5BaseObject):
                 if "libver" not in kwargs:
                     kwargs["libver"] = "latest"
                 self._file = h5py.File(self.path.as_posix(), mode=self._mode_, **kwargs)
+                self.open_kwargs.clear()
+                self.open_kwargs.update(kwargs)
                 self._get_file = self._get_file_direct.__func__
                 return self
             except Exception as error:

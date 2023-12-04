@@ -326,9 +326,10 @@ class HDF5EEG(BaseHDF5):
 
     def standardize_attributes(self) -> None:
         """Sets attributes that correspond to values somewhere else to their current values."""
-        if self.data.exists:
-            self.data.standardize_attributes()
+        if self.mode in {"w", "a"} and not self.swmr_mode:
+            if self.data.exists:
+                self.data.standardize_attributes()
 
-        if self.time_axis.exists:
-            self.attributes["start"] = self.time_axis.components["axis"].start_nanostamp
-            self.attributes["end"] = self.time_axis.components["axis"].end_nanostamp
+            if self.time_axis.exists:
+                self.attributes["start"] = self.time_axis.components["axis"].start_nanostamp
+                self.attributes["end"] = self.time_axis.components["axis"].end_nanostamp
