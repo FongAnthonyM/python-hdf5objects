@@ -536,3 +536,11 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
     def standardize_attributes(self) -> None:
         """Sets attributes that correspond to values somewhere else to current value."""
         pass
+
+    def print_contents(self, indent: int = 0) -> None:
+        """Prints the entire contents.
+
+        Args:
+            indent: The number of space to print between each layer.
+        """
+        pass

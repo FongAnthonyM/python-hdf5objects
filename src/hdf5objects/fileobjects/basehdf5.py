@@ -28,15 +28,14 @@ from classversioning import (
 import h5py
 
 # Local Packages #
-from ..hdf5bases import HDF5Map, HDF5Group, HDF5File
+from ..hdf5bases import HDF5Map, FileMap, HDF5File
 
 
 # Definitions #
 # Classes #
-class BaseHDF5Map(HDF5Map):
+class BaseHDF5Map(FileMap):
     """A map for BaseHDF5 files."""
 
-    default_type = HDF5Group
     default_attribute_names = {"file_type": "FileType", "file_version": "FileVersion"}
     default_attributes = {"file_type": "", "file_version": ""}
 
@@ -271,7 +270,7 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
             return None
 
     @classmethod
-    def get_version_from_file(cls, file: pathlib.Path | str | h5py.File) -> Version:
+    def get_version_from_file(cls, file: pathlib.Path | str | h5py.File) -> tuple[Version, h5py.File]:
         """Return a version from a file.
 
         Args:
@@ -286,9 +285,9 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
             file = file.as_posix()
 
         if isinstance(file, str):
-            file = h5py.File(file)
+            file = h5py.File(file, mode="r", swmr=True)
 
-        return TriNumberVersion(file.attrs[v_name])
+        return TriNumberVersion(file.attrs[v_name]), file
 
     @classmethod
     def get_version_from_object(cls, obj: Any) -> Version:
@@ -300,10 +299,20 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         Returns:
             The version from the file.
         """
-        return cls.get_version_from_file(obj)
+        return cls.get_version_from_file(obj)[0]
 
     # Magic Methods #
     # Construction/Destruction
+    def __new__(cls, *args: Any, **kwargs: Any) -> "VersionedClass":
+        """With given input, will return the correct subclass."""
+        version_type = cls._registry.get_version_type(cls._VERSION_TYPE.name, None)
+        if version_type is not None and version_type.head_class is cls and (kwargs or args):
+            version, file = cls.get_version_from_file(args[0] if args else kwargs.pop(cls._dispatch_kwarg))
+            class_ = cls.get_version_class(version, type_=cls._VERSION_TYPE.name)
+            return class_(file, *args[1:], **kwargs)
+        else:
+            return super().__new__(cls)
+
     def __init__(
         self,
         file: str | pathlib.Path | h5py.File | None = None,

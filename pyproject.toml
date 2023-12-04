@@ -1,6 +1,7 @@
 [tool.poetry]
 name = "hdf5objects"
-version = "0.3.1"
+
+version = "0.4.3"
 description = "hdf5objects"
 authors = ["Anthony Fong <FongAnthonyM@gmail.com>"]
 license = "MIT"
@@ -16,38 +17,38 @@ classifiers = [
 Changelog = "https://github.com/FongAnthonyM/hdf5objects/releases"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-baseobjects = "^1.8.0"
-classversioning = "^0.6.0"
-dspobjects = "^0.2.0"
-framestructure = "^0.4.1"
-h5py = "^3.5.0"
-numpy = "^1.21.1"
-bidict = "^0.22.0"
+python = ">=3.10, <4.0"
+baseobjects = ">=1.10.0"
+classversioning = ">=0.7.0"
+dspobjects = ">=0.3.0"
+proxyarrays = ">=0.5.1"
+h5py = ">=3.5.0"
+numpy = ">=1.25.1"
+bidict = ">=0.22.0"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2.5"
-coverage = {extras = ["toml"], version = "^6.1"}
-safety = "^1.10.3"
-mypy = "^0.910"
-typeguard = "^2.13.0"
-xdoctest = {extras = ["colors"], version = "^0.15.10"}
-sphinx = "^4.2.0"
-sphinx-autobuild = "^2021.3.14"
-pre-commit = "^2.15.0"
-flake8 = "^4.0.1"
-black = "^23.3.0"
-flake8-bandit = "^2.1.2"
-flake8-bugbear = "^21.9.2"
-flake8-docstrings = "^1.6.0"
-flake8-rst-docstrings = "^0.2.3"
-pep8-naming = "^0.12.1"
-darglint = "^1.8.1"
-reorder-python-imports = "^2.6.0"
-pre-commit-hooks = "^4.0.1"
-sphinx-rtd-theme = "^1.0.0"
-sphinx-click = "^3.0.2"
-Pygments = "^2.10.0"
+pytest = ">=6.2.5"
+coverage = {extras = ["toml"], version = ">=6.1"}
+safety = ">=1.10.3"
+mypy = ">=0.910"
+typeguard = ">=2.13.0"
+xdoctest = {extras = ["colors"], version = ">=0.15.10"}
+sphinx = ">=4.2.0"
+sphinx-autobuild = ">=2021.3.14"
+pre-commit = ">=2.15.0"
+flake8 = ">=4.0.1"
+black = ">=23.3.0"
+flake8-bandit = ">=2.1.2"
+flake8-bugbear = ">=21.9.2"
+flake8-docstrings = ">=1.6.0"
+flake8-rst-docstrings = ">=0.2.3"
+pep8-naming = ">=0.12.1"
+darglint = ">=1.8.1"
+reorder-python-imports = ">=2.6.0"
+pre-commit-hooks = ">=4.0.1"
+sphinx-rtd-theme = ">=1.0.0"
+sphinx-click = ">=3.0.2"
+Pygments = ">=2.10.0"
 
 [tool.poetry.scripts]
 hdf5objects = "hdf5objects.__main__:main"

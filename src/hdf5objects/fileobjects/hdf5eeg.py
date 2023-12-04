@@ -109,18 +109,21 @@ class HDF5EEG(BaseHDF5):
     @property
     def start_datetime(self) -> Timestamp | None:
         """The start datetime of this file."""
-        ns = self.attributes.get("start", None)
+        ns = self.start_nanostamp
         return None if ns is None else Timestamp.fromnanostamp(ns)
 
     @property
     def start_nanostamp(self) -> float | None:
         """The start timestamp of this file."""
-        return self.attributes.get("start", None)
+        if (ns := self.attributes.get("start", None)) is None:
+            if len(self["data"]) > 0:
+                return self["data"].components["timeseries"].get_nanostamp(0)
+        return ns
 
     @property
     def start_timestamp(self) -> float | None:
         """The start timestamp of this file."""
-        ns = self.attributes.get("start", None)
+        ns = self.start_nanostamp
         return None if ns is None else ns * 10**9
 
     @property
@@ -323,9 +326,10 @@ class HDF5EEG(BaseHDF5):
 
     def standardize_attributes(self) -> None:
         """Sets attributes that correspond to values somewhere else to their current values."""
-        if self.data.exists:
-            self.data.standardize_attributes()
+        if self.mode in {"w", "a"} and not self.swmr_mode:
+            if self.data.exists:
+                self.data.standardize_attributes()
 
-        if self.time_axis.exists:
-            self.attributes["start"] = self.time_axis.components["axis"].start_nanostamp
-            self.attributes["end"] = self.time_axis.components["axis"].end_nanostamp
+            if self.time_axis.exists:
+                self.attributes["start"] = self.time_axis.components["axis"].start_nanostamp
+                self.attributes["end"] = self.time_axis.components["axis"].end_nanostamp

@@ -18,7 +18,7 @@ __email__ = __email__
 import h5py
 
 # Local Packages #
-from ...hdf5bases import HDF5Map, DatasetMap
+from ...hdf5bases import GroupMap, DatasetMap
 from ...dataset import ObjectReferenceComponent
 from ..datasetcomponents import NodeDatasetComponent
 from ..groupcomponents import NodeGroupComponent
@@ -42,7 +42,7 @@ class BaseNodeDatasetMap(DatasetMap):
     }
 
 
-class BaseNodeGroupMap(HDF5Map):
+class BaseNodeGroupMap(GroupMap):
     """A group map which outlines a group with basic node methods."""
 
     default_attribute_names = {"tree_type": "tree_type"}

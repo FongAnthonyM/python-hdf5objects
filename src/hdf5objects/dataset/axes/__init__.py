@@ -22,3 +22,5 @@ from .regionreferenceaxiscomponent import (
     RegionReferenceAxisComponent,
     RegionReferenceAxisMap,
 )
+from .labelaxiscomponent import LabelAxisComponent, LabelAxisMap
+from .coordinateaxiscomponent import CoordinateAxisComponent, CoordinateAxisMap

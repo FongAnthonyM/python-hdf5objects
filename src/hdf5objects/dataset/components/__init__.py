@@ -13,6 +13,7 @@ __email__ = __email__
 
 # Imports #
 # Local Packages #
+from .geometrycomponent import GeometryComponent
 from .timeseriescomponent import TimeSeriesComponent
 from .objectreferencecomponent import ObjectReferenceComponent
 from .regionreferencecomponent import RegionReferenceComponent

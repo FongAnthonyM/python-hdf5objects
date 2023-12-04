@@ -24,10 +24,12 @@ import numpy as np
 from classversioning import TriNumberVersion
 from classversioning import Version
 
+from hdf5objects import DatasetMap
 from hdf5objects import HDF5Map
-from hdf5objects.datasets import RegionReferenceDataset
-from hdf5objects.datasets import RegionReferenceMap
-from hdf5objects.datasets import TimeReferenceMap
+from hdf5objects.datasets import IDComponent
+from hdf5objects.datasets import SampleAxisMap
+from hdf5objects.datasets import TimeAxisMap
+from hdf5objects.datasets import TimeSeriesComponent
 from hdf5objects.fileobjects import BaseHDF5
 from hdf5objects.fileobjects import BaseHDF5Map
 
@@ -41,23 +43,29 @@ from hdf5objects.fileobjects import BaseHDF5Map
 # Any changes should be done in a subclass or on the instance level.
 # Classes #
 # Define Model Dataset
-class TimeReferenceMap(TimeReferenceMap):
-    """Implementation of TimeReferenceMap."""
+class MultipleComponentMap(DatasetMap):
+    """Implementation of a map with multiple components."""
 
-    default_attribute_names = RegionReferenceMap.default_attribute_names | {"test_attribute": "TestAttribute"}
     default_dtype = (
         ("ID", uuid.UUID),
-        ("Text", str),
-        ("multiple_object", h5py.ref_dtype),
-        ("multiple_region", h5py.regionref_dtype),
-        ("single_region", h5py.regionref_dtype),
+        ("File", str),
     )
-    default_single_reference_fields = {"test_single": ("test_attribute", "single_region")}
-    default_multiple_reference_fields = {"test_multiple": ("multiple_object", "multiple_region")}
-    default_primary_reference_field = "test_single"
+    default_axis_maps = [
+        {
+            "start_time_axis": TimeAxisMap(),
+            "end_time_axis": TimeAxisMap(),
+            "start_sample_axis": SampleAxisMap(),
+            "end_sample_axis": SampleAxisMap(),
+        }
+    ]
+    default_component_types = {
+        "start_times": (TimeSeriesComponent, {"scale_name": "start_time_axis"}),
+        "end_times": (TimeSeriesComponent, {"scale_name": "end_time_axis"}),
+        "ids": (IDComponent, {"uuid_fields": "ID"}),
+    }
 
 
-class RegionReferenceDatasetTestFileMap(BaseHDF5Map):
+class MultipleComponentFileMap(BaseHDF5Map):
     """The map for the file which implements RegionReferenceDataset."""
 
     # Create names for the contained maps and future objects
@@ -66,7 +74,7 @@ class RegionReferenceDatasetTestFileMap(BaseHDF5Map):
     # Note: For dataset the shape, maxshape, and dtype must be initialized to build the dataset on file creation.
     # If you want set the maxshape, do it at the instance level, do not redefine this map just to set it.
     default_maps: Mapping[str, HDF5Map] = {
-        "main_dataset": TimeReferenceMap(shape=(0,), maxshape=(None,)),
+        "main_dataset": MultipleComponentMap(shape=(0,), maxshape=(None,)),
     }
 
 
@@ -133,7 +141,7 @@ if __name__ == "__main__":
         # Assign a File Attribute
         # These attributes were not defined as a property in the TensorModelHDF5 class, so they have to be set and get
         # directly like a normal h5py attribute. Ask Anthony how to set these up as properties.
-        model_file.attributes["subject_id"] = "ECxx"  # If this was setup as a property: model_file.subject_id = "ECxx"
+        model_file.attributes["subject_id"] = "ECxx"  # If this was setup as a property: file.subject_id = "ECxx"
         model_file.attributes["start"] = start.timestamp()
 
         # Create Dataset and Directly Add Some Data (Full Data and Time)

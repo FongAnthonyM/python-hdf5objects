@@ -66,6 +66,7 @@ class DatasetMap(HDF5Map):
     """
 
     default_attributes_type = HDF5Attributes
+    # default_type = HDF5Dataset  # This will be assigned after HDF5Dataset is defined
     default_dtype: np.dtype | str | tuple[tuple[str, type]] | None = None
     default_casting_kwargs: list[dict[str, Any]] | None = None
     default_axis_maps: list[dict[str, Any]] = []
@@ -301,7 +302,8 @@ class HDF5Dataset(HDF5BaseObject):
         mode: The edit mode of this object.
         file: The file object that this dataset object originates from.
         load: Determines if this object will load the dataset from the file on construction.
-        require: Determines if this object will create and fill the dataset in the file on construction.
+        require: Determines if this object will create the dataset in the file on construction.
+        construct: Determines if this object will create its members recursively on construction.
         parent: The HDF5 name of the parent of this HDF5 object.
         dtype: The dtype of this dataset.
         scale_name: Makes this data an axis with this name.
@@ -315,7 +317,7 @@ class HDF5Dataset(HDF5BaseObject):
 
     _wrapped_types: list[type | object] = [h5py.Dataset]
     _wrap_attributes: list[str] = ["dataset"]
-    default_map: HDF5Map = DatasetMap()
+    # default_map: HDF5Map = DatasetMap()  # This will be assigned after HDF5Dataset is defined
     default_axis_map_type: Any = None
 
     # Magic Methods
@@ -330,6 +332,7 @@ class HDF5Dataset(HDF5BaseObject):
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         require: bool = False,
+        construct: bool = False,
         parent: str | None = None,
         dtype: np.dtype | str | tuple[tuple[str, type]] | None = None,
         scale_name: str | None = None,
@@ -363,6 +366,7 @@ class HDF5Dataset(HDF5BaseObject):
                 load=load,
                 parent=parent,
                 require=require,
+                construct=construct,
                 dtype=dtype,
                 scale_name=scale_name,
                 casting_kwargs=casting_kwargs,
@@ -476,6 +480,7 @@ class HDF5Dataset(HDF5BaseObject):
         file: str | pathlib.Path | h5py.File | None = None,
         load: bool = False,
         require: bool = False,
+        construct: bool = False,
         parent: str | None = None,
         dtype: np.dtype | str | tuple[tuple[str, type]] | None = None,
         scale_name: str | None = None,
@@ -495,7 +500,8 @@ class HDF5Dataset(HDF5BaseObject):
             mode: The edit mode of this object.
             file: The file object that this dataset object originates from.
             load: Determines if this object will load the dataset from the file on construction.
-            require: Determines if this object will create and fill the dataset in the file on construction.
+            require: Determines if this object will create the dataset in the file on construction.
+            construct: Determines if this object will create its members recursively on construction.
             parent: The HDF5 name of the parent of this HDF5 object.
             dtype: The dtype of this dataset.
             scale_name: Makes this data an axis with this name.
@@ -555,8 +561,8 @@ class HDF5Dataset(HDF5BaseObject):
         if load and self.exists:
             self.load()
 
-        if require or data is not None:
-            self.require(name=self._full_name, data=data, **kwargs)
+        if require or construct or data is not None:
+            self.require(name=self._full_name, construct=construct, data=data, **kwargs)
 
     def construct_attributes(self, load: bool = False, require: bool = False) -> None:
         """Creates the attributes for this dataset.
@@ -580,7 +586,7 @@ class HDF5Dataset(HDF5BaseObject):
             if self.file.swmr_mode:
                 self._dataset.refresh()
             if len(self._dataset.dims) > len(self._axes):
-                self._axes.extend([{}] * (len(self._dataset.dims) - len(self._axes)))
+                self._axes.extend([{} for i in range(len(self._dataset.dims) - len(self._axes))])
 
             mapped_dims = len(self.map.axis_maps)
             for i, dim in enumerate(self._dataset.dims):
@@ -747,7 +753,10 @@ class HDF5Dataset(HDF5BaseObject):
         if self.file.swmr_mode:
             ds = getattr(self, self._wrap_attributes[0])
             ds.refresh()
-            return ds[key]
+            try:
+                return ds[key]
+            except OSError:
+                return ds[...][key]  # This is very slow but sometimes indexing breaks when in SWMR
         else:
             return getattr(self, self._wrap_attributes[0])[key]
 
@@ -927,7 +936,7 @@ class HDF5Dataset(HDF5BaseObject):
             axes_kwargs: The keyword arguments for creating the axes objects.
         """
         if len(self.axes) < len(self.map.axis_maps):
-            self.axes.extend([{}] * (len(self.map.axis_maps) - len(self.axes)))
+            self.axes.extend([{} for i in range(len(self.map.axis_maps) - len(self.axes))])
 
         temp_kwargs = {"require": True, "file": self.file}
         new_kwargs_len = len(axes_kwargs)
@@ -1042,7 +1051,7 @@ class HDF5Dataset(HDF5BaseObject):
             axes_kwargs: The keyword arguments for creating the axes objects.
         """
         if len(self.axes) < len(self.map.axis_maps):
-            self.axes.extend([{}] * (len(self.map.axis_maps) - len(self.axes)))
+            self.axes.extend([{} for i in range(len(self.map.axis_maps) - len(self.axes))])
 
         temp_kwargs = {"require": True, "file": self.file}
         new_kwargs_len = len(axes_kwargs)
@@ -1062,14 +1071,16 @@ class HDF5Dataset(HDF5BaseObject):
     def require(
         self,
         name: str | None = None,
+        construct: bool = False,
         axes_kwargs: Iterable[dict[str, dict[str, Any]]] = (),
         component_kwargs: dict[str, Any] = {},
         **kwargs: Any,
     ) -> "HDF5Dataset":
-        """Creates and fills the data and axes if they does not exist.
+        """Creates and fills the data and axes if they do not exist.
 
         Args:
             name: The name of the dataset.
+            construct: Determines if this object will create its members recursively on construction.
             axes_kwargs: The keyword arguments for creating the axes objects.
             component_kwargs: The keyword arguments for the components' create methods.
             **kwargs: The keyword arguments for constructing a HDF5 Dataset.
@@ -1078,7 +1089,8 @@ class HDF5Dataset(HDF5BaseObject):
             This object.
         """
         self.require_data(name=name, **kwargs)
-        self.require_axes(axes_kwargs=axes_kwargs)
+        if construct:
+            self.require_axes(axes_kwargs=axes_kwargs)
         self.require_components(**component_kwargs)
         return self
 
@@ -1401,6 +1413,25 @@ class HDF5Dataset(HDF5BaseObject):
         with self:
             self._dataset.dims[axis].detach_scale(dataset._dataset)
 
+    def print_contents(self, indent: int = 0) -> None:
+        """Prints the entire contents.
+
+        Args:
+            indent: The number of space to print between each layer.
+        """
+        if self.attributes:
+            print(f"{' ' * indent}  Attributes:")
+            for name in self.attributes.keys():
+                print(f"{' ' * indent}      {name}")
+        if self.axes:
+            print(f"{' ' * indent}  Axes:")
+            for i, dim in enumerate(self.axes):
+                print(f"{' ' * indent}    Dimension {i}:")
+                for name, value in dim.items():
+                    print(f"{' ' * indent}    +  {name}: {value._full_name} {value.map}")
+                    value.print_contents(indent=indent + 5)
+
 
 # Assign Cyclic Definitions
 DatasetMap.default_type = HDF5Dataset
+HDF5Dataset.default_map = DatasetMap()

@@ -19,7 +19,7 @@ from decimal import Decimal
 from typing import Any
 
 # Third-Party Packages #
-from framestructure import TimeSeriesContainer
+from proxyarrays import ContainerTimeSeries
 import h5py
 import numpy as np
 
@@ -30,11 +30,11 @@ from ..basedatasetcomponent import BaseDatasetComponent
 
 # Definitions #
 # Classes #
-class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
+class TimeSeriesComponent(BaseDatasetComponent, ContainerTimeSeries):
     """A component for a HDF5Dataset which gives it time series functionality.
 
     Attributes:
-        _sample_rate_: The temporrary sample rate of this time series.
+        _sample_rate_: The temporary sample rate of this time series.
         _time_axis: The time axis object of this time series.
         _t_axis: The dim number of the time axis.
         scale_name: The scale name of the time axis.
@@ -44,7 +44,7 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
         t_axis: The dim number of the time axis.
         scale_name: The scale name of the time axis.
         sample_rate: The sample rate of the data in Hz.
-        precise: Determines if this frame returns nanostamps (True) or timestamps (False).
+        precise: Determines if this proxy returns nanostamps (True) or timestamps (False).
         tzinfo: The time zone of the timestamps.
         init: Determines if this object will construct.
         **kwargs: Keyword arguments for inheritance.
@@ -133,7 +133,7 @@ class TimeSeriesComponent(BaseDatasetComponent, TimeSeriesContainer):
             t_axis: The dim number of the time axis.
             scale_name: The scale name of the time axis.
             sample_rate: The sample rate of the data in Hz.
-            precise: Determines if this frame returns nanostamps (True) or timestamps (False).
+            precise: Determines if this proxy returns nanostamps (True) or timestamps (False).
             tzinfo: The time zone of the timestamps.
             **kwargs: Keyword arguments for inheritance.
         """
