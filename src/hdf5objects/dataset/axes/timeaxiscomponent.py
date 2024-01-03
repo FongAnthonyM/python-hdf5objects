@@ -462,7 +462,7 @@ class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
         if tolerance is None:
             tolerance = self.time_tolerance
 
-        if correction is None or (isinstance(correction, bool) and correction):
+        if isinstance(correction, bool) and correction:
             correction = self.tail_correction
         elif isinstance(correction, str):
             correction = self.get_correction(correction)

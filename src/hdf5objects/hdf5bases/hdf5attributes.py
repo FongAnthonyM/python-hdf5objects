@@ -469,7 +469,7 @@ class HDF5Attributes(HDF5BaseObject):
         """Closes the file of this object."""
         if not self._file_was_open:
             self.file.close()
-        elif self.file.mode not in {"w", "a"} and self.file.swmr_mode:
+        elif self.file.mode not in {"w", "a"} and self.file._reopen and self.file.swmr_mode:
             self.file.close()
             self.file.open(**self.file.open_kwargs)
 
