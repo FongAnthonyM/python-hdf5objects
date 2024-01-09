@@ -119,7 +119,7 @@ class HDF5Attributes(HDF5BaseObject):
     # Container Methods
     def __getitem__(self, key: str) -> Any:
         """Gets an attribute from this object."""
-        return self.get_attributes()[key]
+        return self.get_attributes()[self._parse_name(key)]
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Sets an attribute in this object and the within the file."""
