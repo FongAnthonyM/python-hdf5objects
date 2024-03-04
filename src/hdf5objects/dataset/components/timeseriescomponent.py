@@ -114,6 +114,15 @@ class TimeSeriesComponent(BaseDatasetComponent, ContainerTimeSeries):
     def time_axis(self, value: HDF5Dataset | None) -> None:
         self._time_axis = value
 
+    @property
+    def _data(self) -> Any:
+        """The data of the composite."""
+        return self.composite
+
+    @_data.setter
+    def _data(self, value: Any) -> None:
+        pass
+
     # Instance Methods
     # Constructors/Destructors
     def construct(
