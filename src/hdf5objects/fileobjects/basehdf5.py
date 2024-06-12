@@ -74,8 +74,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
 
     # Class Methods #
     # File Validation
-    @singlekwargdispatch("file")
     @classmethod
+    @singlekwargdispatch("file")
     def validate_file_type(cls, file: pathlib.Path | str | HDF5File | h5py.File) -> bool:
         """Checks if the given file or path is a valid type.
 
@@ -87,8 +87,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         """
         raise TypeError(f"{type(file)} is not a valid type for validate_file_type.")
 
-    @validate_file_type.register
     @classmethod
+    @validate_file_type.__wrapped__.register
     def _validate_file_type(cls, file: pathlib.Path) -> bool:
         """Checks if the given path is a valid type.
 
@@ -109,8 +109,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         else:
             return False
 
-    @validate_file_type.register
     @classmethod
+    @validate_file_type.__wrapped__.register
     def _validate_file_type(cls, file: str) -> bool:
         """Checks if the given path is a valid type.
 
@@ -133,8 +133,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         else:
             return False
 
-    @validate_file_type.register
     @classmethod
+    @validate_file_type.__wrapped__.register
     def _validate_file_type(cls, file: HDF5File) -> bool:
         """Checks if the given file is a valid type.
 
@@ -148,8 +148,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         file = file._file
         return t_name in file.attrs and cls.FILE_TYPE == file.attrs[t_name]
 
-    @validate_file_type.register
     @classmethod
+    @validate_file_type.__wrapped__.register
     def _validate_file_type(cls, file: h5py.File) -> bool:
         """Checks if the given file is a valid type.
 
@@ -174,8 +174,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         """
         raise NotImplementedError
 
-    @singlekwargdispatch("file")
     @classmethod
+    @singlekwargdispatch("file")
     def new_validated(cls, file: pathlib.Path | str | HDF5File | h5py.File, **kwargs: Any) -> Union["BaseHDF5", None]:
         """Checks if the given file or path is a valid type and returns the file if valid.
 
@@ -187,8 +187,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         """
         raise TypeError(f"{type(file)} is not a valid type for new_validate.")
 
-    @new_validated.register
     @classmethod
+    @new_validated.__wrapped__.register
     def _new_validated(cls, file: pathlib.Path, **kwargs: Any) -> Any:
         """Checks if the given path is a valid type and returns the file if valid.
 
@@ -210,8 +210,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         else:
             return None
 
-    @new_validated.register
     @classmethod
+    @new_validated.__wrapped__.register
     def _new_validated(cls, file: str, **kwargs: Any) -> Any:
         """Checks if the given path is a valid type and returns the file if valid.
 
@@ -234,8 +234,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         else:
             return None
 
-    @new_validated.register
     @classmethod
+    @new_validated.__wrapped__.register
     def _new_validated(cls, file: HDF5File, **kwargs: Any) -> Any:
         """Checks if the given file is a valid type and returns the file if valid.
 
@@ -252,8 +252,8 @@ class BaseHDF5(HDF5File, VersionedClass, metaclass=CachingVersionedInitMeta):
         else:
             return None
 
-    @new_validated.register
     @classmethod
+    @new_validated.__wrapped__.register
     def _new_validated(cls, file: h5py.File, **kwargs: Any) -> Any:
         """Checks if the given file is a valid type and returns the file if valid.
 

@@ -95,8 +95,8 @@ class HDF5Caster(BaseObject):
         """Casts a UUID to a type that can be stored in an HDF5."""
         return item.hex
 
-    @singlekwargdispatch("item")
     @classmethod
+    @singlekwargdispatch("item")
     def cast_from(cls, item: Any) -> Any:
         """Casts an item to a type that can be stored in an HDF5.
 
@@ -108,41 +108,42 @@ class HDF5Caster(BaseObject):
         """
         return item
 
-    @cast_from.register(str)
-    @cast_from.register(int)
-    @cast_from.register(float)
-    @cast_from.register(np.dtype)
-    @cast_from.register(h5py.Reference)
     @classmethod
+    @cast_from.__wrapped__.register(str)
+    @cast_from.__wrapped__.register(int)
+    @cast_from.__wrapped__.register(float)
+    @cast_from.__wrapped__.register(np.dtype)
+    @cast_from.__wrapped__.register(h5py.Reference)
     def _cast_from(cls, item: _pass_types) -> _pass_types:
         """Returns the item because it does not need to cast to another type."""
         return item
 
-    @cast_from.register
     @classmethod
+    @cast_from.__wrapped__.register
     def _cast_from(cls, item: datetime.datetime) -> float:
         """Casts a datetime to a type that can be stored in an HDF5."""
         return cls.from_datetime(item)
 
-    @cast_from.register
     @classmethod
+    @cast_from.__wrapped__.register
     def _cast_from(cls, item: datetime.tzinfo) -> float:
         """Casts a timezone to a type that can be stored in an HDF5."""
         return cls.from_timezone(item)
 
-    @cast_from.register
     @classmethod
+    @cast_from.__wrapped__.register
     def _cast_from(cls, item: datetime.timedelta) -> float:
         """Casts a timedelta to a type that can be stored in an HDF5."""
         return cls.from_timedelta(item)
 
-    @cast_from.register
     @classmethod
+    @cast_from.__wrapped__.register
     def _cast_from(cls, item: uuid.UUID) -> bytes:
         """Casts a UUID to a type that can be stored in an HDF5."""
         return cls.from_uuid(item)
 
     # Casting To
+
     @classmethod
     def to_pass(cls, item: _pass_types) -> _pass_types:
         """Returns the item without casting it to another type."""
