@@ -185,6 +185,15 @@ class TimeAxisComponent(AxisComponent, ContainerTimeAxis):
         except AttributeError:
             return self.get_datetimes()
 
+    @property
+    def _data(self) -> Any:
+        """The data of the composite."""
+        return self.composite
+
+    @_data.setter
+    def _data(self, value: Any) -> None:
+        pass
+
     # Instance Methods
     # Constructors/Destructors
     def construct(
