@@ -589,7 +589,8 @@ class HDF5Group(HDF5BaseObject):
             The names and members in this group.
         """
         with self:
-            for name, item in self._group.items():
+            self.file._reopen = False
+            for name, item in tuple(self._group.items()):
                 if not getattr(item, "is_scale", False):
                     map_ = self.map.get_item(name, search_sentinel)
                     if map_ is search_sentinel:
@@ -617,6 +618,7 @@ class HDF5Group(HDF5BaseObject):
                             load=load,
                             **kwargs,
                         )
+            self.file._reopen = True
 
         return self.members.copy()
 

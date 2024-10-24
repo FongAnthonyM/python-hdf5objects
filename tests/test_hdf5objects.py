@@ -55,6 +55,7 @@ class TestHDF5File(ClassTest):
     studies_path = pathlib.Path("/common/subjects")
     load_path = pathlib.Path.cwd().joinpath("pytest_cache/EC212_2020-01-28_00~07~37.h5")
     save_path = pathlib.Path.cwd().joinpath("pytest_cache/")
+    test_path = pathlib.Path("/Users/changlab/Downloads/sub-PR05_task-biomarker_0001_ieeg.h5")
 
     @pytest.fixture
     def load_file(self):
@@ -131,6 +132,9 @@ class TestHDF5File(ClassTest):
         f_obj = self.class_(s_id="EC_test", s_dir=self.save_path, start=start)
         f_obj.create_eeg_dataset()
         assert 1
+
+    def test_load_file(self):
+        f_object = self.class_(file=self.test_path, load=True)
 
 
 # Main #

@@ -51,6 +51,7 @@ class HDF5File(HDF5BaseObject):
     Attributes:
         open_kwargs: The open keyword arguments used to open this file.
         _is_open: Represents if this file is open.
+        _reopen: A flag allow this file to be closed and reopen when refreshing.
         _path: The path to the file.
         _name_: The name of the first layer in the file.
         allow_swmr_create: Determines if creating a dataset during swmr is allowed, forces close open if allowed.
@@ -179,6 +180,7 @@ class HDF5File(HDF5BaseObject):
         # New Attributes #
         self.open_kwargs: dict[str, Any] = {}
         self._is_open: bool = False
+        self._reopen: bool = True
 
         self._path: pathlib.Path | None = None
         self._name_: str = "/"
