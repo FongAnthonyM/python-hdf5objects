@@ -236,47 +236,46 @@ class HDF5BaseObject(StaticWrapper, CachingObject, BaseComposite, metaclass=Cach
         self.map.kwargs = value
 
     # Pickling
-    def __getstate__(self) -> dict[str, Any]:
-        """Creates a dictionary of attributes which can be used to rebuild this object
+    def __getstate__(self) -> None | dict[str, Any] | tuple[dict[str, Any] | None, dict[str, Any]]:
+        """Gets the object's state for pickling.
 
         Returns:
-            dict: A dictionary of this object's attributes.
+            The state returned will be either of the following types based on the presence of __dict__ and __slots__:
+                None: __dict__ nor __slots__ are present.
+                dict: __dict__ is present and __slots__ is not present.
+                tuple[None, dict]: __dict__ is not present and __slots__ is present.
+                tuple[dict, dict]: __dict__ is present and __slots__ is present.
         """
         state = super().__getstate__()
-
-        weak_file = state.pop("_weak_file")
-        if weak_file is not None:
-            state["file"] = weak_file()
-        else:
-            state["file"] = None
-
-        weak_signal = state.pop("_weak_signal")
-        if weak_signal is not None:
-            state["signal"] = weak_signal()
-        else:
-            state["signal"] = None
-
+        if (weak_file := state.get("_weak_file", None)) is not None:
+            state["_weak_file"] = weak_file()
+        if (weak_signal := state.get("_weak_signal", None)) is not None:
+            state["_weak_signal"] = weak_signal()
         return state
 
-    def __setstate__(self, state: Mapping[str, Any]) -> None:
-        """Builds this object based on a dictionary of corresponding attributes.
+    def __setstate__(self, state: Any) -> None:
+        """Sets the object's state from a pickled state.
+
+        By default, the state can be one of the following types with the corresponding behavior:
+            None: Will not set any state.
+            dict: Will set the __dict__ attribute to the state.
+            tuple[None, dict]: Will set the slot values to the second dict of the tuple.
+            tuple[dict, dict]: Will set the __dict__ attribute to the first dict of the tuple and set the slot values
+                to the second dict of the tuple.
 
         Args:
-            state: The attributes to build this object from.
+            state: An object which can be used to set the state of this object.
         """
-        file = state.pop("file")
-        if file is not None:
-            state["_weak_file"] = weakref.ref(file)
-        else:
-            state["_weak_file"] = None
+        # Remove strong reference
+        _weak_file = state.pop("_weak_file", None)
+        _weak_signal = state.pop("_weak_signal", None)
 
-        signal = state.pop("signal")
-        if signal is not None:
-            state["_weak_signal"] = weakref.ref(signal)
-        else:
-            state["_weak_signal"] = None
+        # Set State
+        self._setstate_(state)
 
-        super().__setstate__(state)
+        # Set weak reference
+        self._weak_file = weakref.ref(_weak_file) if _weak_file is not None else None
+        self._weak_signal = weakref.ref(_weak_signal) if _weak_signal is not None else None
 
     # Container Methods
     def __getitem__(self, key: Any) -> Any:
