@@ -311,7 +311,7 @@ class HDF5EEG(BaseHDF5):
             If the file was successfully closed.
         """
         try:
-            if not self.swmr_mode:
+            if self.is_open and not self.swmr_mode:
                 self.standardize_attributes()
         finally:
             return super().close()
