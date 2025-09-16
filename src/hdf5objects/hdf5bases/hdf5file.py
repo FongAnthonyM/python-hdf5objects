@@ -248,7 +248,8 @@ class HDF5File(HDF5BaseObject):
 
     def __del__(self) -> None:
         """Closes the file when this object is deleted."""
-        self.close()
+        if self.is_open:
+            self.close()
 
     # Pickling
     def __getnewargs__(self):
