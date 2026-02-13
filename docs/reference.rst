@@ -1,13 +1,14 @@
-Reference
-=========
+API Reference
+=============
 
 .. contents::
     :local:
+    :depth: 2
     :backlinks: none
 
 
-hdf5objects.__main__
---------------------
+hdf5objects
+---------------------------
 
-.. automodule:: hdf5objects.__main__
+.. automodule:: hdf5objects
    :members:

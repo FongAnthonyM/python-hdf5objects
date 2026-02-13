@@ -1,21 +1,17 @@
 """__init__.py
-Objects that expand on HDF5 and h5py.
+Package initialization for hdf5objects.
 """
-# Package Header #
-from .header import *
 
 # Header #
-__author__ = __author__
-__credits__ = __credits__
-__maintainer__ = __maintainer__
-__email__ = __email__
+__package_name__ = "hdf5objects"
+
+__author__ = "Anthony Fong"
+__credits__ = ["Anthony Fong"]
+__copyright__ = "Copyright 2021, Anthony Fong"
+__license__ = "MIT"
+
+__version__ = "0.6.0"
 
 
 # Imports #
 # Local Packages #
-from .hdf5bases import *
-from .fileobjects import *
-from .dataset import AxisMap
-
-# Assign Cyclic Definitions
-HDF5Dataset.default_axis_map_type = AxisMap
